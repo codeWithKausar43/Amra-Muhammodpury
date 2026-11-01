@@ -69,3 +69,4 @@ export function AuthPromptModal({ isOpen, onClose }: AuthPromptModalProps) {
     </div>
   );
 }
+

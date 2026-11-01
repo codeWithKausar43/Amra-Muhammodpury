@@ -204,3 +204,4 @@ export function Navbar({ onSearch }: NavbarProps) {
     </header>
   );
 }
+

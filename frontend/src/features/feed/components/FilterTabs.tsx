@@ -43,3 +43,4 @@ export function FilterTabs({ activeCategory, onSelectCategory }: FilterTabsProps
     </div>
   );
 }
+

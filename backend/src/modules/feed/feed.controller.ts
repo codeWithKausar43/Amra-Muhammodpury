@@ -77,3 +77,4 @@ export class FeedController {
     return reply.send(successResponse(stories, 'Stories retrieved'));
   }
 }
+

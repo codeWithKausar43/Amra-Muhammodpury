@@ -30,3 +30,4 @@ export const createCommentSchema = z.object({
 export type FeedQueryInput = z.infer<typeof feedQuerySchema>;
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+

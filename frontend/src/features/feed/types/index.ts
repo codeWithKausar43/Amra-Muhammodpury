@@ -66,3 +66,4 @@ export interface CreatePostPayload {
     badgeText?: string;
   };
 }
+

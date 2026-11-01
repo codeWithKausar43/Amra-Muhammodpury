@@ -265,3 +265,4 @@ export const feedService = {
     });
   },
 };
+

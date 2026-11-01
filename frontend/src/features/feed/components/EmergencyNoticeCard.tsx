@@ -93,3 +93,4 @@ export function EmergencyNoticeCard({ onAcknowledge }: EmergencyNoticeCardProps)
     </article>
   );
 }
+

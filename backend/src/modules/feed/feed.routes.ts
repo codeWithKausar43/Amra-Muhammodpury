@@ -21,3 +21,4 @@ export const feedRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/feed/posts/:id/comments', FeedController.getComments);
   fastify.post('/feed/posts/:id/comments', FeedController.createComment);
 };
+
