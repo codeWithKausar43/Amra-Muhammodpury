@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, Bell, X, Menu, MessageSquare, Heart, AlertTriangle } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { SettingsDrawer } from './SettingsDrawer';
@@ -39,6 +40,7 @@ const SAMPLE_NOTIFICATIONS = [
 ];
 
 export function Navbar({ onSearch }: NavbarProps) {
+  const router = useRouter();
   const { searchQuery, setSearchQuery } = useFeedModal();
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -112,6 +114,11 @@ export function Navbar({ onSearch }: NavbarProps) {
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                  }
+                }}
                 placeholder="মুহাম্মদপুরের পোস্ট, সড়ক বা বিষয় খুঁজুন..."
                 className="w-full pl-10 pr-9 py-2 rounded-full text-xs sm:text-sm bg-slate-100 dark:bg-white/5 border border-transparent focus:border-brand-emerald/40 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition-all"
               />
@@ -200,6 +207,17 @@ export function Navbar({ onSearch }: NavbarProps) {
                       );
                     })}
                   </div>
+
+                  {/* Panel footer */}
+                  <div className="p-2 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-center">
+                    <Link
+                      href="/notifications"
+                      onClick={() => setNotificationsOpen(false)}
+                      className="text-xs font-semibold text-brand-emerald dark:text-brand-mint hover:underline inline-block py-1"
+                    >
+                      সকল নোটিফিকেশন দেখুন →
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -230,6 +248,12 @@ export function Navbar({ onSearch }: NavbarProps) {
                 autoFocus
                 value={searchQuery}
                 onChange={handleSearchChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    setSearchOpen(false);
+                    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                  }
+                }}
                 placeholder="মুহাম্মদপুরের পোস্ট বা বিষয় খুঁজুন..."
                 className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none"
               />

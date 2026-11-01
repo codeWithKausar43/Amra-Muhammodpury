@@ -1,5 +1,10 @@
 import { PrismaClient, Prisma } from '../../config/database.js';
-import { FeedQueryInput, CreatePostInput, CreateCommentInput } from './feed.schema.js';
+import {
+  FeedQueryInput,
+  CreatePostInput,
+  UpdatePostInput,
+  CreateCommentInput,
+} from './feed.schema.js';
 import { PostDto, CommentDto, StoryDto } from './feed.types.js';
 import { NotFoundError, UnauthorizedError } from '../../errors/app-error.js';
 
@@ -16,6 +21,7 @@ export class FeedService {
     // Build filter conditions
     const where: Prisma.PostWhereInput = {
       isDeleted: false,
+      groupId: null, // General feed shows standalone community posts
     };
 
     if (category === 'EMERGENCY') {
@@ -38,7 +44,10 @@ export class FeedService {
         where,
         skip,
         take: limit,
-        orderBy: category === 'POPULAR' ? [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }] : { createdAt: 'desc' },
+        orderBy:
+          category === 'POPULAR'
+            ? [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }]
+            : { createdAt: 'desc' },
         include: {
           author: {
             select: {
@@ -55,6 +64,12 @@ export class FeedService {
             },
             orderBy: { order: 'asc' },
           },
+          sharedPost: {
+            include: {
+              author: { select: { id: true, name: true, image: true, role: true } },
+              media: { include: { media: true } },
+            },
+          },
           _count: {
             select: {
               likes: true,
@@ -67,9 +82,15 @@ export class FeedService {
                 select: { id: true },
               }
             : false,
+          savedBy: currentUserId
+            ? {
+                where: { userId: currentUserId },
+                select: { id: true },
+              }
+            : false,
           comments: {
             where: { isDeleted: false },
-            take: 2,
+            take: 3,
             orderBy: { createdAt: 'desc' },
             include: {
               author: {
@@ -92,14 +113,44 @@ export class FeedService {
       location: post.location,
       category: post.category,
       blockBadge: post.blockBadge,
+      privacy: post.privacy,
+      groupId: post.groupId,
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
       sharesCount: post.sharesCount,
       hasLiked: Boolean(post.likes && post.likes.length > 0),
+      hasSaved: Boolean(post.savedBy && post.savedBy.length > 0),
       isEmergency: post.isEmergency,
       emergencyData: post.emergencyData,
       createdAt: post.createdAt,
       author: post.author,
+      sharedPost: post.sharedPost
+        ? {
+            id: post.sharedPost.id,
+            content: post.sharedPost.content,
+            location: post.sharedPost.location,
+            category: post.sharedPost.category,
+            blockBadge: post.sharedPost.blockBadge,
+            privacy: post.sharedPost.privacy,
+            likesCount: 0,
+            commentsCount: 0,
+            sharesCount: post.sharedPost.sharesCount,
+            hasLiked: false,
+            isEmergency: post.sharedPost.isEmergency,
+            createdAt: post.sharedPost.createdAt,
+            author: post.sharedPost.author,
+            media: post.sharedPost.media.map((pm) => ({
+              id: pm.media.id,
+              publicId: pm.media.publicId,
+              secureUrl: pm.media.secureUrl,
+              resourceType: pm.media.resourceType,
+              format: pm.media.format,
+              width: pm.media.width,
+              height: pm.media.height,
+            })),
+            recentComments: [],
+          }
+        : null,
       media: post.media.map((pm) => ({
         id: pm.media.id,
         publicId: pm.media.publicId,
@@ -112,6 +163,7 @@ export class FeedService {
       recentComments: post.comments.map((c) => ({
         id: c.id,
         content: c.content,
+        parentId: c.parentId,
         createdAt: c.createdAt,
         author: c.author,
       })),
@@ -132,6 +184,9 @@ export class FeedService {
         location: input.location,
         category: input.category,
         blockBadge: input.blockBadge,
+        privacy: input.privacy ?? 'PUBLIC',
+        groupId: input.groupId,
+        sharedPostId: input.sharedPostId,
         isEmergency: input.isEmergency ?? false,
         emergencyData: (input.emergencyData as Prisma.InputJsonValue) ?? undefined,
         authorId,
@@ -172,6 +227,8 @@ export class FeedService {
       location: post.location,
       category: post.category,
       blockBadge: post.blockBadge,
+      privacy: post.privacy,
+      groupId: post.groupId,
       likesCount: 0,
       commentsCount: 0,
       sharesCount: 0,
@@ -193,15 +250,118 @@ export class FeedService {
     };
   }
 
+  public async editPost(postId: string, userId: string, input: UpdatePostInput): Promise<PostDto> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId, isDeleted: false },
+    });
+
+    if (!post) throw new NotFoundError('পোস্টটি পাওয়া যায়নি');
+    if (post.authorId !== userId) {
+      throw new UnauthorizedError('পোস্ট সম্পাদনা করার অনুমতি নেই');
+    }
+
+    const updated = await this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        ...(input.content !== undefined ? { content: input.content } : {}),
+        ...(input.location !== undefined ? { location: input.location } : {}),
+        ...(input.privacy !== undefined ? { privacy: input.privacy } : {}),
+      },
+      include: {
+        author: { select: { id: true, name: true, image: true, role: true } },
+        media: { include: { media: true } },
+        _count: { select: { likes: true, comments: { where: { isDeleted: false } } } },
+      },
+    });
+
+    return {
+      id: updated.id,
+      content: updated.content,
+      location: updated.location,
+      category: updated.category,
+      blockBadge: updated.blockBadge,
+      privacy: updated.privacy,
+      likesCount: updated._count.likes,
+      commentsCount: updated._count.comments,
+      sharesCount: updated.sharesCount,
+      hasLiked: false,
+      isEmergency: updated.isEmergency,
+      emergencyData: updated.emergencyData,
+      createdAt: updated.createdAt,
+      author: updated.author,
+      media: updated.media.map((pm) => pm.media),
+      recentComments: [],
+    };
+  }
+
+  public async sharePost(postId: string, userId: string, caption?: string): Promise<PostDto> {
+    const originalPost = await this.prisma.post.findUnique({
+      where: { id: postId, isDeleted: false },
+    });
+    if (!originalPost) throw new NotFoundError('মূল পোস্টটি পাওয়া যায়নি');
+
+    // Create shared post
+    const [shared] = await this.prisma.$transaction([
+      this.prisma.post.create({
+        data: {
+          content: caption?.trim() || '',
+          authorId: userId,
+          sharedPostId: postId,
+          privacy: 'PUBLIC',
+        },
+        include: {
+          author: { select: { id: true, name: true, image: true, role: true } },
+          media: { include: { media: true } },
+          _count: { select: { likes: true, comments: true } },
+        },
+      }),
+      this.prisma.post.update({
+        where: { id: postId },
+        data: { sharesCount: { increment: 1 } },
+      }),
+      ...(originalPost.authorId !== userId
+        ? [
+            this.prisma.notification.create({
+              data: {
+                recipientId: originalPost.authorId,
+                actorId: userId,
+                type: 'POST_SHARE',
+                title: 'পোস্ট শেয়ার',
+                content: `একজন সদস্য আপনার পোস্টটি শেয়ার করেছেন।`,
+                entityId: postId,
+                entityType: 'post',
+              },
+            }),
+          ]
+        : []),
+    ]);
+
+    return {
+      id: shared.id,
+      content: shared.content,
+      location: shared.location,
+      category: shared.category,
+      blockBadge: shared.blockBadge,
+      privacy: shared.privacy,
+      sharedPostId: postId,
+      likesCount: 0,
+      commentsCount: 0,
+      sharesCount: 0,
+      hasLiked: false,
+      isEmergency: false,
+      createdAt: shared.createdAt,
+      author: shared.author,
+      media: [],
+      recentComments: [],
+    };
+  }
+
   public async deletePost(postId: string, userId: string): Promise<boolean> {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
     });
 
-    if (!post) {
-      throw new NotFoundError('পোস্টটি পাওয়া যায়নি');
-    }
-
+    if (!post) throw new NotFoundError('পোস্টটি পাওয়া যায়নি');
     if (post.authorId !== userId) {
       throw new UnauthorizedError('এই পোস্টটি মুছে ফেলার অনুমতি আপনার নেই');
     }
@@ -215,7 +375,13 @@ export class FeedService {
     return true;
   }
 
-  public async toggleLike(postId: string, userId: string): Promise<{ liked: boolean; likesCount: number }> {
+  public async toggleLike(
+    postId: string,
+    userId: string,
+  ): Promise<{ liked: boolean; likesCount: number }> {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) throw new NotFoundError('পোস্ট পাওয়া যায়নি');
+
     const existing = await this.prisma.postLike.findUnique({
       where: {
         postId_userId: {
@@ -236,6 +402,21 @@ export class FeedService {
           userId,
         },
       });
+
+      // Notify post author if not self
+      if (post.authorId !== userId) {
+        await this.prisma.notification.create({
+          data: {
+            recipientId: post.authorId,
+            actorId: userId,
+            type: 'POST_LIKE',
+            title: 'নতুন লাইক',
+            content: 'আপনার পোস্টে একটি নতুন লাইক পড়েছে।',
+            entityId: postId,
+            entityType: 'post',
+          },
+        });
+      }
     }
 
     const likesCount = await this.prisma.postLike.count({
@@ -270,12 +451,17 @@ export class FeedService {
     return comments.map((c) => ({
       id: c.id,
       content: c.content,
+      parentId: c.parentId,
       createdAt: c.createdAt,
       author: c.author,
     }));
   }
 
-  public async createComment(postId: string, userId: string, input: CreateCommentInput): Promise<CommentDto> {
+  public async createComment(
+    postId: string,
+    userId: string,
+    input: CreateCommentInput,
+  ): Promise<CommentDto> {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
     });
@@ -289,6 +475,7 @@ export class FeedService {
         postId,
         authorId: userId,
         content: input.content,
+        parentId: input.parentId,
       },
       include: {
         author: {
@@ -302,12 +489,45 @@ export class FeedService {
       },
     });
 
+    // Send notification to post author or parent comment author
+    if (post.authorId !== userId) {
+      await this.prisma.notification.create({
+        data: {
+          recipientId: post.authorId,
+          actorId: userId,
+          type: input.parentId ? 'COMMENT_REPLY' : 'POST_COMMENT',
+          title: input.parentId ? 'মন্তব্যের রিপ্লাই' : 'নতুন মন্তব্য',
+          content: `${comment.author.name} আপনার পোস্টে একটি মন্তব্য করেছেন।`,
+          entityId: postId,
+          entityType: 'post',
+        },
+      });
+    }
+
     return {
       id: comment.id,
       content: comment.content,
+      parentId: comment.parentId,
       createdAt: comment.createdAt,
       author: comment.author,
     };
+  }
+
+  public async deleteComment(commentId: string, userId: string): Promise<boolean> {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+    if (!comment) throw new NotFoundError('মন্তব্যটি পাওয়া যায়নি');
+    if (comment.authorId !== userId) {
+      throw new UnauthorizedError('মন্তব্য মুছে ফেলার অনুমতি নেই');
+    }
+
+    await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { isDeleted: true },
+    });
+
+    return true;
   }
 
   public async getStories(): Promise<StoryDto[]> {

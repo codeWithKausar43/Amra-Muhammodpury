@@ -251,7 +251,21 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
               </Link>
 
               <Link
-                href="/explore"
+                href="/friends"
+                onClick={onClose}
+                className="flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-brand-emerald flex items-center justify-center shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium">বন্ধু ও পরিচিত মহল</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+
+              <Link
+                href="/groups"
                 onClick={onClose}
                 className="flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
               >
@@ -259,13 +273,13 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                   <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center shrink-0">
                     <Users className="w-4 h-4" />
                   </div>
-                  <span className="text-sm font-medium">এলাকা ভিত্তিক ফোরাম</span>
+                  <span className="text-sm font-medium">এলাকা ভিত্তিক ফোরাম ও গ্রুপ</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
               </Link>
 
               <Link
-                href="/dashboard"
+                href="/saved"
                 onClick={onClose}
                 className="flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
               >

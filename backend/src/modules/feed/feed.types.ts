@@ -19,6 +19,7 @@ export interface PostMediaDto {
 export interface CommentDto {
   id: string;
   content: string;
+  parentId?: string | null;
   createdAt: Date;
   author: AuthorSummary;
 }
@@ -29,10 +30,16 @@ export interface PostDto {
   location?: string | null;
   category: string;
   blockBadge?: string | null;
+  privacy?: string;
+  groupId?: string | null;
+  group?: { id: string; name: string } | null;
+  sharedPostId?: string | null;
+  sharedPost?: PostDto | null;
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
   hasLiked: boolean;
+  hasSaved?: boolean;
   isEmergency: boolean;
   emergencyData?: unknown;
   createdAt: Date;

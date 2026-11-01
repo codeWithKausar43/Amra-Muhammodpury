@@ -61,15 +61,24 @@ input, button, select, textarea {
 
 /* Hide scrollbar while preserving scroll functionality across all browsers */
 .no-scrollbar::-webkit-scrollbar,
-.scrollbar-none::-webkit-scrollbar {
+.scrollbar-none::-webkit-scrollbar,
+*::-webkit-scrollbar.no-scrollbar,
+*::-webkit-scrollbar.scrollbar-none {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+  background: transparent !important;
 }
 
 .no-scrollbar,
 .scrollbar-none {
   -ms-overflow-style: none !important; /* IE and Edge */
   scrollbar-width: none !important; /* Firefox */
+  overflow: -moz-scrollbars-none;
+}
+
+/* Chrome, Safari, Opera */
+* {
+  scrollbar-width: thin;
 }
 

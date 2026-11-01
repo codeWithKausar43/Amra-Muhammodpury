@@ -10,6 +10,14 @@ import { healthRoutes } from './modules/health/health.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { cloudinaryRoutes } from './integrations/cloudinary/cloudinary.routes.js';
 import { feedRoutes } from './modules/feed/feed.routes.js';
+import { friendRoutes } from './modules/friends/friend.routes.js';
+import { groupRoutes } from './modules/groups/group.routes.js';
+import { notificationRoutes } from './modules/notifications/notification.routes.js';
+import { messageRoutes } from './modules/messages/message.routes.js';
+import { savedRoutes } from './modules/saved/saved.routes.js';
+import { searchRoutes } from './modules/search/search.routes.js';
+import { profileRoutes } from './modules/profile/profile.routes.js';
+import { safetyRoutes } from './modules/safety/safety.routes.js';
 import { errorResponse } from './utils/api-response.js';
 import { HTTP_STATUS } from './constants/status-codes.js';
 
@@ -45,6 +53,14 @@ export const buildApp = async (): Promise<FastifyInstance> => {
       await v1.register(authRoutes);
       await v1.register(cloudinaryRoutes);
       await v1.register(feedRoutes);
+      await v1.register(friendRoutes);
+      await v1.register(groupRoutes);
+      await v1.register(notificationRoutes);
+      await v1.register(messageRoutes);
+      await v1.register(savedRoutes);
+      await v1.register(searchRoutes);
+      await v1.register(profileRoutes);
+      await v1.register(safetyRoutes);
     },
     { prefix: '/api/v1' },
   );

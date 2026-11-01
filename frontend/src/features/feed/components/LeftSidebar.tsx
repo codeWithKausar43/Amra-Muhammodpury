@@ -12,6 +12,8 @@ import {
   Calculator,
   MapPin,
   ShieldCheck,
+  UserCheck,
+  MessageSquare,
 } from 'lucide-react';
 
 interface LeftSidebarProps {
@@ -111,24 +113,40 @@ export function LeftSidebar({ activeBlock, onSelectBlock }: LeftSidebarProps) {
             </Link>
           </li>
           <li>
-            <button
-              type="button"
-              onClick={() => alert('সংরক্ষিত পোস্ট শীঘ্রই যুক্ত হবে!')}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-left"
+            <Link
+              href="/friends"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+            >
+              <UserCheck className="w-4 h-4 text-slate-500" />
+              <span>বন্ধু ও পরিচিত মহল</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/messages"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4 text-slate-500" />
+              <span>ইনবক্স ও বার্তা</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/saved"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
             >
               <Bookmark className="w-4 h-4 text-slate-500" />
               <span>সংরক্ষিত পোস্ট</span>
-            </button>
+            </Link>
           </li>
           <li>
-            <button
-              type="button"
-              onClick={() => alert('এলাকা ফোরাম পেইজ তৈরি হচ্ছে')}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-left"
+            <Link
+              href="/groups"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
             >
               <Users className="w-4 h-4 text-slate-500" />
               <span>এলাকা ভিত্তিক ফোরাম</span>
-            </button>
+            </Link>
           </li>
           <li>
             <Link

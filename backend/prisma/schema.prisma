@@ -11,22 +11,38 @@ datasource db {
 }
 
 model User {
-  id            String       @id @default(uuid())
-  name          String
-  email         String       @unique
-  emailVerified Boolean      @default(false)
-  image         String?
-  phone         String?      @unique
-  role          String       @default("USER")
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  media         Media[]
-  posts         Post[]
-  likes         PostLike[]
-  comments      Comment[]
-  stories       Story[]
+  id                     String             @id @default(uuid())
+  name                   String
+  email                  String             @unique
+  emailVerified          Boolean            @default(false)
+  image                  String?
+  coverImage             String?
+  bio                    String?            @db.Text
+  phone                  String?            @unique
+  role                   String             @default("USER")
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  sessions               Session[]
+  accounts               Account[]
+  media                  Media[]
+  posts                  Post[]
+  likes                  PostLike[]
+  comments               Comment[]
+  stories                Story[]
+  sentFriendRequests     FriendRequest[]    @relation("sentRequests")
+  receivedFriendRequests FriendRequest[]    @relation("receivedRequests")
+  friendshipsA           Friendship[]       @relation("friendA")
+  friendshipsB           Friendship[]       @relation("friendB")
+  groupMemberships       GroupMember[]
+  groupJoinRequests      GroupJoinRequest[]
+  createdGroups          Group[]            @relation("groupCreator")
+  notifications          Notification[]     @relation("recipient")
+  sentMessages           Message[]          @relation("sender")
+  receivedMessages       Message[]          @relation("recipient")
+  savedPosts             SavedPost[]
+  blockedUsers           BlockedUser[]      @relation("blocker")
+  blockedByUsers         BlockedUser[]      @relation("blocked")
+  reports                Report[]           @relation("reporter")
 
   @@map("user")
 }
@@ -102,6 +118,7 @@ model Post {
   location      String?
   category      String      @default("GENERAL") // "GENERAL" | "MY_BLOCK" | "POPULAR" | "EMERGENCY"
   blockBadge    String?     // e.g. "ব্লক-সি", "সলিমুল্লাহ রোড"
+  privacy       String      @default("PUBLIC") // "PUBLIC" | "FRIENDS" | "ONLY_ME"
   sharesCount   Int         @default(0)
   isEmergency   Boolean     @default(false)
   emergencyData Json?       // Helpline number, department, alert details
@@ -110,12 +127,22 @@ model Post {
   updatedAt     DateTime    @updatedAt
   authorId      String
   author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  groupId       String?
+  group         Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  sharedPostId  String?
+  sharedPost    Post?       @relation("PostShares", fields: [sharedPostId], references: [id], onDelete: SetNull)
+  shares        Post[]      @relation("PostShares")
   media         PostMedia[]
   likes         PostLike[]
   comments      Comment[]
+  savedBy       SavedPost[]
+  reports       Report[]
 
   @@index([authorId])
   @@index([category])
+  @@index([privacy])
+  @@index([groupId])
+  @@index([sharedPostId])
   @@index([createdAt])
   @@map("post")
 }
@@ -147,17 +174,21 @@ model PostLike {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  content   String   @db.Text
-  isDeleted Boolean  @default(false) // Soft deletion!
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(uuid())
+  content   String    @db.Text
+  isDeleted Boolean   @default(false) // Soft deletion!
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
 
   @@index([postId])
+  @@index([parentId])
   @@map("comment")
 }
 
@@ -172,4 +203,182 @@ model Story {
 
   @@index([authorId])
   @@map("story")
+}
+
+// -------------------------------------------------------------
+// SOCIAL NETWORKING EXTENSIONS
+// -------------------------------------------------------------
+
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("sentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("receivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     String   @default("PENDING") // "PENDING" | "ACCEPTED" | "REJECTED"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([senderId, status])
+  @@map("friend_request")
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation("friendA", fields: [userId], references: [id], onDelete: Cascade)
+  friendId  String
+  friend    User     @relation("friendB", fields: [friendId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+  @@map("friendship")
+}
+
+model Group {
+  id           String             @id @default(uuid())
+  name         String
+  description  String?            @db.Text
+  image        String?
+  coverImage   String?
+  privacy      String             @default("PUBLIC") // "PUBLIC" | "PRIVATE"
+  rules        String?            @db.Text
+  creatorId    String
+  creator      User               @relation("groupCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  members      GroupMember[]
+  posts        Post[]
+  joinRequests GroupJoinRequest[]
+
+  @@index([creatorId])
+  @@index([privacy])
+  @@map("group")
+}
+
+model GroupMember {
+  id       String   @id @default(uuid())
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String   @default("MEMBER") // "OWNER" | "ADMIN" | "MODERATOR" | "MEMBER"
+  joinedAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_member")
+}
+
+model GroupJoinRequest {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String   @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+  createdAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+  @@index([groupId, status])
+  @@map("group_join_request")
+}
+
+model SavedPost {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@map("saved_post")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  recipientId String
+  recipient   User     @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId     String?
+  type        String   // "FRIEND_REQUEST" | "FRIEND_ACCEPT" | "POST_LIKE" | "POST_COMMENT" | "COMMENT_REPLY" | "POST_SHARE" | "GROUP_INVITE" | "GROUP_JOIN_REQUEST" | "GROUP_APPROVED"
+  title       String
+  content     String
+  entityId    String?  // postId, groupId, userId
+  entityType  String?  // "post" | "group" | "user"
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([recipientId, isRead])
+  @@index([createdAt])
+  @@map("notification")
+}
+
+model Conversation {
+  id          String    @id @default(uuid())
+  userOneId   String
+  userTwoId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  messages    Message[]
+
+  @@unique([userOneId, userTwoId])
+  @@index([userOneId])
+  @@index([userTwoId])
+  @@map("conversation")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId    String
+  recipient      User         @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  content        String       @db.Text
+  mediaUrl       String?
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([recipientId, isRead])
+  @@map("message")
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@map("blocked_user")
+}
+
+model Report {
+  id         String   @id @default(uuid())
+  reporterId String
+  reporter   User     @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType String   // "POST" | "COMMENT" | "USER" | "GROUP"
+  targetId   String
+  reason     String
+  details    String?  @db.Text
+  status     String   @default("PENDING") // "PENDING" | "REVIEWED" | "RESOLVED" | "DISMISSED"
+  postId     String?
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([status])
+  @@map("report")
 }

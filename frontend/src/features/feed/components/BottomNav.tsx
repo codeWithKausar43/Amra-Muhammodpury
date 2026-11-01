@@ -18,6 +18,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
 
   const isHome = pathname === '/' || pathname === '/feed';
   const isExplore = pathname === '/explore';
+  const isNotifications = pathname === '/notifications';
   const isProfile = pathname.startsWith('/profile') || pathname.startsWith('/dashboard');
 
   const handleCenterPlusClick = () => {
@@ -79,21 +80,24 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
           </div>
 
           {/* Notifications */}
-          <button
-            type="button"
-            onClick={() => alert('নোটিফিকেশন ফিচার শীঘ্রই চালু হচ্ছে!')}
-            className="relative flex flex-col items-center gap-1 py-1 px-2.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+          <Link
+            href="/notifications"
+            className={`relative flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
+              isNotifications
+                ? 'text-brand-emerald dark:text-brand-mint font-bold'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
           >
             <div className="relative">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 ring-1 ring-white dark:ring-brand-charcoal" />
             </div>
             <span className="text-[11px] leading-none">বিজ্ঞপ্তি</span>
-          </button>
+          </Link>
 
           {/* Profile or Login */}
           <Link
-            href={session?.user ? '/dashboard' : '/login'}
+            href={session?.user ? `/profile/${session.user.id}` : '/login'}
             className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
               isProfile
                 ? 'text-brand-emerald dark:text-brand-mint font-bold'

@@ -22,7 +22,10 @@ export function StoriesCarousel({
 
   return (
     <div className="w-full overflow-hidden select-none mb-3.5">
-      <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar scrollbar-none py-1 px-0.5">
+      <div
+        className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar scrollbar-none py-1 px-0.5 [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
         {/* Card 1: Create Story (Facebook Style) */}
         <button
           type="button"

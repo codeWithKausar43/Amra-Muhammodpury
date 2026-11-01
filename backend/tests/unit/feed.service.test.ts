@@ -28,6 +28,11 @@ describe('FeedService (Unit)', () => {
       story: {
         findMany: vi.fn(),
       },
+      notification: {
+        create: vi.fn(),
+        findMany: vi.fn(),
+        count: vi.fn(),
+      },
     };
     service = new FeedService(mockPrisma as unknown as PrismaClient);
   });
@@ -71,9 +76,11 @@ describe('FeedService (Unit)', () => {
 
   describe('toggleLike', () => {
     it('creates like when not already liked', async () => {
+      mockPrisma.post.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'user-2' });
       mockPrisma.postLike.findUnique.mockResolvedValue(null);
       mockPrisma.postLike.create.mockResolvedValue({ id: 'like-1' });
       mockPrisma.postLike.count.mockResolvedValue(156);
+      mockPrisma.notification.create.mockResolvedValue({ id: 'notif-1' });
 
       const result = await service.toggleLike('post-1', 'user-1');
       expect(result.liked).toBe(true);
@@ -82,6 +89,7 @@ describe('FeedService (Unit)', () => {
     });
 
     it('deletes like when already liked', async () => {
+      mockPrisma.post.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'user-2' });
       mockPrisma.postLike.findUnique.mockResolvedValue({ id: 'like-1' });
       mockPrisma.postLike.delete.mockResolvedValue({ id: 'like-1' });
       mockPrisma.postLike.count.mockResolvedValue(154);

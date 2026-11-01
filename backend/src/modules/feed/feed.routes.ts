@@ -11,6 +11,12 @@ export const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // Create post (auth required)
   fastify.post('/feed/posts', FeedController.createPost);
 
+  // Edit post (auth required, ownership checked)
+  fastify.patch('/feed/posts/:id', FeedController.editPost);
+
+  // Share post (auth required)
+  fastify.post('/feed/posts/:id/share', FeedController.sharePost);
+
   // Delete post (auth required, ownership checked)
   fastify.delete('/feed/posts/:id', FeedController.deletePost);
 
@@ -20,5 +26,5 @@ export const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // Comments
   fastify.get('/feed/posts/:id/comments', FeedController.getComments);
   fastify.post('/feed/posts/:id/comments', FeedController.createComment);
+  fastify.delete('/feed/comments/:commentId', FeedController.deleteComment);
 };
-
