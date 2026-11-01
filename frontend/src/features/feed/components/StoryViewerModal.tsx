@@ -64,6 +64,22 @@ export function StoryViewerModal({
 
   const currentStory = activeStories[currentIndex];
 
+  const handleNext = React.useCallback(() => {
+    if (currentIndex < activeStories.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+      setProgress(0);
+    } else {
+      onClose();
+    }
+  }, [currentIndex, activeStories.length, onClose]);
+
+  const handlePrev = React.useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+      setProgress(0);
+    }
+  }, [currentIndex]);
+
   // Increment view count when a story is viewed
   React.useEffect(() => {
     if (isOpen && currentStory) {
@@ -94,22 +110,6 @@ export function StoryViewerModal({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, handleNext, handlePrev, onClose]);
-
-  const handleNext = React.useCallback(() => {
-    if (currentIndex < activeStories.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      setProgress(0);
-    } else {
-      onClose();
-    }
-  }, [currentIndex, activeStories.length, onClose]);
-
-  const handlePrev = React.useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-      setProgress(0);
-    }
-  }, [currentIndex]);
 
   // Story Timer (5 seconds auto-advance)
   React.useEffect(() => {
