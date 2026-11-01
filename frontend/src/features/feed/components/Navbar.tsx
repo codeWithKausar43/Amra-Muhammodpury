@@ -163,62 +163,69 @@ export function Navbar({ onSearch }: NavbarProps) {
 
               {/* Notifications Dropdown Panel */}
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-72 sm:w-88 max-w-[calc(100vw-20px)] bg-white dark:bg-brand-charcoal-dark border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-3 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                      বিজ্ঞপ্তি ও নোটিফিকেশন
-                    </h3>
-                    {hasUnread && (
-                      <button
-                        type="button"
-                        onClick={markAllRead}
-                        className="text-[11px] font-semibold text-brand-emerald hover:underline cursor-pointer"
-                      >
-                        পড়া হয়েছে
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
-                    {notifications.map((n) => {
-                      const Icon = n.icon;
-                      return (
-                        <div
-                          key={n.id}
-                          className={`p-3 flex items-start gap-2.5 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 ${
-                            n.unread ? 'bg-emerald-50/40 dark:bg-brand-emerald/5' : ''
-                          }`}
+                <>
+                  {/* Backdrop for mobile */}
+                  <div
+                    className="sm:hidden fixed inset-0 bg-black/25 z-40 backdrop-blur-xs"
+                    onClick={() => setNotificationsOpen(false)}
+                  />
+                  <div className="fixed top-14 left-3 right-3 sm:absolute sm:top-full sm:left-auto sm:right-0 sm:w-88 sm:mt-2 bg-white dark:bg-brand-charcoal-dark border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-4 py-3 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        বিজ্ঞপ্তি ও নোটিফিকেশন
+                      </h3>
+                      {hasUnread && (
+                        <button
+                          type="button"
+                          onClick={markAllRead}
+                          className="text-[11px] font-semibold text-brand-emerald hover:underline cursor-pointer"
                         >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${n.color}`}>
-                            <Icon className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs text-slate-800 dark:text-slate-200 leading-snug">
-                              {n.title}
-                            </p>
-                            <span className="text-[10px] text-slate-400 mt-1 block">
-                              {n.time}
-                            </span>
-                          </div>
-                          {n.unread && (
-                            <span className="w-2 h-2 rounded-full bg-brand-emerald shrink-0 mt-1.5" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                          পড়া হয়েছে
+                        </button>
+                      )}
+                    </div>
 
-                  {/* Panel footer */}
-                  <div className="p-2 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-center">
-                    <Link
-                      href="/notifications"
-                      onClick={() => setNotificationsOpen(false)}
-                      className="text-xs font-semibold text-brand-emerald dark:text-brand-mint hover:underline inline-block py-1"
-                    >
-                      সকল নোটিফিকেশন দেখুন →
-                    </Link>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
+                      {notifications.map((n) => {
+                        const Icon = n.icon;
+                        return (
+                          <div
+                            key={n.id}
+                            className={`p-3 flex items-start gap-2.5 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 ${
+                              n.unread ? 'bg-emerald-50/40 dark:bg-brand-emerald/5' : ''
+                            }`}
+                          >
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${n.color}`}>
+                              <Icon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs text-slate-800 dark:text-slate-200 leading-snug">
+                                {n.title}
+                              </p>
+                              <span className="text-[10px] text-slate-400 mt-1 block">
+                                {n.time}
+                              </span>
+                            </div>
+                            {n.unread && (
+                              <span className="w-2 h-2 rounded-full bg-brand-emerald shrink-0 mt-1.5" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Panel footer */}
+                    <div className="p-2 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-center">
+                      <Link
+                        href="/notifications"
+                        onClick={() => setNotificationsOpen(false)}
+                        className="text-xs font-semibold text-brand-emerald dark:text-brand-mint hover:underline inline-block py-1"
+                      >
+                        সকল নোটিফিকেশন দেখুন →
+                      </Link>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
 
