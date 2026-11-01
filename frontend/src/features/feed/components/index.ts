@@ -11,4 +11,5 @@ export * from './RightSidebar';
 export * from './HeroBanner';
 export * from './CreatePostModal';
 export * from './AuthPromptModal';
+export * from './SettingsDrawer';
 
