@@ -46,6 +46,8 @@ export interface GroupData {
   creator: {
     id: string;
     name: string;
+    email?: string | null;
+    phone?: string | null;
     image: string | null;
   };
   members?: Array<{
@@ -102,6 +104,8 @@ export interface UserProfileData {
   user: {
     id: string;
     name: string;
+    email?: string;
+    phone?: string;
     image: string | null;
     coverImage: string | null;
     bio: string | null;
@@ -335,7 +339,7 @@ export const socialService = {
     }
   },
 
-  async updateProfile(data: { name?: string; bio?: string; image?: string; coverImage?: string }) {
+  async updateProfile(data: { name?: string; email?: string; phone?: string; bio?: string; image?: string; coverImage?: string }) {
     return apiClient<ApiResponse<FriendSummary>>('/profile', {
       method: 'PATCH',
       body: JSON.stringify(data),
