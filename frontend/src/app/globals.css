@@ -58,3 +58,18 @@ body {
 input, button, select, textarea {
   font-family: 'SolaimanLipi', inherit;
 }
+
+/* Hide scrollbar while preserving scroll functionality across all browsers */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+}
+

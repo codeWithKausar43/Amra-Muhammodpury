@@ -19,7 +19,7 @@ export function FilterTabs({ activeCategory, onSelectCategory }: FilterTabsProps
   ];
 
   return (
-    <div className="w-full flex items-center gap-2 overflow-x-auto scrollbar-none py-1 mb-4 select-none">
+    <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar scrollbar-none py-1 mb-4 select-none">
       {tabs.map((tab) => {
         const isActive = activeCategory === tab.id;
         return (

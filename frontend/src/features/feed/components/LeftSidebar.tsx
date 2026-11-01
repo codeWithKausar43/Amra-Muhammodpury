@@ -34,7 +34,7 @@ export function LeftSidebar({ activeBlock, onSelectBlock }: LeftSidebarProps) {
   const { data: session } = useSession();
 
   return (
-    <aside className="hidden lg:block w-64 xl:w-72 shrink-0 space-y-5 sticky top-20 h-[calc(100vh-5.5rem)] overflow-y-auto no-scrollbar pb-8">
+    <aside className="hidden lg:block w-64 xl:w-72 shrink-0 space-y-5 sticky top-20 h-[calc(100vh-5.5rem)] overflow-y-auto no-scrollbar scrollbar-none pb-8">
       {/* User Mini Card */}
       {session?.user ? (
         <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-4 border border-slate-200/80 dark:border-white/10 shadow-soft">

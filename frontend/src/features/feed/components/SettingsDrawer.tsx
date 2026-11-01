@@ -133,7 +133,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         </div>
 
         {/* Scrollable Content Body (Clean, Non-Boxy Design) */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6 no-scrollbar">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6 no-scrollbar scrollbar-none">
           {/* User Account / Sign In Section (Clean Minimalist) */}
           {session?.user ? (
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
