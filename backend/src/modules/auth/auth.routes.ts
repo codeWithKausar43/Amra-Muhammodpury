@@ -2,42 +2,33 @@ import { FastifyPluginAsync } from 'fastify';
 import { AuthController } from './auth.controller.js';
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.post(
-    '/auth/register',
+  fastify.get(
+    '/auth/check',
     {
       schema: {
-        description: 'Register a new user account',
+        description: 'Verify if email or Bangladesh mobile number is available',
         tags: ['Auth'],
-        body: {
+        querystring: {
           type: 'object',
-          required: ['name', 'email', 'password'],
           properties: {
-            name: { type: 'string', minLength: 2, maxLength: 50 },
             email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 8 },
+            phone: { type: 'string' },
           },
         },
       },
     },
-    AuthController.register,
+    AuthController.checkAvailability,
   );
 
-  fastify.post(
-    '/auth/login',
+  fastify.get(
+    '/auth/me',
     {
       schema: {
-        description: 'Authenticate user with email and password',
+        description: 'Get profile details of the currently authenticated Better Auth session',
         tags: ['Auth'],
-        body: {
-          type: 'object',
-          required: ['email', 'password'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 1 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
       },
     },
-    AuthController.login,
+    AuthController.getCurrentUser,
   );
 };

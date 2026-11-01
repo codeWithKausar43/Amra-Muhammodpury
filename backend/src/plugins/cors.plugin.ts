@@ -4,20 +4,21 @@ import { FastifyPluginAsync } from 'fastify';
 import { env } from '../config/env.js';
 
 const corsPlugin: FastifyPluginAsync = async (fastify) => {
+  const allowedOrigins = [env.FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'];
+
   await fastify.register(cors, {
     origin: (origin, cb) => {
-      // Allow requests with no origin (like mobile apps, curl, postman)
+      // Allow requests with no origin (like mobile apps, curl, server-to-server)
       if (!origin) return cb(null, true);
 
-      const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         return cb(null, true);
       }
-      return cb(new Error('Not allowed by CORS'), false);
+      return cb(new Error(`Origin ${origin} not allowed by CORS`), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cookie'],
   });
 };
 

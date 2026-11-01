@@ -41,3 +41,4 @@ COPY --chown=node:node --from=builder /app/backend/package.json ./package.json
 EXPOSE 5000
 
 CMD ["node", "dist/server.js"]
+

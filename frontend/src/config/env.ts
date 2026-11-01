@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().default('আমরা মুহাম্মদপুরী'),
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:5000/api/v1'),
+  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:5000'),
 });
 
 const parseClientEnv = () => {

@@ -1,12 +1,10 @@
-export interface UserProfileDto {
+export interface UserSessionDto {
   id: string;
-  email: string;
   name: string;
-  role: 'USER' | 'ADMIN' | 'MODERATOR';
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  phone?: string | null;
+  role: string;
   createdAt: Date;
-}
-
-export interface AuthTokenResponse {
-  user: UserProfileDto;
-  accessToken: string;
 }

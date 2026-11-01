@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from '../../src/modules/auth/auth.service.js';
-import { ConflictError, UnauthorizedError } from '../../src/errors/app-error.js';
+import { ConflictError, NotFoundError } from '../../src/errors/app-error.js';
 import type { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 describe('AuthService (Unit)', () => {
   let mockPrisma: any;
@@ -12,72 +11,62 @@ describe('AuthService (Unit)', () => {
     mockPrisma = {
       user: {
         findUnique: vi.fn(),
-        create: vi.fn(),
+        findFirst: vi.fn(),
       },
     };
     authService = new AuthService(mockPrisma as unknown as PrismaClient);
   });
 
-  describe('register', () => {
+  describe('checkAvailability', () => {
     it('throws ConflictError if user with same email exists', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ id: '1', email: 'test@example.com' });
 
-      await expect(
-        authService.register({
-          name: 'Test User',
-          email: 'test@example.com',
-          password: 'Password123',
-        }),
-      ).rejects.toThrow(ConflictError);
+      await expect(authService.checkAvailability('test@example.com')).rejects.toThrow(
+        ConflictError,
+      );
     });
 
-    it('creates and returns a sanitized user profile on valid registration', async () => {
+    it('throws ConflictError if user with same phone exists', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue({
-        id: 'user-uuid-1',
-        name: 'Test User',
-        email: 'test@example.com',
+      mockPrisma.user.findFirst.mockResolvedValue({ id: '1', phone: '01712345678' });
+
+      await expect(authService.checkAvailability(undefined, '01712345678')).rejects.toThrow(
+        ConflictError,
+      );
+    });
+
+    it('returns available: true if neither exists', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+
+      const result = await authService.checkAvailability('new@example.com', '01712345678');
+      expect(result.available).toBe(true);
+    });
+  });
+
+  describe('getCurrentUser', () => {
+    it('throws NotFoundError if user is not found', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(authService.getCurrentUser('nonexistent-id')).rejects.toThrow(NotFoundError);
+    });
+
+    it('returns sanitized user profile', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        name: 'Ahmed',
+        email: 'ahmed@example.com',
+        emailVerified: true,
+        image: null,
+        phone: '01700000000',
         role: 'USER',
         createdAt: new Date('2026-01-01'),
       });
 
-      const result = await authService.register({
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'Password123',
-      });
-
-      expect(result.id).toBe('user-uuid-1');
-      expect(result.email).toBe('test@example.com');
-      expect((result as any).passwordHash).toBeUndefined();
-    });
-  });
-
-  describe('login', () => {
-    it('throws UnauthorizedError if user is not found', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-
-      await expect(
-        authService.login({
-          email: 'notfound@example.com',
-          password: 'Password123',
-        }),
-      ).rejects.toThrow(UnauthorizedError);
-    });
-
-    it('throws UnauthorizedError if password does not match', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        email: 'test@example.com',
-        passwordHash: await bcrypt.hash('CorrectPass123', 10),
-      });
-
-      await expect(
-        authService.login({
-          email: 'test@example.com',
-          password: 'WrongPassword',
-        }),
-      ).rejects.toThrow(UnauthorizedError);
+      const user = await authService.getCurrentUser('user-1');
+      expect(user.id).toBe('user-1');
+      expect(user.name).toBe('Ahmed');
+      expect(user.email).toBe('ahmed@example.com');
     });
   });
 });

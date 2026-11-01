@@ -30,6 +30,7 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   }
 
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+    credentials: 'include', // Include Better Auth session cookies
     headers: {
       ...defaultHeaders,
       ...headers,
@@ -40,7 +41,8 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const errorMessage = data?.error?.message || response.statusText || 'Network request failed';
+    const errorMessage =
+      data?.error?.message || data?.message || response.statusText || 'Network request failed';
     const errorCode = data?.error?.code || 'HTTP_ERROR';
     throw new ApiError(errorMessage, response.status, errorCode, data?.error?.details);
   }

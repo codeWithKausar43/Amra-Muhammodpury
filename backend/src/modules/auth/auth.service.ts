@@ -1,67 +1,52 @@
-import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
-import { RegisterInput, LoginInput } from './auth.schema.js';
-import { ConflictError, UnauthorizedError } from '../../errors/app-error.js';
-import { AuthTokenResponse, UserProfileDto } from './auth.types.js';
+import { ConflictError, NotFoundError } from '../../errors/app-error.js';
+import { UserSessionDto } from './auth.types.js';
 
 export class AuthService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  public async register(input: RegisterInput): Promise<UserProfileDto> {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: input.email.toLowerCase() },
-    });
-
-    if (existing) {
-      throw new ConflictError('A user with this email address already exists');
+  public async checkAvailability(email?: string, phone?: string): Promise<{ available: boolean }> {
+    if (email) {
+      const existing = await this.prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+      if (existing) {
+        throw new ConflictError('এই ইমেইল ঠিকানাটি দিয়ে ইতিমধ্যে অ্যাকাউন্ট খোলা হয়েছে');
+      }
     }
 
-    const passwordHash = await bcrypt.hash(input.password, 10);
+    if (phone) {
+      // Normalize phone number (strip whitespace or convert +880 to 0)
+      const normalizedPhone = phone.replace(/\s+/g, '');
+      const existing = await this.prisma.user.findFirst({
+        where: { phone: normalizedPhone },
+      });
+      if (existing) {
+        throw new ConflictError('এই মোবাইল নম্বরটি ইতিমধ্যে ব্যবহার করা হয়েছে');
+      }
+    }
 
-    const user = await this.prisma.user.create({
-      data: {
-        name: input.name,
-        email: input.email.toLowerCase(),
-        passwordHash,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-
-    return user;
+    return { available: true };
   }
 
-  public async login(input: LoginInput): Promise<AuthTokenResponse> {
+  public async getCurrentUser(userId: string): Promise<UserSessionDto> {
     const user = await this.prisma.user.findUnique({
-      where: { email: input.email.toLowerCase() },
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new NotFoundError('User not found');
     }
 
-    const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
-    if (!isValidPassword) {
-      throw new UnauthorizedError('Invalid email or password');
-    }
-
-    const userDto: UserProfileDto = {
+    return {
       id: user.id,
       name: user.name,
       email: user.email,
+      emailVerified: user.emailVerified,
+      image: user.image,
+      phone: user.phone,
       role: user.role,
       createdAt: user.createdAt,
-    };
-
-    // Return authenticated profile with placeholder session token for initial foundation
-    return {
-      user: userDto,
-      accessToken: `session_${user.id}_${Date.now()}`,
     };
   }
 }

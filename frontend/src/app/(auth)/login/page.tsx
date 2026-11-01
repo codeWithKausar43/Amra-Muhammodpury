@@ -1,17 +1,18 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
+import type { Metadata } from 'next';
+import { AuthCard } from '@/features/auth/components/AuthCard';
+import { AuthHeader } from '@/features/auth/components/AuthHeader';
+import { LoginForm } from '@/features/auth/components/LoginForm';
+
+export const metadata: Metadata = {
+  title: 'লগইন',
+  description: 'আপনার কমিউনিটির সঙ্গে যুক্ত থাকতে লগইন করুন',
+};
 
 export default function LoginPage() {
   return (
-    <Card className="max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Sign In</CardTitle>
-        <CardDescription>Authentication portal placeholder</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-slate-500">
-          Ready for auth form integration with React Hook Form and Zod validation.
-        </p>
-      </CardContent>
-    </Card>
+    <AuthCard>
+      <AuthHeader title="আবার ফিরে আসুন" subtitle="আপনার কমিউনিটির সঙ্গে যুক্ত থাকতে লগইন করুন।" />
+      <LoginForm />
+    </AuthCard>
   );
 }

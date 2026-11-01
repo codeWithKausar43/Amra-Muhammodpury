@@ -37,6 +37,7 @@ amra-muhammadpuri/
 ## 2. Technology Stack
 
 ### Frontend (`frontend/`)
+
 - **Framework**: Next.js (App Router)
 - **UI Library**: React 19
 - **Styling**: Tailwind CSS
@@ -46,6 +47,7 @@ amra-muhammadpuri/
 - **Code Quality**: ESLint, TypeScript Strict Mode, Vitest & React Testing Library
 
 ### Backend (`backend/`)
+
 - **Runtime**: Node.js
 - **Web Framework**: Fastify (high-performance, low overhead)
 - **Database & ORM**: PostgreSQL with Prisma ORM
@@ -60,6 +62,7 @@ amra-muhammadpuri/
 ## 3. Quickstart & Setup
 
 ### Prerequisites
+
 - **Node.js**: `v20.x` or `v22.x` (LTS recommended)
 - **PNPM**: `v9.x` (`corepack enable` or `npm install -g pnpm`)
 - **Docker & Docker Compose** (for local PostgreSQL database)
@@ -67,11 +70,13 @@ amra-muhammadpuri/
 ### Installation
 
 1. **Clone the repository and install dependencies**:
+
    ```bash
    pnpm install
    ```
 
 2. **Configure Environment Variables**:
+
    ```bash
    # Copy backend environment template
    cp backend/.env.example backend/.env
@@ -81,12 +86,14 @@ amra-muhammadpuri/
    ```
 
 3. **Start Local PostgreSQL Database**:
+
    ```bash
    cd backend
    docker compose up -d
    ```
 
 4. **Initialize Database with Prisma**:
+
    ```bash
    cd backend
    pnpm prisma migrate dev
@@ -94,6 +101,7 @@ amra-muhammadpuri/
    ```
 
 5. **Start Both Applications (Concurrent Development Mode)**:
+
    ```bash
    # From root directory:
    pnpm dev
@@ -109,17 +117,17 @@ amra-muhammadpuri/
 
 All lifecycle scripts can be executed directly from the monorepo root:
 
-| Command | Description |
-| :--- | :--- |
-| `pnpm dev` | Starts both frontend and backend concurrently in development mode |
-| `pnpm dev:frontend` | Starts only the Next.js frontend application |
-| `pnpm dev:backend` | Starts only the Fastify backend server with hot-reload |
-| `pnpm build` | Builds both backend and frontend applications for production |
-| `pnpm lint` | Runs ESLint across all workspaces |
-| `pnpm typecheck` | Validates TypeScript types across all workspaces with zero emission |
-| `pnpm format` | Formats the entire codebase using Prettier |
-| `pnpm format:check` | Verifies code formatting conformance without modifying files |
-| `pnpm test` | Runs the test suites across all workspaces |
+| Command             | Description                                                         |
+| :------------------ | :------------------------------------------------------------------ |
+| `pnpm dev`          | Starts both frontend and backend concurrently in development mode   |
+| `pnpm dev:frontend` | Starts only the Next.js frontend application                        |
+| `pnpm dev:backend`  | Starts only the Fastify backend server with hot-reload              |
+| `pnpm build`        | Builds both backend and frontend applications for production        |
+| `pnpm lint`         | Runs ESLint across all workspaces                                   |
+| `pnpm typecheck`    | Validates TypeScript types across all workspaces with zero emission |
+| `pnpm format`       | Formats the entire codebase using Prettier                          |
+| `pnpm format:check` | Verifies code formatting conformance without modifying files        |
+| `pnpm test`         | Runs the test suites across all workspaces                          |
 
 ---
 
