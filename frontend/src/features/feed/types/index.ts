@@ -51,6 +51,7 @@ export interface Story {
   mediaUrl?: string | null;
   author: AuthorSummary;
   createdAt: string;
+  viewsCount?: number;
 }
 
 export interface CreatePostPayload {

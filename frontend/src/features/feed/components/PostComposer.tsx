@@ -59,7 +59,7 @@ export function PostComposer({
         >
           {user?.name
             ? `আপনার মনে কী চলছে, ${user.name.split(' ')[0]}?`
-            : "আপনার মনে কী চলছে? (What's on your mind?)"}
+            : 'আপনার মনে কী চলছে?'}
         </button>
 
         {/* Photo Action on the right */}

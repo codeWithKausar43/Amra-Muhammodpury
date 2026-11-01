@@ -12,4 +12,5 @@ export * from './HeroBanner';
 export * from './CreatePostModal';
 export * from './AuthPromptModal';
 export * from './SettingsDrawer';
+export * from './StoryViewerModal';
 

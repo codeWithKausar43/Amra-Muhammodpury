@@ -9,9 +9,17 @@ interface StoriesCarouselProps {
   stories: Story[];
   userImage?: string | null;
   onAddStory?: () => void;
+  onSelectStory?: (index: number) => void;
 }
 
-export function StoriesCarousel({ stories, userImage, onAddStory }: StoriesCarouselProps) {
+export function StoriesCarousel({
+  stories,
+  userImage,
+  onAddStory,
+  onSelectStory,
+}: StoriesCarouselProps) {
+  const communityStories = stories.filter((s) => s.id !== 'story-1');
+
   return (
     <div className="w-full overflow-hidden select-none mb-3.5">
       <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar scrollbar-none py-1 px-0.5">
@@ -52,57 +60,56 @@ export function StoriesCarousel({ stories, userImage, onAddStory }: StoriesCarou
         </button>
 
         {/* Community Stories (Facebook Vertical Cards) */}
-        {stories
-          .filter((s) => s.id !== 'story-1')
-          .map((story) => {
-            const backgroundPhoto =
-              story.mediaUrl ||
-              story.author.image ||
-              'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80';
+        {communityStories.map((story, index) => {
+          const backgroundPhoto =
+            story.mediaUrl ||
+            story.author.image ||
+            'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80';
 
-            return (
-              <div
-                key={story.id}
-                className="w-24 sm:w-28 md:w-32 h-40 sm:h-48 md:h-52 rounded-2xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-slate-900"
-              >
-                {/* Full Cover Background */}
-                <Image
-                  src={backgroundPhoto}
-                  alt={story.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+          return (
+            <div
+              key={story.id}
+              onClick={() => onSelectStory?.(index)}
+              className="w-24 sm:w-28 md:w-32 h-40 sm:h-48 md:h-52 rounded-2xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-slate-900"
+            >
+              {/* Full Cover Background */}
+              <Image
+                src={backgroundPhoto}
+                alt={story.title}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+              />
 
-                {/* Dark Gradient Overlay for Readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15" />
+              {/* Dark Gradient Overlay for Readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15" />
 
-                {/* Top-Left Author Avatar with Ring */}
-                <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-10 overflow-hidden shadow-sm">
-                  {story.author.image ? (
-                    <div className="relative w-full h-full rounded-full overflow-hidden">
-                      <Image
-                        src={story.author.image}
-                        alt={story.author.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-brand-emerald text-white text-[11px] font-bold">
-                      {story.author.name.charAt(0)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottom Author Name */}
-                <div className="absolute bottom-2 left-2 right-2 sm:bottom-2.5 sm:left-2.5 sm:right-2.5 z-10">
-                  <p className="text-[11px] sm:text-xs font-bold text-white leading-tight drop-shadow-md truncate">
-                    {story.author.name}
-                  </p>
-                </div>
+              {/* Top-Left Author Avatar with Ring */}
+              <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-10 overflow-hidden shadow-sm">
+                {story.author.image ? (
+                  <div className="relative w-full h-full rounded-full overflow-hidden">
+                    <Image
+                      src={story.author.image}
+                      alt={story.author.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-brand-emerald text-white text-[11px] font-bold">
+                    {story.author.name.charAt(0)}
+                  </div>
+                )}
               </div>
-            );
-          })}
+
+              {/* Bottom Author Name */}
+              <div className="absolute bottom-2 left-2 right-2 sm:bottom-2.5 sm:left-2.5 sm:right-2.5 z-10">
+                <p className="text-[11px] sm:text-xs font-bold text-white leading-tight drop-shadow-md truncate">
+                  {story.author.name}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

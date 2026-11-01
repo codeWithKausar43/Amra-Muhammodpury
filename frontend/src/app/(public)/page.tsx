@@ -12,6 +12,7 @@ import {
   RightSidebar,
   CreatePostModal,
   AuthPromptModal,
+  StoryViewerModal,
 } from '@/features/feed/components';
 import { FeedCategory } from '@/features/feed/components/FilterTabs';
 import { Post, Story } from '@/features/feed/types';
@@ -36,6 +37,7 @@ export default function HomePage() {
   const [posts, setPosts] = React.useState<Post[]>([]);
   const [stories, setStories] = React.useState<Story[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [activeStoryIndex, setActiveStoryIndex] = React.useState<number | null>(null);
 
   // Fetch feed posts and stories on mount and when category changes
   React.useEffect(() => {
@@ -128,6 +130,7 @@ export default function HomePage() {
               if (!session?.user) openAuthModal();
               else alert('স্টোরি আপলোড ফিচার শীঘ্রই উন্মুক্ত করা হবে!');
             }}
+            onSelectStory={(index) => setActiveStoryIndex(index)}
           />
 
           {/* 3. Category Filter Tabs */}
@@ -221,6 +224,14 @@ export default function HomePage() {
       <AuthPromptModal
         isOpen={isAuthModalOpen}
         onClose={closeAuthModal}
+      />
+
+      {/* Fullscreen Story Viewer Modal */}
+      <StoryViewerModal
+        isOpen={activeStoryIndex !== null}
+        onClose={() => setActiveStoryIndex(null)}
+        stories={stories}
+        initialStoryIndex={activeStoryIndex ?? 0}
       />
     </div>
   );

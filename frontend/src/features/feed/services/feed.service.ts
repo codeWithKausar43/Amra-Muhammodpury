@@ -158,6 +158,7 @@ export const fallbackMockStories: Story[] = [
     title: 'Towhidul Rakib',
     mediaUrl:
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80',
+    viewsCount: 184,
     author: {
       id: 's-2',
       name: 'তৌহিদুল রাকিব',
@@ -172,6 +173,7 @@ export const fallbackMockStories: Story[] = [
     title: 'Jaber Abdulla',
     mediaUrl:
       'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=80',
+    viewsCount: 247,
     author: {
       id: 's-3',
       name: 'জাবের আব্দুল্লাহ',
@@ -186,6 +188,7 @@ export const fallbackMockStories: Story[] = [
     title: 'Al-Amin Hossain',
     mediaUrl:
       'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80',
+    viewsCount: 92,
     author: {
       id: 's-4',
       name: 'আল-আমিন হোসেন',
@@ -200,6 +203,7 @@ export const fallbackMockStories: Story[] = [
     title: 'Tania Ahmed',
     mediaUrl:
       'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&auto=format&fit=crop&q=80',
+    viewsCount: 315,
     author: {
       id: 's-5',
       name: 'তানিয়া আহমেদ',
