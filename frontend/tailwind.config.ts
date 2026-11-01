@@ -26,6 +26,16 @@ const config: Config = {
           'charcoal-light': '#24342E',
         },
       },
+      fontFamily: {
+        sans: [
+          'SolaimanLipi',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
+      },
       boxShadow: {
         glass: '0 8px 32px 0 rgba(8, 122, 85, 0.08)',
         'glass-dark': '0 8px 32px 0 rgba(0, 0, 0, 0.4)',

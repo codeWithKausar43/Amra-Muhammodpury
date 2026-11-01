@@ -26,3 +26,4 @@ export const claimMediaSchema = z.object({
 export type UploadSignatureInput = z.infer<typeof uploadSignatureSchema>;
 export type UploadConfirmInput = z.infer<typeof uploadConfirmSchema>;
 export type ClaimMediaInput = z.infer<typeof claimMediaSchema>;
+

@@ -18,3 +18,4 @@ describe('PasswordStrength Component', () => {
     expect(screen.getByText('শক্তিশালী')).toBeInTheDocument();
   });
 });
+

@@ -1,12 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
+/* Local SolaimanLipi Font Definitions */
+@font-face {
+  font-family: 'SolaimanLipi';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/SolaimanLipi.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'SolaimanLipi';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/SolaimanLipi-Bold.woff2') format('woff2');
+}
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #f4f9f6;
-  --foreground: #17231f;
+  --background: #F4F9F6;
+  --foreground: #17231F;
   --card-bg: rgba(255, 255, 255, 0.92);
   --card-border: rgba(8, 122, 85, 0.14);
   --input-bg: rgba(255, 255, 255, 0.85);
@@ -14,8 +29,8 @@
 }
 
 .dark {
-  --background: #0b1411;
-  --foreground: #f4f9f6;
+  --background: #0B1411;
+  --foreground: #F4F9F6;
   --card-bg: rgba(23, 35, 31, 0.82);
   --card-border: rgba(255, 255, 255, 0.08);
   --input-bg: rgba(14, 23, 20, 0.7);
@@ -25,16 +40,7 @@
 body {
   color: var(--foreground);
   background-color: var(--background);
-  font-family:
-    'Noto Sans Bengali',
-    'Hind Siliguri',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Helvetica,
-    Arial,
-    sans-serif;
+  font-family: 'SolaimanLipi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -48,10 +54,7 @@ body {
   border: 1px solid var(--card-border);
 }
 
-/* iOS-style smooth input rendering */
-input,
-button,
-select,
-textarea {
-  font-family: inherit;
+/* Input rendering */
+input, button, select, textarea {
+  font-family: 'SolaimanLipi', inherit;
 }
