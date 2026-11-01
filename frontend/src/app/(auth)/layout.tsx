@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'প্রবেশ ও নিবন্ধন | আমরা মুহাম্মদপুরী',
-  description: 'আমরা মুহাম্মদপুরী প্ল্যাটফর্মের অথেন্টিকেশন পোর্টাল',
+  title: 'প্রবেশ ও নিবন্ধন | আমরা মোহাম্মদপুরী',
+  description: 'আমরা মোহাম্মদপুরী প্ল্যাটফর্মের অথেন্টিকেশন পোর্টাল',
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Footer copyright */}
       <footer className="relative z-10 mt-6 pb-2 text-center text-xs text-slate-400 dark:text-slate-500">
-        &copy; {new Date().getFullYear()} আমরা মুহাম্মদপুরী। সর্বস্বত্ব সংরক্ষিত।
+        &copy; {new Date().getFullYear()} আমরা মোহাম্মদপুরী। সর্বস্বত্ব সংরক্ষিত।
       </footer>
     </div>
   );

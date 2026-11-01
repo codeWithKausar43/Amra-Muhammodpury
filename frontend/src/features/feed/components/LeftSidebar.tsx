@@ -69,7 +69,7 @@ export function LeftSidebar({ activeBlock, onSelectBlock }: LeftSidebarProps) {
         <div className="bg-gradient-to-br from-brand-emerald/10 via-brand-mint/20 to-transparent dark:from-brand-emerald/20 dark:to-transparent rounded-2xl p-4 border border-brand-emerald/20 text-left space-y-2.5">
           <div className="flex items-center gap-2 text-brand-emerald font-bold text-sm">
             <ShieldCheck className="w-4 h-4" />
-            <span>মুহাম্মদপুরী পরিবারে যুক্ত হোন</span>
+            <span>মোহাম্মদপুরী পরিবারে যুক্ত হোন</span>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
             এলাকার উন্নয়ন, নিরাপত্তা ও সামাজিক উদ্যোগে আপনার কণ্ঠ তুলে ধরুন।

@@ -4,8 +4,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'আমরা মুহাম্মদপুরী',
-    template: '%s | আমরা মুহাম্মদপুরী',
+    default: 'আমরা মোহাম্মদপুরী',
+    template: '%s | আমরা মোহাম্মদপুরী',
   },
   description: 'Community platform connecting residents and initiatives.',
 };

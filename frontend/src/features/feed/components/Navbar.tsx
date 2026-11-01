@@ -96,7 +96,7 @@ export function Navbar({ onSearch }: NavbarProps) {
             </div>
             <div className="flex flex-col text-left min-w-0">
               <span className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate max-w-[125px] min-[360px]:max-w-[165px] sm:max-w-none">
-                আমরা মুহাম্মদপুরী
+                আমরা মোহাম্মদপুরী
               </span>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
                 Community Timeline
