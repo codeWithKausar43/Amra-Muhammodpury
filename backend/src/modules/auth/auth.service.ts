@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '../../config/database.js';
 import { ConflictError, NotFoundError } from '../../errors/app-error.js';
 import { UserSessionDto } from './auth.types.js';
 

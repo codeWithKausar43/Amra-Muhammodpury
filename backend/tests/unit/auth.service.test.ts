@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from '../../src/modules/auth/auth.service.js';
 import { ConflictError, NotFoundError } from '../../src/errors/app-error.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '../../src/config/database.js';
 
 describe('AuthService (Unit)', () => {
   let mockPrisma: any;

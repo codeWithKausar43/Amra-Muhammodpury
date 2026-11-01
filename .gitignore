@@ -33,6 +33,7 @@ yarn-error.log*
 # Prisma / DB
 backend/prisma/*.db
 backend/prisma/*.db-journal
+backend/prisma/generated/
 
 # Coverage & Tests
 coverage/

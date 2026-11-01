@@ -9,6 +9,7 @@ import { errorHandler } from './middleware/error-handler.middleware.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { cloudinaryRoutes } from './integrations/cloudinary/cloudinary.routes.js';
+import { feedRoutes } from './modules/feed/feed.routes.js';
 import { errorResponse } from './utils/api-response.js';
 import { HTTP_STATUS } from './constants/status-codes.js';
 
@@ -43,6 +44,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
       await v1.register(healthRoutes);
       await v1.register(authRoutes);
       await v1.register(cloudinaryRoutes);
+      await v1.register(feedRoutes);
     },
     { prefix: '/api/v1' },
   );

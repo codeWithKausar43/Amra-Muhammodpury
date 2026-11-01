@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '../../config/database.js';
 import { cloudinary } from './cloudinary.config.js';
 import { env } from '../../config/env.js';
 import { UploadSignatureInput, UploadConfirmInput } from './cloudinary.schema.js';
