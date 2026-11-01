@@ -13,12 +13,14 @@ interface PostComposerProps {
   onPostCreated: (newPost: Post) => void;
   onRequireAuth?: () => void;
   onOpenModal?: () => void;
+  onOpenPhotoModal?: () => void;
 }
 
 export function PostComposer({
   user,
   onRequireAuth,
   onOpenModal,
+  onOpenPhotoModal,
 }: PostComposerProps) {
   const handleClick = () => {
     if (!user) {
@@ -26,6 +28,18 @@ export function PostComposer({
       return;
     }
     onOpenModal?.();
+  };
+
+  const handlePhotoClick = () => {
+    if (!user) {
+      onRequireAuth?.();
+      return;
+    }
+    if (onOpenPhotoModal) {
+      onOpenPhotoModal();
+    } else {
+      onOpenModal?.();
+    }
   };
 
   return (
@@ -67,7 +81,7 @@ export function PostComposer({
         {/* Photo Action on the right */}
         <button
           type="button"
-          onClick={handleClick}
+          onClick={handlePhotoClick}
           className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 sm:px-2 sm:py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors shrink-0 cursor-pointer"
           title="ছবি বা ভিডিও যুক্ত করুন"
         >

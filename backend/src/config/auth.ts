@@ -9,8 +9,12 @@ export const auth = betterAuth({
     provider: 'postgresql',
   }),
   baseURL: env.BETTER_AUTH_URL,
+  basePath: '/api/auth',
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: [env.FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  logger: {
+    level: 'debug',
+  },
   user: {
     additionalFields: {
       phone: {
@@ -28,24 +32,38 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // Set to true if email verification is strictly blocking
+    requireEmailVerification: false,
     sendResetPassword: async ({ user, url }) => {
-      // Re-route URL to frontend reset password page with token
-      const parsedUrl = new URL(url);
-      const token = parsedUrl.searchParams.get('token') || '';
-      const frontendResetUrl = `${env.FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
-      await emailService.sendResetPasswordEmail(user.email, frontendResetUrl);
+      try {
+        const parsedUrl = new URL(url);
+        const token = parsedUrl.searchParams.get('token') || '';
+        const frontendResetUrl = `${env.FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
+        await emailService.sendResetPasswordEmail(user.email, frontendResetUrl);
+      } catch (err) {
+        console.error('[Auth] sendResetPassword error:', err);
+      }
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      // Re-route URL to frontend verify-email page with token
-      const parsedUrl = new URL(url);
-      const token = parsedUrl.searchParams.get('token') || '';
-      const frontendVerifyUrl = `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(token)}`;
-      await emailService.sendVerificationEmail(user.email, frontendVerifyUrl, user.name);
+      try {
+        // url may be an absolute URL from Better Auth — extract the token
+        let frontendVerifyUrl: string;
+        try {
+          const parsedUrl = new URL(url);
+          const token = parsedUrl.searchParams.get('token') || '';
+          frontendVerifyUrl = `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(token)}`;
+        } catch {
+          // url was not a valid absolute URL, use it as-is fallback
+          frontendVerifyUrl = `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(url)}`;
+        }
+        await emailService.sendVerificationEmail(user.email, frontendVerifyUrl, user.name);
+      } catch (err) {
+        // Log but do NOT re-throw — a missing email must not block registration
+        console.error('[Auth] sendVerificationEmail error:', err);
+      }
     },
   },
   socialProviders: {

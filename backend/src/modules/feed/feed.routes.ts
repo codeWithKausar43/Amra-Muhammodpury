@@ -7,6 +7,7 @@ export const feedRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Stories
   fastify.get('/feed/stories', FeedController.getStories);
+  fastify.post('/feed/stories', FeedController.createStory);
 
   // Create post (auth required)
   fastify.post('/feed/posts', FeedController.createPost);

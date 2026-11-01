@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-export type FeedCategory = 'ALL' | 'MY_BLOCK' | 'POPULAR' | 'EMERGENCY' | 'LIVE';
+export type FeedCategory = 'ALL' | 'MY_POSTS' | 'MY_BLOCK' | 'POPULAR' | 'EMERGENCY' | 'LIVE';
 
 interface FilterTabsProps {
   activeCategory: FeedCategory;
@@ -12,7 +12,7 @@ interface FilterTabsProps {
 export function FilterTabs({ activeCategory, onSelectCategory }: FilterTabsProps) {
   const tabs: { id: FeedCategory; label: string; dot?: boolean }[] = [
     { id: 'ALL', label: 'সকল পোস্ট' },
-    { id: 'MY_BLOCK', label: 'আমার ব্লক' },
+    { id: 'MY_POSTS', label: 'আমার পোস্ট' },
     { id: 'POPULAR', label: 'জনপ্রিয়' },
     { id: 'EMERGENCY', label: 'জরুরী বিজ্ঞপ্তি' },
     { id: 'LIVE', label: 'লাইভ', dot: true },
@@ -46,4 +46,3 @@ export function FilterTabs({ activeCategory, onSelectCategory }: FilterTabsProps
     </div>
   );
 }
-

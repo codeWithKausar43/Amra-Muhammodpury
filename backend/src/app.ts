@@ -27,6 +27,25 @@ export const buildApp = async (): Promise<FastifyInstance> => {
     trustProxy: true,
   });
 
+  // Allow empty body when Content-Type is 'application/json' (prevents FST_ERR_CTP_EMPTY_JSON_BODY)
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_request, body: string, done) => {
+      if (!body || body.trim() === '') {
+        return done(null, {});
+      }
+      try {
+        const json = JSON.parse(body);
+        done(null, json);
+      } catch (err) {
+        const parseErr = err as Error & { statusCode?: number };
+        parseErr.statusCode = 400;
+        done(parseErr, undefined);
+      }
+    },
+  );
+
   // Global error handler
   app.setErrorHandler(errorHandler);
 

@@ -6,8 +6,10 @@ import {
   updatePostSchema,
   sharePostSchema,
   createCommentSchema,
+  createStorySchema,
 } from './feed.schema.js';
 import { successResponse } from '../../utils/api-response.js';
+import type { ReactionType } from './feed.types.js';
 
 export class FeedController {
   public static async getFeed(request: FastifyRequest, reply: FastifyReply) {
@@ -74,11 +76,12 @@ export class FeedController {
   public static async toggleLike(request: FastifyRequest, reply: FastifyReply) {
     const session = await request.server.authenticate(request, reply);
     const { id } = request.params as { id: string };
+    const body = (request.body as { type?: ReactionType }) || {};
     const service = new FeedService(request.server.prisma);
 
-    const result = await service.toggleLike(id, session.user.id);
+    const result = await service.toggleLike(id, session.user.id, body.type);
     return reply.send(
-      successResponse(result, result.liked ? 'পছন্দ করা হয়েছে' : 'পছন্দ বাতিল করা হয়েছে'),
+      successResponse(result, result.liked ? 'প্রতিক্রিয়া সম্পন্ন হয়েছে' : 'প্রতিক্রিয়া মুছে ফেলা হয়েছে'),
     );
   }
 
@@ -113,5 +116,14 @@ export class FeedController {
     const service = new FeedService(request.server.prisma);
     const stories = await service.getStories();
     return reply.send(successResponse(stories, 'Stories retrieved'));
+  }
+
+  public static async createStory(request: FastifyRequest, reply: FastifyReply) {
+    const session = await request.server.authenticate(request, reply);
+    const input = createStorySchema.parse(request.body);
+    const service = new FeedService(request.server.prisma);
+
+    const story = await service.createStory(input, session.user.id);
+    return reply.status(201).send(successResponse(story, 'স্টোরি সফলভাবে যুক্ত হয়েছে'));
   }
 }

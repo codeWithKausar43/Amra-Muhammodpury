@@ -21,9 +21,13 @@ interface RequestOptions extends RequestInit {
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { token, headers, ...customConfig } = options;
 
-  const defaultHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const defaultHeaders: Record<string, string> = {};
+
+  // Only set Content-Type: application/json when there is an actual body
+  // and the caller didn't pass FormData (where browser must set boundary)
+  if (customConfig.body && !(customConfig.body instanceof FormData)) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     defaultHeaders.Authorization = `Bearer ${token}`;

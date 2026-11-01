@@ -1,11 +1,32 @@
-import type { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'প্রবেশ ও নিবন্ধন | আমরা মোহাম্মদপুরী',
-  description: 'আমরা মোহাম্মদপুরী প্ল্যাটফর্মের অথেন্টিকেশন পোর্টাল',
-};
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth/auth-client';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { data: session, isPending } = useSession();
+
+  React.useEffect(() => {
+    // If user is already logged in, send them to dashboard
+    if (!isPending && session) {
+      router.replace('/dashboard');
+    }
+  }, [session, isPending, router]);
+
+  // While checking session, show nothing (prevents flash of auth page)
+  if (isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-brand-charcoal-dark">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-emerald border-t-transparent" />
+      </div>
+    );
+  }
+
+  // If already authenticated, don't render auth pages (redirect is in progress)
+  if (session) return null;
+
   return (
     <div className="relative min-h-[100dvh] w-full flex flex-col justify-center items-center p-3 sm:p-6 overflow-x-hidden transition-colors duration-300">
       {/* Background ambient lighting effects */}

@@ -119,6 +119,7 @@ model Post {
   category      String      @default("GENERAL") // "GENERAL" | "MY_BLOCK" | "POPULAR" | "EMERGENCY"
   blockBadge    String?     // e.g. "ব্লক-সি", "সলিমুল্লাহ রোড"
   privacy       String      @default("PUBLIC") // "PUBLIC" | "FRIENDS" | "ONLY_ME"
+  bgColor       String?
   sharesCount   Int         @default(0)
   isEmergency   Boolean     @default(false)
   emergencyData Json?       // Helpline number, department, alert details
@@ -166,6 +167,7 @@ model PostLike {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("LIKE")
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])

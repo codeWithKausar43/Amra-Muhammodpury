@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
-import { toNodeHandler } from 'better-auth/node';
+import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../config/auth.js';
 import { UnauthorizedError } from '../errors/app-error.js';
 
@@ -22,16 +22,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
   // Authentication hook for protected endpoints
   fastify.decorate('authenticate', async (request: FastifyRequest, _reply: FastifyReply) => {
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(request.headers)) {
-      if (value) {
-        if (Array.isArray(value)) {
-          value.forEach((v) => headers.append(key, v));
-        } else {
-          headers.set(key, value);
-        }
-      }
-    }
+    const headers = fromNodeHeaders(request.headers);
 
     const session = await auth.api.getSession({
       headers,
@@ -45,18 +36,46 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     return session;
   });
 
-  const betterAuthHandler = toNodeHandler(auth);
+  /**
+   * Native Web API Handler for Better Auth.
+   *
+   * Fastify consumes the incoming request stream to parse JSON bodies.
+   * Instead of using `toNodeHandler(auth)` (which tries to re-read the already consumed stream),
+   * we construct a standard Web Request from Fastify's parsed body and pass it to `auth.handler(req)`.
+   * This also allows @fastify/cors to handle CORS and preflight requests naturally.
+   */
+  const handleAuthRoute = async (request: FastifyRequest, reply: FastifyReply) => {
+    const url = new URL(request.url, `http://${request.headers.host || 'localhost:5000'}`);
+    const headers = fromNodeHeaders(request.headers);
 
-  // Handle all Better Auth routes under /api/auth
-  fastify.all('/api/auth/*', async (request, reply) => {
-    reply.hijack();
-    betterAuthHandler(request.raw, reply.raw);
-  });
+    const hasBody = request.body && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
 
-  fastify.all('/api/auth', async (request, reply) => {
-    reply.hijack();
-    betterAuthHandler(request.raw, reply.raw);
-  });
+    const req = new Request(url.toString(), {
+      method: request.method,
+      headers,
+      body: hasBody ? JSON.stringify(request.body) : undefined,
+    });
+
+    const response = await auth.handler(req);
+
+    reply.status(response.status);
+
+    const setCookies = response.headers.getSetCookie?.() || [];
+    if (setCookies.length > 0) {
+      reply.header('set-cookie', setCookies);
+    }
+
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== 'set-cookie') {
+        reply.header(key, value);
+      }
+    });
+
+    return reply.send(response.body ? await response.text() : null);
+  };
+
+  fastify.all('/api/auth/*', handleAuthRoute);
+  fastify.all('/api/auth', handleAuthRoute);
 };
 
 export default fp(authPlugin, {

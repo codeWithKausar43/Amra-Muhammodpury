@@ -10,7 +10,7 @@ export * from './LeftSidebar';
 export * from './RightSidebar';
 export * from './HeroBanner';
 export * from './CreatePostModal';
+export * from './CreateStoryModal';
 export * from './AuthPromptModal';
 export * from './SettingsDrawer';
 export * from './StoryViewerModal';
-

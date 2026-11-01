@@ -5,7 +5,7 @@ import {
   UpdatePostInput,
   CreateCommentInput,
 } from './feed.schema.js';
-import { PostDto, CommentDto, StoryDto } from './feed.types.js';
+import { PostDto, CommentDto, StoryDto, ReactionType } from './feed.types.js';
 import { NotFoundError, UnauthorizedError } from '../../errors/app-error.js';
 
 export class FeedService {
@@ -26,8 +26,16 @@ export class FeedService {
 
     if (category === 'EMERGENCY') {
       where.isEmergency = true;
-    } else if (category === 'MY_BLOCK') {
-      where.blockBadge = { not: null };
+    } else if (category === 'MY_POSTS' || category === 'MY_BLOCK') {
+      if (currentUserId) {
+        where.authorId = currentUserId;
+      } else {
+        where.authorId = '00000000-0000-0000-0000-000000000000';
+      }
+    } else if (category === 'LIVE') {
+      where.createdAt = {
+        gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      };
     }
 
     if (search && search.trim()) {
@@ -76,12 +84,15 @@ export class FeedService {
               comments: { where: { isDeleted: false } },
             },
           },
-          likes: currentUserId
-            ? {
-                where: { userId: currentUserId },
-                select: { id: true },
-              }
-            : false,
+          likes: {
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              type: true,
+              userId: true,
+              user: { select: { name: true } },
+            },
+          },
           savedBy: currentUserId
             ? {
                 where: { userId: currentUserId },
@@ -107,9 +118,26 @@ export class FeedService {
       }),
     ]);
 
-    const formattedPosts: PostDto[] = posts.map((post) => ({
+    const userLikes = currentUserId
+      ? await this.prisma.postLike.findMany({
+          where: {
+            postId: { in: posts.map((p) => p.id) },
+            userId: currentUserId,
+          },
+          select: { postId: true, type: true },
+        })
+      : [];
+    const userLikeMap = new Map(userLikes.map((l) => [l.postId, l.type as ReactionType]));
+
+    const formattedPosts: PostDto[] = posts.map((post) => {
+      const userReaction = userLikeMap.get(post.id) || null;
+      const topReactions = Array.from(new Set(post.likes.map((l) => l.type as ReactionType)));
+      const recentLikers = post.likes.map((l) => l.user.name);
+
+      return {
       id: post.id,
       content: post.content,
+      bgColor: post.bgColor,
       location: post.location,
       category: post.category,
       blockBadge: post.blockBadge,
@@ -118,7 +146,10 @@ export class FeedService {
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
       sharesCount: post.sharesCount,
-      hasLiked: Boolean(post.likes && post.likes.length > 0),
+      hasLiked: Boolean(userReaction),
+        userReaction,
+        topReactions,
+        recentLikers,
       hasSaved: Boolean(post.savedBy && post.savedBy.length > 0),
       isEmergency: post.isEmergency,
       emergencyData: post.emergencyData,
@@ -167,7 +198,8 @@ export class FeedService {
         createdAt: c.createdAt,
         author: c.author,
       })),
-    }));
+    };
+  });
 
     return {
       posts: formattedPosts,
@@ -178,20 +210,22 @@ export class FeedService {
   }
 
   public async createPost(input: CreatePostInput, authorId: string): Promise<PostDto> {
+    const blockBadge = input.blockBadge || input.blockName || null;
     const post = await this.prisma.post.create({
       data: {
-        content: input.content,
+        content: input.content || '',
         location: input.location,
         category: input.category,
-        blockBadge: input.blockBadge,
+        blockBadge,
         privacy: input.privacy ?? 'PUBLIC',
+        bgColor: input.bgColor,
         groupId: input.groupId,
         sharedPostId: input.sharedPostId,
         isEmergency: input.isEmergency ?? false,
         emergencyData: (input.emergencyData as Prisma.InputJsonValue) ?? undefined,
         authorId,
         media: {
-          create: input.mediaIds.map((mediaId, index) => ({
+          create: (input.mediaIds || []).map((mediaId, index) => ({
             mediaId,
             order: index,
           })),
@@ -224,6 +258,7 @@ export class FeedService {
     return {
       id: post.id,
       content: post.content,
+      bgColor: post.bgColor,
       location: post.location,
       category: post.category,
       blockBadge: post.blockBadge,
@@ -233,6 +268,9 @@ export class FeedService {
       commentsCount: 0,
       sharesCount: 0,
       hasLiked: false,
+      userReaction: null,
+      topReactions: [],
+      recentLikers: [],
       isEmergency: post.isEmergency,
       emergencyData: post.emergencyData,
       createdAt: post.createdAt,
@@ -277,6 +315,7 @@ export class FeedService {
     return {
       id: updated.id,
       content: updated.content,
+      bgColor: updated.bgColor,
       location: updated.location,
       category: updated.category,
       blockBadge: updated.blockBadge,
@@ -339,6 +378,7 @@ export class FeedService {
     return {
       id: shared.id,
       content: shared.content,
+      bgColor: shared.bgColor,
       location: shared.location,
       category: shared.category,
       blockBadge: shared.blockBadge,
@@ -378,9 +418,19 @@ export class FeedService {
   public async toggleLike(
     postId: string,
     userId: string,
-  ): Promise<{ liked: boolean; likesCount: number }> {
+    reactionType: ReactionType = 'LIKE',
+  ): Promise<{
+    liked: boolean;
+    userReaction: ReactionType | null;
+    likesCount: number;
+    topReactions: ReactionType[];
+    recentLikers: string[];
+  }> {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundError('পোস্ট পাওয়া যায়নি');
+
+    const validTypes: ReactionType[] = ['LIKE', 'LOVE', 'CARE', 'HAHA', 'WOW', 'SAD', 'ANGRY'];
+    const selectedType = validTypes.includes(reactionType) ? reactionType : 'LIKE';
 
     const existing = await this.prisma.postLike.findUnique({
       where: {
@@ -391,17 +441,37 @@ export class FeedService {
       },
     });
 
+    let liked = false;
+    let userReaction: ReactionType | null = null;
+
     if (existing) {
-      await this.prisma.postLike.delete({
-        where: { id: existing.id },
-      });
+      if (existing.type === selectedType) {
+        // Same reaction clicked again -> remove it (unlike)
+        await this.prisma.postLike.delete({
+          where: { id: existing.id },
+        });
+        liked = false;
+        userReaction = null;
+      } else {
+        // Different reaction clicked -> update reaction type
+        await this.prisma.postLike.update({
+          where: { id: existing.id },
+          data: { type: selectedType },
+        });
+        liked = true;
+        userReaction = selectedType;
+      }
     } else {
+      // New reaction
       await this.prisma.postLike.create({
         data: {
           postId,
           userId,
+          type: selectedType,
         },
       });
+      liked = true;
+      userReaction = selectedType;
 
       // Notify post author if not self
       if (post.authorId !== userId) {
@@ -410,8 +480,8 @@ export class FeedService {
             recipientId: post.authorId,
             actorId: userId,
             type: 'POST_LIKE',
-            title: 'নতুন লাইক',
-            content: 'আপনার পোস্টে একটি নতুন লাইক পড়েছে।',
+            title: 'নতুন প্রতিক্রিয়া',
+            content: 'আপনার পোস্টে একটি নতুন রিঅ্যাকশন পড়েছে।',
             entityId: postId,
             entityType: 'post',
           },
@@ -419,13 +489,28 @@ export class FeedService {
       }
     }
 
-    const likesCount = await this.prisma.postLike.count({
-      where: { postId },
-    });
+    const [likesCount, allLikes] = await Promise.all([
+      this.prisma.postLike.count({ where: { postId } }),
+      this.prisma.postLike.findMany({
+        where: { postId },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          type: true,
+          user: { select: { name: true } },
+        },
+      }),
+    ]);
+
+    const topReactions = Array.from(new Set(allLikes.map((l) => l.type as ReactionType)));
+    const recentLikers = allLikes.map((l) => l.user.name);
 
     return {
-      liked: !existing,
+      liked,
+      userReaction,
       likesCount,
+      topReactions,
+      recentLikers,
     };
   }
 
@@ -556,5 +641,38 @@ export class FeedService {
       author: s.author,
       createdAt: s.createdAt,
     }));
+  }
+
+  public async createStory(
+    input: { title?: string; mediaUrl: string },
+    authorId: string,
+  ): Promise<StoryDto> {
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const story = await this.prisma.story.create({
+      data: {
+        title: input.title || 'মুহাম্মদপুরী স্টোরি',
+        mediaUrl: input.mediaUrl,
+        expiresAt,
+        authorId,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return {
+      id: story.id,
+      title: story.title,
+      mediaUrl: story.mediaUrl,
+      author: story.author,
+      createdAt: story.createdAt,
+    };
   }
 }

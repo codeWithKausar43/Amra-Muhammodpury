@@ -7,17 +7,17 @@ import {
   PostComposer,
   FilterTabs,
   PostCard,
-  EmergencyNoticeCard,
   LeftSidebar,
   RightSidebar,
   CreatePostModal,
+  CreateStoryModal,
   AuthPromptModal,
   StoryViewerModal,
 } from '@/features/feed/components';
 import { FeedCategory } from '@/features/feed/components/FilterTabs';
-import { Post } from '@/features/feed/types';
+import { Post, Story } from '@/features/feed/types';
 import { useFeedModal } from '@/features/feed/context/FeedModalContext';
-import { Loader2, Sprout } from 'lucide-react';
+import { Loader2, Sprout, UserCheck } from 'lucide-react';
 import {
   useFeedPostsQuery,
   useFeedStoriesQuery,
@@ -41,6 +41,8 @@ export default function HomePage() {
   const [category, setCategory] = React.useState<FeedCategory>('ALL');
   const [selectedBlock, setSelectedBlock] = React.useState<string | null>(null);
   const [activeStoryIndex, setActiveStoryIndex] = React.useState<number | null>(null);
+  const [isCreateStoryOpen, setIsCreateStoryOpen] = React.useState(false);
+  const [initialAddPhoto, setInitialAddPhoto] = React.useState(false);
 
   // 1. Intelligent Cached Queries
   const { data: posts = [], isLoading: isPostsLoading } = useFeedPostsQuery(category);
@@ -55,6 +57,7 @@ export default function HomePage() {
       { queryKey: ['feed', 'posts'] },
       (old) => (old ? [newPost, ...old] : [newPost]),
     );
+    queryClient.invalidateQueries({ queryKey: ['feed', 'posts'] });
   };
 
   // Handle post deletion callback (instantly updates TanStack cache)
@@ -63,6 +66,16 @@ export default function HomePage() {
       { queryKey: ['feed', 'posts'] },
       (old) => (old ? old.filter((p) => p.id !== postId) : []),
     );
+    queryClient.invalidateQueries({ queryKey: ['feed', 'posts'] });
+  };
+
+  // Handle story creation callback
+  const handleStoryCreated = (newStory: Story) => {
+    queryClient.setQueriesData<Story[]>(
+      { queryKey: ['feed', 'stories'] },
+      (old) => (old ? [newStory, ...old] : [newStory]),
+    );
+    queryClient.invalidateQueries({ queryKey: ['feed', 'stories'] });
   };
 
   // Filter posts by selected block and navbar search query
@@ -104,7 +117,14 @@ export default function HomePage() {
             user={session?.user}
             onPostCreated={handlePostCreated}
             onRequireAuth={openAuthModal}
-            onOpenModal={openCreatePost}
+            onOpenModal={() => {
+              setInitialAddPhoto(false);
+              openCreatePost();
+            }}
+            onOpenPhotoModal={() => {
+              setInitialAddPhoto(true);
+              openCreatePost();
+            }}
           />
 
           {/* 2. Stories Carousel (Vertical Facebook Story Cards) */}
@@ -113,7 +133,7 @@ export default function HomePage() {
             userImage={session?.user?.image}
             onAddStory={() => {
               if (!session?.user) openAuthModal();
-              else alert('স্টোরি আপলোড ফিচার শীঘ্রই উন্মুক্ত করা হবে!');
+              else setIsCreateStoryOpen(true);
             }}
             onSelectStory={(index) => setActiveStoryIndex(index)}
           />
@@ -149,31 +169,60 @@ export default function HomePage() {
               <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
               <span className="text-xs font-medium">মুহাম্মদপুরের পোস্টসমূহ লোড হচ্ছে...</span>
             </div>
-          ) : filteredPosts.length === 0 ? (
-            <div className="bg-white dark:bg-brand-charcoal-dark rounded-2xl p-8 border border-slate-200/80 dark:border-white/10 text-center space-y-2">
+          ) : (category === 'MY_POSTS' || category === 'MY_BLOCK') && !session?.user ? (
+            /* Unauthenticated user clicking "আমার পোস্ট" tab */
+            <div className="bg-white dark:bg-brand-charcoal-dark rounded-2xl p-8 border border-slate-200/80 dark:border-white/10 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-brand-emerald mx-auto flex items-center justify-center">
+                <UserCheck className="w-6 h-6" />
+              </div>
               <p className="text-sm font-bold text-slate-800 dark:text-white">
-                এই ক্যাটাগরিতে এখনো কোনো পোস্ট নেই
+                আপনার নিজস্ব পোস্টগুলো দেখতে লগইন করুন
               </p>
-              <p className="text-xs text-slate-500">
-                মুহাম্মদপুরের প্রথম আপডেটটি আপনি নিজেই শেয়ার করুন!
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                লগইন করলে এখানে শুধুমাত্র আপনার শেয়ার করা পোস্টসমূহ সংরক্ষিত ও দৃশ্যমান থাকবে।
               </p>
+              <button
+                type="button"
+                onClick={openAuthModal}
+                className="px-5 py-2 rounded-full bg-brand-emerald hover:bg-emerald-800 text-white text-xs font-semibold shadow-glow cursor-pointer transition-all"
+              >
+                লগইন / নিবন্ধন করুন
+              </button>
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            /* Empty state for current tab */
+            <div className="bg-white dark:bg-brand-charcoal-dark rounded-2xl p-8 border border-slate-200/80 dark:border-white/10 text-center space-y-2.5">
+              <p className="text-sm font-bold text-slate-800 dark:text-white">
+                {category === 'MY_POSTS' || category === 'MY_BLOCK'
+                  ? 'আপনি এখনো কোনো পোস্ট করেননি'
+                  : 'এই ক্যাটাগরিতে এখনো কোনো পোস্ট নেই'}
+              </p>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                {category === 'MY_POSTS' || category === 'MY_BLOCK'
+                  ? 'মুহাম্মদপুরের উন্নয়ন বা আপনার অভিজ্ঞতা নিয়ে প্রথম পোস্টটি শেয়ার করুন!'
+                  : 'মুহাম্মদপুরের প্রথম আপডেটটি আপনি নিজেই শেয়ার করুন!'}
+              </p>
+              {(category === 'MY_POSTS' || category === 'MY_BLOCK') && session?.user && (
+                <button
+                  type="button"
+                  onClick={() => openCreatePost()}
+                  className="mt-2 px-5 py-2 rounded-full bg-brand-emerald hover:bg-emerald-800 text-white text-xs font-semibold shadow-glow cursor-pointer transition-all inline-block"
+                >
+                  নতুন পোস্ট তৈরি করুন
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3.5 sm:space-y-4">
-              {filteredPosts.map((post, index) => (
-                <React.Fragment key={post.id}>
-                  <PostCard
-                    post={post}
-                    currentUserId={session?.user?.id}
-                    onPostDeleted={handlePostDeleted}
-                    onRequireAuth={openAuthModal}
-                  />
-
-                  {/* Insert Emergency Notice Card after the 2nd post or when viewing EMERGENCY tab */}
-                  {(index === 1 || category === 'EMERGENCY') && (
-                    <EmergencyNoticeCard />
-                  )}
-                </React.Fragment>
+              {filteredPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  currentUserId={session?.user?.id}
+                  currentUserName={session?.user?.name}
+                  onPostDeleted={handlePostDeleted}
+                  onRequireAuth={openAuthModal}
+                />
               ))}
 
               {/* End of Feed Landmark */}
@@ -204,6 +253,14 @@ export default function HomePage() {
         onClose={closeCreatePost}
         user={session?.user}
         onPostCreated={handlePostCreated}
+        initialAddPhoto={initialAddPhoto}
+      />
+
+      <CreateStoryModal
+        isOpen={isCreateStoryOpen}
+        onClose={() => setIsCreateStoryOpen(false)}
+        user={session?.user}
+        onStoryCreated={handleStoryCreated}
       />
 
       <AuthPromptModal

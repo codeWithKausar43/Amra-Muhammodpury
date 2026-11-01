@@ -1,3 +1,5 @@
+export type ReactionType = 'LIKE' | 'LOVE' | 'CARE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY';
+
 export interface AuthorSummary {
   id: string;
   name: string;
@@ -31,6 +33,7 @@ export interface PostDto {
   category: string;
   blockBadge?: string | null;
   privacy?: string;
+  bgColor?: string | null;
   groupId?: string | null;
   group?: { id: string; name: string } | null;
   sharedPostId?: string | null;
@@ -39,6 +42,9 @@ export interface PostDto {
   commentsCount: number;
   sharesCount: number;
   hasLiked: boolean;
+  userReaction?: ReactionType | null;
+  topReactions?: ReactionType[];
+  recentLikers?: string[];
   hasSaved?: boolean;
   isEmergency: boolean;
   emergencyData?: unknown;
