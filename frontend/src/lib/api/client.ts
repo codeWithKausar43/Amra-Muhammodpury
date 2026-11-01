@@ -29,7 +29,12 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
     defaultHeaders.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+  let normalizedPath = endpoint;
+  if (!normalizedPath.startsWith('/api/')) {
+    normalizedPath = `/api/v1${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`;
+  }
+
+  const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${normalizedPath}`, {
     credentials: 'include', // Include Better Auth session cookies
     headers: {
       ...defaultHeaders,
