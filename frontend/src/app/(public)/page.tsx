@@ -28,6 +28,7 @@ export default function HomePage() {
     isAuthModalOpen,
     openAuthModal,
     closeAuthModal,
+    searchQuery,
   } = useFeedModal();
 
   const [category, setCategory] = React.useState<FeedCategory>('ALL');
@@ -77,16 +78,28 @@ export default function HomePage() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
 
-  // Filter posts by selected block if active
+  // Filter posts by selected block and navbar search query
   const filteredPosts = React.useMemo(() => {
-    if (!selectedBlock) return posts;
-    return posts.filter(
-      (p) =>
-        p.blockBadge?.includes(selectedBlock) ||
-        p.location?.includes(selectedBlock) ||
-        p.content.includes(selectedBlock),
-    );
-  }, [posts, selectedBlock]);
+    let result = posts;
+    if (selectedBlock) {
+      result = result.filter(
+        (p) =>
+          p.blockBadge?.includes(selectedBlock) ||
+          p.location?.includes(selectedBlock) ||
+          p.content.includes(selectedBlock),
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (p) =>
+          p.content.toLowerCase().includes(q) ||
+          p.author.name.toLowerCase().includes(q) ||
+          (p.location && p.location.toLowerCase().includes(q)),
+      );
+    }
+    return result;
+  }, [posts, selectedBlock, searchQuery]);
 
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-3 sm:py-5">

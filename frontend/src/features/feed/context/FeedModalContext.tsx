@@ -9,6 +9,8 @@ interface FeedModalContextType {
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
 }
 
 const FeedModalContext = React.createContext<FeedModalContextType | undefined>(undefined);
@@ -16,6 +18,7 @@ const FeedModalContext = React.createContext<FeedModalContextType | undefined>(u
 export function FeedModalProvider({ children }: { children: React.ReactNode }) {
   const [isCreatePostOpen, setIsCreatePostOpen] = React.useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   return (
     <FeedModalContext.Provider
@@ -26,6 +29,8 @@ export function FeedModalProvider({ children }: { children: React.ReactNode }) {
         isAuthModalOpen,
         openAuthModal: () => setIsAuthModalOpen(true),
         closeAuthModal: () => setIsAuthModalOpen(false),
+        searchQuery,
+        setSearchQuery,
       }}
     >
       {children}
@@ -43,8 +48,9 @@ export function useFeedModal() {
       isAuthModalOpen: false,
       openAuthModal: () => {},
       closeAuthModal: () => {},
+      searchQuery: '',
+      setSearchQuery: () => {},
     };
   }
   return context;
 }
-

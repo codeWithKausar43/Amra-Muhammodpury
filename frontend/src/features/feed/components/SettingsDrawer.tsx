@@ -22,6 +22,9 @@ import {
   UserPlus,
   ChevronRight,
   Sparkles,
+  Check,
+  Shield,
+  Eye,
 } from 'lucide-react';
 
 interface SettingsDrawerProps {
@@ -33,6 +36,19 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+
+  // Sub-modal states for interactive settings
+  const [notificationModalOpen, setNotificationModalOpen] = React.useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = React.useState(false);
+
+  // Functional notification toggles
+  const [notifyEmergency, setNotifyEmergency] = React.useState(true);
+  const [notifyComments, setNotifyComments] = React.useState(true);
+  const [notifyForum, setNotifyForum] = React.useState(false);
+
+  // Functional privacy toggles
+  const [publicProfile, setPublicProfile] = React.useState(true);
+  const [showActivity, setShowActivity] = React.useState(true);
 
   React.useEffect(() => {
     setMounted(true);
@@ -47,7 +63,11 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
 
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (notificationModalOpen) setNotificationModalOpen(false);
+        else if (privacyModalOpen) setPrivacyModalOpen(false);
+        else onClose();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
 
@@ -55,7 +75,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, notificationModalOpen, privacyModalOpen]);
 
   const isDark = mounted && theme === 'dark';
 
@@ -230,13 +250,10 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
               </Link>
 
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  alert('এলাকা ভিত্তিক ফোরাম শীঘ্রই উন্মুক্ত করা হবে!');
-                }}
-                className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
+              <Link
+                href="/explore"
+                onClick={onClose}
+                className="flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center shrink-0">
@@ -245,15 +262,12 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                   <span className="text-sm font-medium">এলাকা ভিত্তিক ফোরাম</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-              </button>
+              </Link>
 
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  alert('সংরক্ষিত পোস্ট শীঘ্রই যুক্ত হবে!');
-                }}
-                className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
+              <Link
+                href="/dashboard"
+                onClick={onClose}
+                className="flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center shrink-0">
@@ -262,7 +276,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                   <span className="text-sm font-medium">সংরক্ষিত পোস্ট (Saved)</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -272,7 +286,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
               সেটিংস ও প্রেফারেন্স
             </h3>
             <div className="space-y-0.5">
-              {/* Theme Switcher Row */}
+              {/* Theme Switcher Row (Instant Live Switching) */}
               <button
                 type="button"
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
@@ -311,13 +325,10 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
               </Link>
 
-              {/* Notification Preferences */}
+              {/* Notification Preferences (Functional Submodal) */}
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  alert('বিজ্ঞপ্তি সেটিংস শীঘ্রই আসছে!');
-                }}
+                onClick={() => setNotificationModalOpen(true)}
                 className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
               >
                 <div className="flex items-center gap-3">
@@ -329,13 +340,10 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
-              {/* Privacy and Security */}
+              {/* Privacy and Security (Functional Submodal) */}
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  alert('গোপনীয়তা ও নিরাপত্তা সেটিংস উন্মুক্ত করা হচ্ছে');
-                }}
+                onClick={() => setPrivacyModalOpen(true)}
                 className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-white/5 transition-colors group text-left cursor-pointer"
               >
                 <div className="flex items-center gap-3">
@@ -356,6 +364,211 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
           <span>© ২০২৬</span>
         </div>
       </div>
+
+      {/* Interactive Notification Preferences Modal */}
+      {notificationModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-brand-charcoal-dark w-full max-w-sm rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-brand-emerald" />
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  বিজ্ঞপ্তি প্রেফারেন্স
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotificationModalOpen(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              {/* Toggle 1: Emergency Notices */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/5">
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    জরুরী ও নাগরিক নোটিশ
+                  </p>
+                  <p className="text-[11px] text-slate-400">বিদ্যুৎ, পানি ও রোড সংক্রান্ত সতর্কতা</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotifyEmergency(!notifyEmergency)}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    notifyEmergency ? 'bg-brand-emerald' : 'bg-slate-300 dark:bg-white/20'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      notifyEmergency ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggle 2: Comments & Likes */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/5">
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    মন্তব্য ও লাইক অ্যালার্ট
+                  </p>
+                  <p className="text-[11px] text-slate-400">আপনার পোস্টে প্রতিক্রিয়া পাওয়া গেলে</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotifyComments(!notifyComments)}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    notifyComments ? 'bg-brand-emerald' : 'bg-slate-300 dark:bg-white/20'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      notifyComments ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggle 3: Area Forum */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/5">
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    এলাকা ফোরাম আপডেট
+                  </p>
+                  <p className="text-[11px] text-slate-400">আপনার ব্লকের নতুন পোস্টসমূহ</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotifyForum(!notifyForum)}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    notifyForum ? 'bg-brand-emerald' : 'bg-slate-300 dark:bg-white/20'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      notifyForum ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setNotificationModalOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-brand-emerald text-white text-xs font-bold hover:bg-emerald-800 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>সংরক্ষণ সম্পন্ন</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Privacy & Security Modal */}
+      {privacyModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-brand-charcoal-dark w-full max-w-sm rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-brand-emerald" />
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  গোপনীয়তা ও নিরাপত্তা
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPrivacyModalOpen(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              {/* Privacy 1 */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/5">
+                <div className="flex items-center gap-2.5">
+                  <Eye className="w-4 h-4 text-brand-emerald shrink-0" />
+                  <div>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      প্রোফাইল দৃশ্যমানতা
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {publicProfile ? 'সার্বজনীন (সবার জন্য উন্মুক্ত)' : 'শুধুমাত্র যাচাইকৃত বাসিন্দা'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPublicProfile(!publicProfile)}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    publicProfile ? 'bg-brand-emerald' : 'bg-slate-300 dark:bg-white/20'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      publicProfile ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Privacy 2 */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/5">
+                <div className="flex items-center gap-2.5">
+                  <Lock className="w-4 h-4 text-brand-emerald shrink-0" />
+                  <div>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      অনলাইন স্ট্যাটাস ও সক্রিয়তা
+                    </p>
+                    <p className="text-[11px] text-slate-400">টাইমলাইনে সবুজ অনলাইন ডট প্রদর্শন</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowActivity(!showActivity)}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    showActivity ? 'bg-brand-emerald' : 'bg-slate-300 dark:bg-white/20'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      showActivity ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Direct Password Change Link if user */}
+              {session?.user && (
+                <Link
+                  href="/forgot-password"
+                  onClick={() => {
+                    setPrivacyModalOpen(false);
+                    onClose();
+                  }}
+                  className="block text-center py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 text-xs font-semibold"
+                >
+                  পাসওয়ার্ড পরিবর্তন করুন
+                </Link>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPrivacyModalOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-brand-emerald text-white text-xs font-bold hover:bg-emerald-800 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>সংরক্ষণ সম্পন্ন</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
