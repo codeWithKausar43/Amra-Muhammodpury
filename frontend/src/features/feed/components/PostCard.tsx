@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import {
-  Heart,
+  ThumbsUp,
   MessageSquare,
   Share2,
   MapPin,
@@ -39,6 +39,7 @@ export function PostCard({
   const [newComment, setNewComment] = React.useState('');
   const [submittingComment, setSubmittingComment] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [expandedContent, setExpandedContent] = React.useState(false);
 
   // Format relative timestamp
   const getRelativeTime = (isoString: string) => {
@@ -48,9 +49,9 @@ export function PostCard({
     const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
 
     if (diffMins < 1) return 'এইমাত্র';
-    if (diffMins < 60) return `${diffMins} মিনিট আগে`;
-    if (diffHours < 24) return `${diffHours} ঘণ্টা আগে`;
-    return `${diffDays} দিন আগে`;
+    if (diffMins < 60) return `${diffMins} মি.`;
+    if (diffHours < 24) return `${diffHours} ঘণ্টা`;
+    return `${diffDays} দিন`;
   };
 
   const handleToggleLike = async () => {
@@ -62,7 +63,6 @@ export function PostCard({
     if (likeLoading) return;
     setLikeLoading(true);
 
-    // Optimistic UI update
     const previousLiked = hasLiked;
     const previousCount = likesCount;
     setHasLiked(!previousLiked);
@@ -73,7 +73,6 @@ export function PostCard({
       setHasLiked(res.liked);
       setLikesCount(res.likesCount);
     } catch {
-      // Revert if API fails
       setHasLiked(previousLiked);
       setLikesCount(previousCount);
     } finally {
@@ -89,7 +88,7 @@ export function PostCard({
         setComments(fullComments);
         setCommentsLoaded(true);
       } catch {
-        // keep recent comments
+        // fallback to recent
       }
     }
   };
@@ -125,7 +124,7 @@ export function PostCard({
           url: window.location.href,
         });
       } catch {
-        // cancelled
+        // user cancelled
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
@@ -145,74 +144,79 @@ export function PostCard({
   };
 
   const isAuthor = currentUserId === post.author.id;
+  const isLongContent = post.content.length > 200;
+  const displayContent =
+    isLongContent && !expandedContent
+      ? post.content.slice(0, 180) + '...'
+      : post.content;
 
   return (
-    <article className="w-full bg-white/95 dark:bg-brand-charcoal/85 border border-slate-200/80 dark:border-white/10 rounded-2.5xl sm:rounded-3xl p-3.5 sm:p-5 mb-4 shadow-xs backdrop-blur-md transition-all">
-      {/* Header Row */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-brand-emerald/10 shrink-0 ring-2 ring-brand-emerald/20">
-            {post.author.image ? (
-              <Image
-                src={post.author.image}
-                alt={post.author.name}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center font-bold text-sm text-brand-emerald">
-                {post.author.name.charAt(0)}
-              </div>
-            )}
+    <article className="w-full bg-white dark:bg-brand-charcoal-dark border border-slate-200/80 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-soft transition-all">
+      {/* Header: Author, Verification, Time & Menu */}
+      <div className="flex items-start justify-between gap-3 mb-2.5">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Avatar with Green Online Dot */}
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 relative">
+              {post.author.image ? (
+                <Image
+                  src={post.author.image}
+                  alt={post.author.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-bold text-brand-emerald bg-slate-100 dark:bg-white/10">
+                  {post.author.name.charAt(0)}
+                </div>
+              )}
+            </div>
+            {/* Green Online Dot */}
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-brand-charcoal-dark" />
           </div>
 
-          <div className="flex flex-col text-left">
+          <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight hover:underline cursor-pointer">
                 {post.author.name}
-              </span>
-              <CheckCircle2 className="w-3.5 h-3.5 text-brand-emerald fill-brand-emerald/20 shrink-0" />
+              </h3>
+              {/* Blue Verified Badge */}
+              <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500 dark:text-blue-400 dark:fill-blue-400 text-white shrink-0" />
               {post.blockBadge && (
-                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-brand-emerald dark:text-brand-mint border border-brand-emerald/20">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-mint/40 dark:bg-brand-emerald/20 text-brand-emerald dark:text-brand-mint border border-brand-emerald/20">
                   {post.blockBadge}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
               <span>{getRelativeTime(post.createdAt)}</span>
-              {post.location && (
-                <>
-                  <span>•</span>
-                  <span>{post.location}</span>
-                </>
-              )}
               <span>•</span>
-              <Globe className="w-3 h-3 text-slate-400" />
-              <span>সর্বজনীন</span>
-            </div>
+              <Globe className="w-3 h-3 text-slate-400 inline" />
+            </p>
           </div>
         </div>
 
-        {/* 3-dots Menu */}
+        {/* Top-Right Menu */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+            aria-label="Options"
           >
-            <MoreHorizontal className="w-4 h-4" />
+            <MoreHorizontal className="w-5 h-5" />
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 mt-1 w-40 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200 dark:border-white/10 shadow-lg py-1.5 z-30 animate-fadeIn text-xs">
+            <div className="absolute right-0 top-8 z-30 w-40 bg-white dark:bg-brand-charcoal border border-slate-200 dark:border-white/10 rounded-xl shadow-lg p-1 animate-in fade-in zoom-in-95 duration-100">
               <button
                 type="button"
                 onClick={() => {
-                  handleShare();
                   setMenuOpen(false);
+                  handleShare();
                 }}
-                className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg text-left"
               >
                 <Share2 className="w-3.5 h-3.5" />
                 <span>লিংক কপি করুন</span>
@@ -221,10 +225,10 @@ export function PostCard({
                 <button
                   type="button"
                   onClick={() => {
-                    handleDelete();
                     setMenuOpen(false);
+                    handleDelete();
                   }}
-                  className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-left"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>পোস্ট মুছুন</span>
@@ -235,9 +239,9 @@ export function PostCard({
         </div>
       </div>
 
-      {/* Content Text with Bengali hashtag highlights */}
-      <div className="text-slate-800 dark:text-slate-200 text-xs sm:text-sm leading-relaxed mb-3 whitespace-pre-wrap">
-        {post.content.split(' ').map((word, i) => {
+      {/* Post Text Body */}
+      <div className="text-slate-900 dark:text-slate-100 text-xs sm:text-sm leading-relaxed mb-3 whitespace-pre-wrap">
+        {displayContent.split(' ').map((word, i) => {
           if (word.startsWith('#')) {
             return (
               <span
@@ -250,6 +254,15 @@ export function PostCard({
           }
           return word + ' ';
         })}
+        {isLongContent && (
+          <button
+            type="button"
+            onClick={() => setExpandedContent(!expandedContent)}
+            className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-semibold text-xs ml-1 focus:outline-none"
+          >
+            {expandedContent ? ' সংক্ষেপ করুন' : '... See more'}
+          </button>
+        )}
       </div>
 
       {/* Attached Media Photo/Video */}
@@ -261,7 +274,6 @@ export function PostCard({
               alt="Post attachment"
               fill
               className="object-cover"
-              unoptimized
             />
           </div>
           {post.location && (
@@ -273,41 +285,59 @@ export function PostCard({
         </div>
       )}
 
-      {/* Engagement Counter Row */}
-      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs py-2 px-1 border-b border-slate-100 dark:border-white/5 select-none">
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white text-[9px]">
-            ❤
+      {/* Engagement Summary Row (Facebook Reaction Bubbles + Counts) */}
+      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs py-2 px-1 select-none">
+        {/* Overlapping Reaction Icons */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center -space-x-1">
+            <span className="w-4 h-4 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 flex items-center justify-center text-white text-[9px] shadow-xs ring-1 ring-white dark:ring-brand-charcoal-dark z-30">
+              👍
+            </span>
+            <span className="w-4 h-4 rounded-full bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center text-white text-[9px] shadow-xs ring-1 ring-white dark:ring-brand-charcoal-dark z-20">
+              ❤️
+            </span>
+            <span className="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-white text-[9px] shadow-xs ring-1 ring-white dark:ring-brand-charcoal-dark z-10">
+              🥰
+            </span>
           </div>
-          <span>{likesCount} পছন্দ</span>
+          <span className="text-xs text-slate-600 dark:text-slate-300">
+            {hasLiked
+              ? `আপনি এবং আরও ${likesCount > 1 ? likesCount - 1 : 0} জন`
+              : `মিসকাতুর রহমান এবং আরও ${likesCount > 1 ? likesCount - 1 : likesCount} জন`}
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <span>{post.commentsCount} মন্তব্য</span>
+
+        {/* Comment and Share Counts */}
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <span>{comments.length || post.commentsCount} মন্তব্য</span>
+          <span>•</span>
           <span>{post.sharesCount} শেয়ার</span>
         </div>
       </div>
 
-      {/* Action Buttons: Like, Comment, Share */}
-      <div className="grid grid-cols-3 gap-1 pt-1.5 text-xs font-semibold select-none">
+      {/* Action Buttons Row: Like, Comment, Share (Facebook Style) */}
+      <div className="grid grid-cols-3 gap-1 py-1 border-y border-slate-200/80 dark:border-white/10 text-xs font-semibold select-none">
         {/* Like */}
         <button
           type="button"
           onClick={handleToggleLike}
-          className={`flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all ${
+          className={`flex items-center justify-center gap-1.5 py-2 rounded-xl transition-colors cursor-pointer ${
             hasLiked
-              ? 'text-red-500 font-bold bg-red-50/50 dark:bg-red-950/20'
+              ? 'text-blue-600 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-950/20'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
           }`}
         >
-          <Heart className={`w-4 h-4 ${hasLiked ? 'fill-red-500 text-red-500' : ''}`} />
-          <span>পছন্দ</span>
+          <ThumbsUp
+            className={`w-4 h-4 ${hasLiked ? 'fill-blue-600 text-blue-600 dark:fill-blue-400 dark:text-blue-400' : ''}`}
+          />
+          <span>লাইক</span>
         </button>
 
         {/* Comment */}
         <button
           type="button"
           onClick={handleOpenComments}
-          className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
         >
           <MessageSquare className="w-4 h-4" />
           <span>মন্তব্য</span>
@@ -317,7 +347,7 @@ export function PostCard({
         <button
           type="button"
           onClick={handleShare}
-          className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
         >
           <Share2 className="w-4 h-4" />
           <span>শেয়ার</span>
@@ -326,7 +356,7 @@ export function PostCard({
 
       {/* Comments Drawer / List */}
       {commentsOpen && (
-        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/5 space-y-3 animate-fadeIn">
+        <div className="mt-3 pt-2 space-y-3 animate-in fade-in duration-150">
           {/* New Comment Input */}
           <form onSubmit={handleAddComment} className="flex items-center gap-2">
             <input
@@ -334,12 +364,12 @@ export function PostCard({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="একটি শালীন মন্তব্য লিখুন..."
-              className="flex-1 bg-slate-100 dark:bg-white/5 border border-transparent focus:border-brand-emerald/40 text-slate-900 dark:text-white placeholder:text-slate-400 rounded-full px-3.5 py-1.5 text-xs outline-none"
+              className="flex-1 bg-slate-100 dark:bg-white/5 border border-transparent focus:border-brand-emerald/40 text-slate-900 dark:text-white placeholder:text-slate-400 rounded-full px-3.5 py-2 text-xs outline-none"
             />
             <button
               type="submit"
               disabled={submittingComment || !newComment.trim()}
-              className="p-1.5 rounded-full bg-brand-emerald text-white hover:bg-brand-emerald-hover disabled:opacity-40 transition-colors"
+              className="p-2 rounded-full bg-brand-emerald text-white hover:bg-emerald-800 disabled:opacity-40 transition-colors"
             >
               {submittingComment ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -358,31 +388,25 @@ export function PostCard({
             ) : (
               comments.map((comment) => (
                 <div key={comment.id} className="flex items-start gap-2 text-xs">
-                  <div className="relative w-6 h-6 rounded-full overflow-hidden bg-slate-200 shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10 relative shrink-0">
                     {comment.author.image ? (
                       <Image
                         src={comment.author.image}
                         alt={comment.author.name}
                         fill
                         className="object-cover"
-                        unoptimized
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center font-bold text-[10px] text-brand-emerald">
+                      <div className="w-full h-full flex items-center justify-center font-bold text-slate-600 dark:text-slate-300">
                         {comment.author.name.charAt(0)}
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 bg-slate-50 dark:bg-white/5 rounded-2xl px-3 py-1.5 border border-slate-100 dark:border-white/5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {comment.author.name}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {getRelativeTime(comment.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-slate-700 dark:text-slate-300 mt-0.5 leading-snug">
+                  <div className="bg-slate-100 dark:bg-white/5 rounded-2xl px-3 py-2 flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white text-[11px]">
+                      {comment.author.name}
+                    </p>
+                    <p className="text-slate-700 dark:text-slate-300 text-xs mt-0.5">
                       {comment.content}
                     </p>
                   </div>

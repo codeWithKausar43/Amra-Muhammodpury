@@ -4,6 +4,42 @@ import { Post, Comment, Story, CreatePostPayload } from '../types';
 
 export const fallbackMockPosts: Post[] = [
   {
+    id: 'sample-post-farhad',
+    content:
+      'ফাইন্যালি নিজের একটা আইটি ফার্ম শুরু করলাম!\n\nআপনার প্রতিষ্ঠানের জন্য এমন একটা ওয়েবসাইট বা অ্যাপ চান, যেটা শুধু কাজই করবে না, হয়ে উঠবে একটা শিল্পকর্ম? তাহলে আই অ্যাম হিয়ার ফর ইউ।\n\nকথা দিচ্ছি, আপনার ওয়েবসাইটের স্পিড গুগলের স্ট্যান্ডার্ড বজায় রাখবে এবং ডিজাইন হবে দৃষ্টিনন্দন ও প্রিমিয়াম। মুহাম্মদপুরের যে কোনো স্টার্টআপ বা উদ্যোক্তাদের জন্য বিশেষ ছাড় থাকবে ইনশাআল্লাহ।',
+    location: 'তাজমহল রোড',
+    category: 'GENERAL',
+    blockBadge: 'তাজমহল রোড',
+    likesCount: 149,
+    commentsCount: 24,
+    sharesCount: 3,
+    hasLiked: false,
+    isEmergency: false,
+    createdAt: new Date(Date.now() - 17 * 60 * 60 * 1000).toISOString(),
+    author: {
+      id: 'author-farhad',
+      name: 'Md Rayhan Uddin Farhad',
+      image:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      role: 'USER',
+    },
+    media: [],
+    recentComments: [
+      {
+        id: 'c-farhad-1',
+        content: 'মাশাআল্লাহ ভাই! শুভকামনা রইলো আপনার নতুন এই যাত্রার জন্য।',
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        author: {
+          id: 'u-miskat',
+          name: 'Miskatur Rahman',
+          image:
+            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+          role: 'USER',
+        },
+      },
+    ],
+  },
+  {
     id: 'sample-post-1',
     content:
       'তাজমহল রোডের নতুন ফুটপাত সংস্কার কাজ দ্রুত গতিতে এগিয়ে চলেছে। স্থানীয় বাসিন্দাদের জন্য হাঁটাচলা এখন অনেক বেশি নিরাপদ ও আরামদায়ক। গাছগুলোর সুরক্ষা নিশ্চিত করে কাজ পরিচালনা প্রশংসনীয়। #মুহাম্মদপুর_উন্নয়ন #নাগরিক_উদ্যোগ #তাজমহল_রোড',
@@ -113,50 +149,62 @@ export const fallbackMockPosts: Post[] = [
 export const fallbackMockStories: Story[] = [
   {
     id: 'story-1',
-    title: 'আপনার স্টোরি',
+    title: 'স্টোরি তৈরি করুন',
     author: { id: 'me', name: 'আপনার স্টোরি', role: 'USER' },
     createdAt: new Date().toISOString(),
   },
   {
     id: 'story-2',
-    title: 'রাসেল করিম',
+    title: 'Towhidul Rakib',
+    mediaUrl:
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80',
     author: {
       id: 's-2',
-      name: 'রাসেল করিম',
-      image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+      name: 'তৌহিদুল রাকিব',
+      image:
+        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
       role: 'USER',
     },
     createdAt: new Date().toISOString(),
   },
   {
     id: 'story-3',
-    title: 'তানিয়া আহমেদ',
+    title: 'Jaber Abdulla',
+    mediaUrl:
+      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=80',
     author: {
       id: 's-3',
-      name: 'তানিয়া আহমেদ',
-      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      name: 'জাবের আব্দুল্লাহ',
+      image:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
       role: 'USER',
     },
     createdAt: new Date().toISOString(),
   },
   {
     id: 'story-4',
-    title: 'বইমেলা টিম',
+    title: 'Al-Amin Hossain',
+    mediaUrl:
+      'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80',
     author: {
       id: 's-4',
-      name: 'বইমেলা টিম',
-      image: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=150&auto=format&fit=crop&q=80',
+      name: 'আল-আমিন হোসেন',
+      image:
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
       role: 'USER',
     },
     createdAt: new Date().toISOString(),
   },
   {
     id: 'story-5',
-    title: 'মেয়াদ ট্রাস্টি',
+    title: 'Tania Ahmed',
+    mediaUrl:
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&auto=format&fit=crop&q=80',
     author: {
       id: 's-5',
-      name: 'মেয়াদ ট্রাস্টি',
-      image: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+      name: 'তানিয়া আহমেদ',
+      image:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       role: 'USER',
     },
     createdAt: new Date().toISOString(),

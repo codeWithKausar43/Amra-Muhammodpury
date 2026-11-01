@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useSession } from '@/lib/auth/auth-client';
 import {
-  AnnouncementBar,
   StoriesCarousel,
   PostComposer,
   FilterTabs,
@@ -11,7 +10,6 @@ import {
   EmergencyNoticeCard,
   LeftSidebar,
   RightSidebar,
-  HeroBanner,
   CreatePostModal,
   AuthPromptModal,
 } from '@/features/feed/components';
@@ -25,6 +23,7 @@ export default function HomePage() {
   const { data: session } = useSession();
   const {
     isCreatePostOpen,
+    openCreatePost,
     closeCreatePost,
     isAuthModalOpen,
     openAuthModal,
@@ -98,15 +97,17 @@ export default function HomePage() {
           onSelectBlock={setSelectedBlock}
         />
 
-        {/* Center Column: Social Timeline Feed */}
+        {/* Center Column: Social Timeline Feed (Facebook Style) */}
         <div className="w-full max-w-xl xl:max-w-2xl min-w-0 space-y-3.5 sm:space-y-4">
-          {/* Welcome Hero for Unauthenticated Visitors */}
-          {!session?.user && <HeroBanner />}
+          {/* 1. Post Composer Row (Avatar with green dot + What's on your mind? + Photo icon) */}
+          <PostComposer
+            user={session?.user}
+            onPostCreated={handlePostCreated}
+            onRequireAuth={openAuthModal}
+            onOpenModal={openCreatePost}
+          />
 
-          {/* Dismissible Emergency / Civic Notice Bar */}
-          <AnnouncementBar />
-
-          {/* Stories Carousel */}
+          {/* 2. Stories Carousel (Vertical Facebook Story Cards) */}
           <StoriesCarousel
             stories={stories}
             userImage={session?.user?.image}
@@ -116,14 +117,7 @@ export default function HomePage() {
             }}
           />
 
-          {/* Post Composer Box */}
-          <PostComposer
-            user={session?.user}
-            onPostCreated={handlePostCreated}
-            onRequireAuth={openAuthModal}
-          />
-
-          {/* Category Filter Tabs */}
+          {/* 3. Category Filter Tabs */}
           <FilterTabs
             activeCategory={category}
             onSelectCategory={(cat) => {
@@ -141,14 +135,14 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setSelectedBlock(null)}
-                className="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline"
+                className="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline cursor-pointer"
               >
                 মুছে ফেলুন
               </button>
             </div>
           )}
 
-          {/* Feed Content */}
+          {/* 4. Feed Posts List */}
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
@@ -199,7 +193,7 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Right Column (Emergency Directory, Helpline & Community Pledge) */}
+        {/* Right Column (Emergency Helpline & Community Directory) */}
         <RightSidebar />
       </div>
 
