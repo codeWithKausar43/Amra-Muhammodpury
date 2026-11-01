@@ -33,3 +33,4 @@ export const profileRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(updated, 'প্রোফাইল সফলভাবে আপডেট করা হয়েছে'));
   });
 };
+

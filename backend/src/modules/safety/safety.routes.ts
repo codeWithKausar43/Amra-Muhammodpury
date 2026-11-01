@@ -36,3 +36,4 @@ export const safetyRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(report, 'রিপোর্টটি গ্রহণ করা হয়েছে। পর্যালোচনা করে ব্যবস্থা নেওয়া হবে।'));
   });
 };
+

@@ -18,3 +18,4 @@ export const savedRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(result, result.message));
   });
 };
+

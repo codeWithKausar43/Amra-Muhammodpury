@@ -84,3 +84,4 @@ export class SearchService {
     return { people, posts: formattedPosts, groups };
   }
 }
+

@@ -36,6 +36,16 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+  const [shouldRender, setShouldRender] = React.useState(isOpen);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      return undefined;
+    }
+    const timer = setTimeout(() => setShouldRender(false), 300);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
   // Sub-modal states for interactive settings
   const [notificationModalOpen, setNotificationModalOpen] = React.useState(false);
@@ -84,6 +94,8 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
     await signOut();
     window.location.reload();
   };
+
+  if (!shouldRender) return null;
 
   return (
     <div

@@ -317,3 +317,4 @@ export class FriendService {
     return { status: 'NONE' };
   }
 }
+

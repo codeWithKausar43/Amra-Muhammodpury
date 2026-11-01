@@ -74,3 +74,4 @@ export const friendRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(result, result.message));
   });
 };
+

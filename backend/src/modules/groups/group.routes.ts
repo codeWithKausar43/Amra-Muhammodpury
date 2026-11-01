@@ -106,3 +106,4 @@ export const groupRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(result, result.message));
   });
 };
+

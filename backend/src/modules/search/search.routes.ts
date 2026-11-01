@@ -16,3 +16,4 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(results, 'Search results'));
   });
 };
+

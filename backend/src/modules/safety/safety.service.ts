@@ -82,3 +82,4 @@ export class SafetyService {
     return report;
   }
 }
+

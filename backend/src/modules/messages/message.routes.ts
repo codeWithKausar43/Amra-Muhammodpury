@@ -32,3 +32,4 @@ export const messageRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(message, 'বার্তা সফলভাবে পাঠানো হয়েছে'));
   });
 };
+
