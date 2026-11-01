@@ -88,17 +88,17 @@ export function Navbar({ onSearch }: NavbarProps) {
   return (
     <>
       <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-brand-charcoal-dark/90 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 transition-colors">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-3">
           {/* Brand Logo & Name */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 select-none">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-brand-emerald to-emerald-800 flex items-center justify-center text-white font-bold text-base shadow-glow">
+          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 select-none min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-emerald to-emerald-800 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-glow shrink-0">
               <span>ম</span>
             </div>
-            <div className="flex flex-col text-left">
-              <span className="text-base sm:text-lg font-bold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight">
+            <div className="flex flex-col text-left min-w-0">
+              <span className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate max-w-[125px] min-[360px]:max-w-[165px] sm:max-w-none">
                 আমরা মুহাম্মদপুরী
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden xs:inline">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
                 Community Timeline
               </span>
             </div>
@@ -135,12 +135,12 @@ export function Navbar({ onSearch }: NavbarProps) {
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Mobile search toggle */}
             <button
               type="button"
               onClick={() => setSearchOpen(!searchOpen)}
-              className="md:hidden w-9 h-9 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+              className="md:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
               aria-label="Search"
             >
               <Search className="w-4 h-4" />
@@ -151,7 +151,7 @@ export function Navbar({ onSearch }: NavbarProps) {
               <button
                 type="button"
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative w-9 h-9 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="নোটিফিকেশন"
                 title="বিজ্ঞপ্তি"
               >
@@ -163,7 +163,7 @@ export function Navbar({ onSearch }: NavbarProps) {
 
               {/* Notifications Dropdown Panel */}
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-88 bg-white dark:bg-brand-charcoal-dark border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-72 sm:w-88 max-w-[calc(100vw-20px)] bg-white dark:bg-brand-charcoal-dark border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 py-3 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
                     <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                       বিজ্ঞপ্তি ও নোটিফিকেশন
@@ -222,8 +222,10 @@ export function Navbar({ onSearch }: NavbarProps) {
               )}
             </div>
 
-            {/* Theme switcher */}
-            <ThemeToggle />
+            {/* Theme switcher (Hidden on narrow screens < 420px to prevent crowding; fully accessible via Drawer) */}
+            <div className="hidden min-[420px]:inline-flex">
+              <ThemeToggle />
+            </div>
 
             {/* Hamburger Menu & Settings Button */}
             <button
@@ -231,9 +233,9 @@ export function Navbar({ onSearch }: NavbarProps) {
               onClick={() => setSettingsOpen(true)}
               aria-label="মেনু ও সেটিংস"
               title="মেনু ও সেটিংস"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-all cursor-pointer ring-1 ring-slate-200 dark:ring-white/10"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-all cursor-pointer ring-1 ring-slate-200 dark:ring-white/10"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
