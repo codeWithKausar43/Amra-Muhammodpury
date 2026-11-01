@@ -116,20 +116,24 @@ export function StoryViewerModal({
     if (!isOpen || isPaused) return;
 
     const interval = 50; // update every 50ms
-    const step = (100 / (5000 / interval)); // 5000ms total
+    const step = 100 / (5000 / interval); // 5000ms total
 
     const timer = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
-          handleNext();
-          return 0;
-        }
+        if (prev >= 100) return 100;
         return prev + step;
       });
     }, interval);
 
     return () => clearInterval(timer);
-  }, [isOpen, isPaused, handleNext]);
+  }, [isOpen, isPaused, currentIndex]);
+
+  // When progress reaches 100%, advance cleanly outside state updater
+  React.useEffect(() => {
+    if (isOpen && progress >= 100) {
+      handleNext();
+    }
+  }, [isOpen, progress, handleNext]);
 
   if (!isOpen || !currentStory) return null;
 
