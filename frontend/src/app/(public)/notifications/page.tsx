@@ -9,51 +9,31 @@ import {
   Users2,
   Loader2,
 } from 'lucide-react';
-import { socialService, NotificationItem } from '@/features/social/services/social.service';
+import {
+  useNotificationsQuery,
+  useSocialMutations,
+} from '@/features/social/hooks/useSocialQueries';
+import { NotificationItem } from '@/features/social/services/social.service';
 
 export default function NotificationsPage() {
-  const [loading, setLoading] = React.useState(true);
-  const [notifications, setNotifications] = React.useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = React.useState(0);
-  const [actionLoading, setActionLoading] = React.useState(false);
+  const { data: notifData, isLoading } = useNotificationsQuery();
+  const mutations = useSocialMutations();
 
-  const loadNotifications = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await socialService.getNotifications();
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+  const notifications = notifData?.notifications ?? [];
+  const unreadCount = notifData?.unreadCount ?? 0;
+  const isInitialLoading = isLoading && !notifData;
 
   const handleMarkAllRead = async () => {
-    setActionLoading(true);
     try {
-      await socialService.markAllNotificationsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
+      await mutations.markAllNotificationsRead.mutateAsync();
     } catch {
       // ignore
-    } finally {
-      setActionLoading(false);
     }
   };
 
   const handleItemClick = async (notif: NotificationItem) => {
     if (!notif.isRead) {
-      await socialService.markNotificationRead(notif.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n)),
-      );
-      setUnreadCount((c) => Math.max(0, c - 1));
+      await mutations.markNotificationRead.mutateAsync(notif.id);
     }
   };
 
@@ -93,7 +73,7 @@ export default function NotificationsPage() {
           <button
             type="button"
             onClick={handleMarkAllRead}
-            disabled={actionLoading}
+            disabled={mutations.markAllNotificationsRead.isPending}
             className="text-xs font-semibold text-brand-emerald hover:underline cursor-pointer"
           >
             সব পড়া হিসেবে চিহ্নিত করুন
@@ -101,7 +81,7 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {loading ? (
+      {isInitialLoading ? (
         <div className="py-20 flex flex-col items-center justify-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-brand-emerald" />
           <p className="text-xs text-slate-400">নোটিফিকেশন লোড হচ্ছে...</p>

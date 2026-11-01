@@ -13,14 +13,24 @@ import {
   ArrowRight,
   X,
 } from 'lucide-react';
-import { socialService, GroupData } from '@/features/social/services/social.service';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useGroupsQuery,
+  useSocialMutations,
+  socialQueryKeys,
+} from '@/features/social/hooks/useSocialQueries';
+import { socialService } from '@/features/social/services/social.service';
 
 export default function GroupsPage() {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
+  const { data: groupsData, isLoading } = useGroupsQuery();
+  const mutations = useSocialMutations();
+
   const [activeTab, setActiveTab] = React.useState<'JOINED' | 'DISCOVER'>('JOINED');
-  const [loading, setLoading] = React.useState(true);
-  const [joinedGroups, setJoinedGroups] = React.useState<GroupData[]>([]);
-  const [discoverGroups, setDiscoverGroups] = React.useState<GroupData[]>([]);
+  const joinedGroups = groupsData?.joined ?? [];
+  const discoverGroups = groupsData?.discover ?? [];
+  const isInitialLoading = isLoading && !groupsData;
 
   // Modal for creating group
   const [createModalOpen, setCreateModalOpen] = React.useState(false);
@@ -32,23 +42,6 @@ export default function GroupsPage() {
   const [createError, setCreateError] = React.useState<string | null>(null);
 
   const [actionLoadingId, setActionLoadingId] = React.useState<string | null>(null);
-
-  const loadGroups = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await socialService.getGroups();
-      setJoinedGroups(data.joined);
-      setDiscoverGroups(data.discover);
-    } catch {
-      // Fallback
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    loadGroups();
-  }, [loadGroups]);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +64,7 @@ export default function GroupsPage() {
       setGroupName('');
       setGroupDesc('');
       setGroupRules('');
-      await loadGroups();
+      await queryClient.invalidateQueries({ queryKey: socialQueryKeys.groups.all });
     } catch (err: unknown) {
       setCreateError(err instanceof Error ? err.message : 'গ্রুপ তৈরি করতে ব্যর্থ হয়েছে');
     } finally {
@@ -82,8 +75,7 @@ export default function GroupsPage() {
   const handleJoin = async (groupId: string) => {
     setActionLoadingId(groupId);
     try {
-      await socialService.joinGroup(groupId);
-      await loadGroups();
+      await mutations.joinGroup.mutateAsync(groupId);
     } catch {
       // ignore
     } finally {
@@ -144,7 +136,7 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isInitialLoading ? (
         <div className="py-16 flex flex-col items-center justify-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-brand-emerald" />
           <p className="text-xs text-slate-400">গ্রুপ লোড হচ্ছে...</p>

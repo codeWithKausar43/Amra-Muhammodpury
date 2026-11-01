@@ -12,22 +12,20 @@ import {
   Search,
 } from 'lucide-react';
 import {
-  socialService,
-  ConversationSummary,
-  ChatMessage,
-  FriendSummary,
-} from '@/features/social/services/social.service';
+  useConversationsQuery,
+  useChatMessagesQuery,
+  useSocialMutations,
+} from '@/features/social/hooks/useSocialQueries';
 
 export default function MessagesPage() {
   const { data: session } = useSession();
-  const [loading, setLoading] = React.useState(true);
-  const [conversations, setConversations] = React.useState<ConversationSummary[]>([]);
+  const { data: conversations = [], isLoading: isConvLoading } = useConversationsQuery();
   const [activeConvId, setActiveConvId] = React.useState<string | null>(null);
-  const [activeChat, setActiveChat] = React.useState<{
-    messages: ChatMessage[];
-    otherUser: FriendSummary | null;
-  }>({ messages: [], otherUser: null });
-  const [chatLoading, setChatLoading] = React.useState(false);
+  const { data: chatData, isLoading: isChatLoading } = useChatMessagesQuery(activeConvId);
+  const mutations = useSocialMutations();
+
+  const activeChat = chatData || { messages: [], otherUser: null };
+  const isInitialLoading = isConvLoading && conversations.length === 0;
 
   const [messageText, setMessageText] = React.useState('');
   const [sending, setSending] = React.useState(false);
@@ -35,52 +33,14 @@ export default function MessagesPage() {
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  const loadConversations = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const list = await socialService.getConversations();
-      setConversations(list);
-      if (list.length > 0 && !activeConvId) {
-        // default select first on desktop
-        if (window.innerWidth >= 768) {
-          setActiveConvId(list[0]?.id || null);
-        }
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [activeConvId]);
-
+  // default select first conversation on desktop
   React.useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
-
-  // Load chat messages when activeConvId changes
-  React.useEffect(() => {
-    if (!activeConvId) return;
-
-    let isMounted = true;
-    async function loadThread() {
-      setChatLoading(true);
-      try {
-        const data = await socialService.getMessages(activeConvId!);
-        if (isMounted) {
-          setActiveChat(data);
-        }
-      } catch {
-        // ignore
-      } finally {
-        if (isMounted) setChatLoading(false);
+    if (conversations.length > 0 && !activeConvId) {
+      if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        setActiveConvId(conversations[0]?.id || null);
       }
     }
-
-    loadThread();
-    return () => {
-      isMounted = false;
-    };
-  }, [activeConvId]);
+  }, [conversations, activeConvId]);
 
   // Scroll to bottom when new message arrives
   React.useEffect(() => {
@@ -96,14 +56,10 @@ export default function MessagesPage() {
     setMessageText('');
 
     try {
-      const newMsg = await socialService.sendMessage(activeChat.otherUser.id, content);
-      if (newMsg.data) {
-        setActiveChat((prev) => ({
-          ...prev,
-          messages: [...prev.messages, newMsg.data as unknown as ChatMessage],
-        }));
-      }
-      await loadConversations();
+      await mutations.sendMessage.mutateAsync({
+        recipientId: activeChat.otherUser.id,
+        content,
+      });
     } catch {
       // ignore
     } finally {
@@ -145,7 +101,7 @@ export default function MessagesPage() {
 
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5 no-scrollbar">
-            {loading ? (
+            {isInitialLoading ? (
               <div className="py-12 flex flex-col items-center justify-center space-y-2">
                 <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
                 <p className="text-xs text-slate-400">লোড হচ্ছে...</p>
@@ -263,7 +219,7 @@ export default function MessagesPage() {
 
               {/* Message Bubbles Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {chatLoading ? (
+                {isChatLoading && activeChat.messages.length === 0 ? (
                   <div className="py-20 flex justify-center">
                     <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
                   </div>

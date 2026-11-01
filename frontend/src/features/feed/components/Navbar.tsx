@@ -3,41 +3,18 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, X, Menu, MessageSquare, Heart, AlertTriangle } from 'lucide-react';
+import { Search, Bell, X, Menu, MessageSquare, Heart, UserPlus } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { SettingsDrawer } from './SettingsDrawer';
 import { useFeedModal } from '../context/FeedModalContext';
+import {
+  useNotificationsQuery,
+  useSocialMutations,
+} from '@/features/social/hooks/useSocialQueries';
 
 interface NavbarProps {
   onSearch?: (query: string) => void;
 }
-
-const SAMPLE_NOTIFICATIONS = [
-  {
-    id: 'n-1',
-    icon: MessageSquare,
-    color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/40',
-    title: 'ইঞ্জি. সামিউল ইসলাম আপনার পোস্টে মন্তব্য করেছেন।',
-    time: '১০ মিনিট আগে',
-    unread: true,
-  },
-  {
-    id: 'n-2',
-    icon: AlertTriangle,
-    color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/40',
-    title: 'ডিপিডিসি থেকে বাবর রোডে বিদ্যুৎ সংস্কার বিজ্ঞপ্তি প্রকাশিত হয়েছে।',
-    time: '১ ঘণ্টা আগে',
-    unread: true,
-  },
-  {
-    id: 'n-3',
-    icon: Heart,
-    color: 'text-rose-500 bg-rose-50 dark:bg-rose-950/40',
-    title: 'সালমান ফারসি আপনার পোস্টে লাইক দিয়েছেন।',
-    time: '৩ ঘণ্টা আগে',
-    unread: false,
-  },
-];
 
 export function Navbar({ onSearch }: NavbarProps) {
   const router = useRouter();
@@ -45,7 +22,12 @@ export function Navbar({ onSearch }: NavbarProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
-  const [notifications, setNotifications] = React.useState(SAMPLE_NOTIFICATIONS);
+
+  const { data: notifData } = useNotificationsQuery();
+  const mutations = useSocialMutations();
+  const notificationsList = notifData?.notifications ?? [];
+  const unreadCount = notifData?.unreadCount ?? 0;
+  const hasUnread = unreadCount > 0;
 
   const notificationRef = React.useRef<HTMLDivElement>(null);
 
@@ -80,10 +62,23 @@ export function Navbar({ onSearch }: NavbarProps) {
   };
 
   const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    mutations.markAllNotificationsRead.mutate();
   };
 
-  const hasUnread = notifications.some((n) => n.unread);
+  const getNotifMeta = (type: string) => {
+    switch (type) {
+      case 'POST_LIKE':
+        return { Icon: Heart, color: 'text-rose-500 bg-rose-50 dark:bg-rose-950/40' };
+      case 'POST_COMMENT':
+      case 'COMMENT_REPLY':
+        return { Icon: MessageSquare, color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/40' };
+      case 'FRIEND_REQUEST':
+      case 'FRIEND_ACCEPT':
+        return { Icon: UserPlus, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' };
+      default:
+        return { Icon: Bell, color: 'text-brand-emerald bg-emerald-50 dark:bg-emerald-950/40' };
+    }
+  };
 
   return (
     <>
@@ -186,32 +181,43 @@ export function Navbar({ onSearch }: NavbarProps) {
                     </div>
 
                     <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
-                      {notifications.map((n) => {
-                        const Icon = n.icon;
-                        return (
-                          <div
-                            key={n.id}
-                            className={`p-3 flex items-start gap-2.5 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 ${
-                              n.unread ? 'bg-emerald-50/40 dark:bg-brand-emerald/5' : ''
-                            }`}
-                          >
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${n.color}`}>
-                              <Icon className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-slate-800 dark:text-slate-200 leading-snug">
-                                {n.title}
-                              </p>
-                              <span className="text-[10px] text-slate-400 mt-1 block">
-                                {n.time}
-                              </span>
-                            </div>
-                            {n.unread && (
-                              <span className="w-2 h-2 rounded-full bg-brand-emerald shrink-0 mt-1.5" />
-                            )}
-                          </div>
-                        );
-                      })}
+                      {notificationsList.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-400">
+                          কোনো নতুন নোটিফিকেশন নেই
+                        </div>
+                      ) : (
+                        notificationsList.slice(0, 6).map((n) => {
+                          const { Icon, color } = getNotifMeta(n.type);
+                          return (
+                            <Link
+                              key={n.id}
+                              href="/notifications"
+                              onClick={() => setNotificationsOpen(false)}
+                              className={`p-3 flex items-start gap-2.5 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 ${
+                                !n.isRead ? 'bg-emerald-50/40 dark:bg-brand-emerald/5' : ''
+                              }`}
+                            >
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${color}`}>
+                                <Icon className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs text-slate-800 dark:text-slate-200 leading-snug">
+                                  {n.title}
+                                </p>
+                                <span className="text-[10px] text-slate-400 mt-1 block">
+                                  {new Date(n.createdAt).toLocaleTimeString('bn-BD', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                              {!n.isRead && (
+                                <span className="w-2 h-2 rounded-full bg-brand-emerald shrink-0 mt-1.5" />
+                              )}
+                            </Link>
+                          );
+                        })
+                      )}
                     </div>
 
                     {/* Panel footer */}

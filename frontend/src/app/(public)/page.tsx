@@ -15,12 +15,18 @@ import {
   StoryViewerModal,
 } from '@/features/feed/components';
 import { FeedCategory } from '@/features/feed/components/FilterTabs';
-import { Post, Story } from '@/features/feed/types';
-import { feedService } from '@/features/feed/services/feed.service';
+import { Post } from '@/features/feed/types';
 import { useFeedModal } from '@/features/feed/context/FeedModalContext';
 import { Loader2, Sprout } from 'lucide-react';
+import {
+  useFeedPostsQuery,
+  useFeedStoriesQuery,
+  usePrefetchSocialTabs,
+} from '@/features/social/hooks/useSocialQueries';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function HomePage() {
+  const queryClient = useQueryClient();
   const { data: session } = useSession();
   const {
     isCreatePostOpen,
@@ -34,50 +40,29 @@ export default function HomePage() {
 
   const [category, setCategory] = React.useState<FeedCategory>('ALL');
   const [selectedBlock, setSelectedBlock] = React.useState<string | null>(null);
-  const [posts, setPosts] = React.useState<Post[]>([]);
-  const [stories, setStories] = React.useState<Story[]>([]);
-  const [loading, setLoading] = React.useState(true);
   const [activeStoryIndex, setActiveStoryIndex] = React.useState<number | null>(null);
 
-  // Fetch feed posts and stories on mount and when category changes
-  React.useEffect(() => {
-    let isMounted = true;
-    async function loadFeed() {
-      setLoading(true);
-      try {
-        const [postsRes, storiesRes] = await Promise.all([
-          feedService.getPosts({
-            category,
-            limit: 20,
-          }),
-          feedService.getStories(),
-        ]);
+  // 1. Intelligent Cached Queries
+  const { data: posts = [], isLoading: isPostsLoading } = useFeedPostsQuery(category);
+  const { data: stories = [] } = useFeedStoriesQuery();
 
-        if (isMounted) {
-          setPosts(postsRes.posts);
-          setStories(storiesRes);
-        }
-      } catch (err) {
-        console.error('Error fetching feed data:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
+  // 2. Background Tab Prefetcher (runs when Home is rendered & idle)
+  usePrefetchSocialTabs();
 
-    loadFeed();
-    return () => {
-      isMounted = false;
-    };
-  }, [category]);
-
-  // Handle post creation callback
+  // Handle post creation callback (instantly updates TanStack cache)
   const handlePostCreated = (newPost: Post) => {
-    setPosts((prev) => [newPost, ...prev]);
+    queryClient.setQueriesData<Post[]>(
+      { queryKey: ['feed', 'posts'] },
+      (old) => (old ? [newPost, ...old] : [newPost]),
+    );
   };
 
-  // Handle post deletion callback
+  // Handle post deletion callback (instantly updates TanStack cache)
   const handlePostDeleted = (postId: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    queryClient.setQueriesData<Post[]>(
+      { queryKey: ['feed', 'posts'] },
+      (old) => (old ? old.filter((p) => p.id !== postId) : []),
+    );
   };
 
   // Filter posts by selected block and navbar search query
@@ -159,7 +144,7 @@ export default function HomePage() {
           )}
 
           {/* 4. Feed Posts List */}
-          {loading ? (
+          {isPostsLoading && posts.length === 0 ? (
             <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
               <span className="text-xs font-medium">মুহাম্মদপুরের পোস্টসমূহ লোড হচ্ছে...</span>

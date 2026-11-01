@@ -15,47 +15,33 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import {
-  socialService,
-  FriendSummary,
-  FriendRequestsData,
-} from '@/features/social/services/social.service';
+  useFriendsQuery,
+  useFriendRequestsQuery,
+  useFriendSuggestionsQuery,
+  useSocialMutations,
+} from '@/features/social/hooks/useSocialQueries';
 
 export default function FriendsPage() {
   const [activeTab, setActiveTab] = React.useState<'ALL' | 'REQUESTS' | 'SUGGESTIONS'>('ALL');
-  const [loading, setLoading] = React.useState(true);
-  const [friends, setFriends] = React.useState<FriendSummary[]>([]);
-  const [requests, setRequests] = React.useState<FriendRequestsData>({ incoming: [], sent: [] });
-  const [suggestions, setSuggestions] = React.useState<FriendSummary[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [actionLoadingId, setActionLoadingId] = React.useState<string | null>(null);
 
-  const loadData = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const [fData, rData, sData] = await Promise.all([
-        socialService.getFriends(),
-        socialService.getRequests(),
-        socialService.getSuggestions(),
-      ]);
-      setFriends(fData);
-      setRequests(rData);
-      setSuggestions(sData);
-    } catch {
-      // Fallback
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // TanStack Cached Queries (Instant Render if Prefetched)
+  const { data: friends = [], isLoading: isFriendsLoading } = useFriendsQuery();
+  const { data: requests = { incoming: [], sent: [] }, isLoading: isRequestsLoading } = useFriendRequestsQuery();
+  const { data: suggestions = [], isLoading: isSuggestionsLoading } = useFriendSuggestionsQuery();
+  const mutations = useSocialMutations();
 
-  React.useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const loading =
+    (isFriendsLoading || isRequestsLoading || isSuggestionsLoading) &&
+    friends.length === 0 &&
+    requests.incoming.length === 0 &&
+    suggestions.length === 0;
 
   const handleAccept = async (requestId: string) => {
     setActionLoadingId(requestId);
     try {
-      await socialService.acceptFriendRequest(requestId);
-      await loadData();
+      await mutations.acceptFriendRequest.mutateAsync(requestId);
     } catch {
       // ignore
     } finally {
@@ -66,8 +52,7 @@ export default function FriendsPage() {
   const handleReject = async (requestId: string) => {
     setActionLoadingId(requestId);
     try {
-      await socialService.rejectFriendRequest(requestId);
-      await loadData();
+      await mutations.rejectFriendRequest.mutateAsync(requestId);
     } catch {
       // ignore
     } finally {
@@ -78,8 +63,7 @@ export default function FriendsPage() {
   const handleCancel = async (requestId: string) => {
     setActionLoadingId(requestId);
     try {
-      await socialService.cancelFriendRequest(requestId);
-      await loadData();
+      await mutations.cancelFriendRequest.mutateAsync(requestId);
     } catch {
       // ignore
     } finally {
@@ -90,8 +74,7 @@ export default function FriendsPage() {
   const handleSendRequest = async (userId: string) => {
     setActionLoadingId(userId);
     try {
-      await socialService.sendFriendRequest(userId);
-      await loadData();
+      await mutations.sendFriendRequest.mutateAsync(userId);
     } catch {
       // ignore
     } finally {
@@ -103,8 +86,7 @@ export default function FriendsPage() {
     if (!confirm('আপনি কি এই বন্ধুকে আপনার তালিকা থেকে সরাতে চান?')) return;
     setActionLoadingId(friendId);
     try {
-      await socialService.removeFriend(friendId);
-      await loadData();
+      await mutations.removeFriend.mutateAsync(friendId);
     } catch {
       // ignore
     } finally {

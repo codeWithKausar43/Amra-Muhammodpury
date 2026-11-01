@@ -16,9 +16,14 @@ import {
   X,
   ArrowLeft,
 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useUserProfileQuery,
+  useSocialMutations,
+  socialQueryKeys,
+} from '@/features/social/hooks/useSocialQueries';
 import {
   socialService,
-  UserProfileData,
 } from '@/features/social/services/social.service';
 import { PostCard } from '@/features/feed/components/PostCard';
 
@@ -26,12 +31,18 @@ export default function UserProfilePage() {
   const params = useParams();
   const userId = params.id as string;
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
+  const mutations = useSocialMutations();
 
-  const [loading, setLoading] = React.useState(true);
-  const [profileData, setProfileData] = React.useState<UserProfileData | null>(null);
-  const [friendshipStatus, setFriendshipStatus] = React.useState<{ status: string; requestId?: string }>({
-    status: 'NONE',
+  const { data: profileData, isLoading } = useUserProfileQuery(userId);
+
+  const { data: friendshipStatus = { status: 'NONE' } } = useQuery({
+    queryKey: socialQueryKeys.friends.status(userId),
+    queryFn: () => socialService.getFriendshipStatus(userId),
+    enabled: Boolean(session?.user && session.user.id !== userId),
+    staleTime: 60 * 1000,
   });
+
   const [actionLoading, setActionLoading] = React.useState(false);
 
   // Edit Profile Modal states
@@ -41,37 +52,19 @@ export default function UserProfilePage() {
   const [editCover, setEditCover] = React.useState('');
   const [updating, setUpdating] = React.useState(false);
 
-  const loadProfile = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const pData = await socialService.getProfile(userId);
-      setProfileData(pData);
-      if (pData?.user) {
-        setEditName(pData.user.name);
-        setEditBio(pData.user.bio || '');
-        setEditCover(pData.user.coverImage || '');
-      }
-
-      if (session?.user && session.user.id !== userId) {
-        const sData = await socialService.getFriendshipStatus(userId);
-        setFriendshipStatus(sData);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, session]);
-
   React.useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    if (profileData?.user) {
+      setEditName(profileData.user.name);
+      setEditBio(profileData.user.bio || '');
+      setEditCover(profileData.user.coverImage || '');
+    }
+  }, [profileData]);
 
   const handleSendFriendRequest = async () => {
     setActionLoading(true);
     try {
-      await socialService.sendFriendRequest(userId);
-      setFriendshipStatus({ status: 'REQUEST_SENT' });
+      await mutations.sendFriendRequest.mutateAsync(userId);
+      queryClient.invalidateQueries({ queryKey: socialQueryKeys.friends.status(userId) });
     } catch {
       // ignore
     } finally {
@@ -83,9 +76,9 @@ export default function UserProfilePage() {
     if (!friendshipStatus.requestId) return;
     setActionLoading(true);
     try {
-      await socialService.acceptFriendRequest(friendshipStatus.requestId);
-      setFriendshipStatus({ status: 'FRIENDS' });
-      await loadProfile();
+      await mutations.acceptFriendRequest.mutateAsync(friendshipStatus.requestId);
+      queryClient.invalidateQueries({ queryKey: socialQueryKeys.friends.status(userId) });
+      queryClient.invalidateQueries({ queryKey: socialQueryKeys.profile.detail(userId) });
     } catch {
       // ignore
     } finally {
@@ -97,8 +90,8 @@ export default function UserProfilePage() {
     if (!friendshipStatus.requestId) return;
     setActionLoading(true);
     try {
-      await socialService.cancelFriendRequest(friendshipStatus.requestId);
-      setFriendshipStatus({ status: 'NONE' });
+      await mutations.cancelFriendRequest.mutateAsync(friendshipStatus.requestId);
+      queryClient.invalidateQueries({ queryKey: socialQueryKeys.friends.status(userId) });
     } catch {
       // ignore
     } finally {
@@ -116,7 +109,7 @@ export default function UserProfilePage() {
         coverImage: editCover.trim() || undefined,
       });
       setEditModalOpen(false);
-      await loadProfile();
+      queryClient.invalidateQueries({ queryKey: socialQueryKeys.profile.detail(userId) });
     } catch {
       // ignore
     } finally {
@@ -124,7 +117,7 @@ export default function UserProfilePage() {
     }
   };
 
-  if (loading) {
+  if (isLoading && !profileData) {
     return (
       <div className="py-24 flex flex-col items-center justify-center space-y-3">
         <Loader2 className="w-8 h-8 animate-spin text-brand-emerald" />

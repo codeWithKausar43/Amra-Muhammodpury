@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signOut } from '@/lib/auth/auth-client';
 import { useTheme } from 'next-themes';
+import { useQueryClient } from '@tanstack/react-query';
+import { clearAllSocialCache } from '@/features/social/hooks/useSocialQueries';
 import {
   X,
   Settings,
@@ -31,6 +33,7 @@ interface SettingsDrawerProps {
 
 export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
@@ -78,6 +81,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
 
   const handleSignOut = async () => {
     onClose();
+    clearAllSocialCache(queryClient);
     await signOut();
     window.location.reload();
   };

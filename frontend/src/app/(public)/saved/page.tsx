@@ -3,29 +3,12 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Bookmark, Loader2, ArrowRight } from 'lucide-react';
-import { socialService } from '@/features/social/services/social.service';
-import { Post } from '@/features/feed/types';
+import { useSavedPostsQuery } from '@/features/social/hooks/useSocialQueries';
 import { PostCard } from '@/features/feed/components/PostCard';
 
 export default function SavedPostsPage() {
-  const [loading, setLoading] = React.useState(true);
-  const [savedItems, setSavedItems] = React.useState<Array<{ savedAt: string; post: Post }>>([]);
-
-  const loadSaved = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const items = await socialService.getSavedPosts();
-      setSavedItems(items);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    loadSaved();
-  }, [loadSaved]);
+  const { data: savedItems = [], isLoading } = useSavedPostsQuery();
+  const isInitialLoading = isLoading && savedItems.length === 0;
 
   return (
     <div className="max-w-2xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5">
@@ -39,7 +22,7 @@ export default function SavedPostsPage() {
         </p>
       </div>
 
-      {loading ? (
+      {isInitialLoading ? (
         <div className="py-20 flex flex-col items-center justify-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-brand-emerald" />
           <p className="text-xs text-slate-400">সংরক্ষিত পোস্ট লোড হচ্ছে...</p>
