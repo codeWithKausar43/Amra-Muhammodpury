@@ -89,39 +89,39 @@ async function main() {
   // --------------------------------------------------------------------------
   const seedUsers = [
     {
-      email: 'kausardev90@gmail.com',
-      name: 'Md Kausar',
+      email: 'admin@amra-muhammadpuri.org',
+      name: 'অ্যাডমিন - কাউসার আহমেদ',
       role: 'ADMIN',
-      phone: '01711000000',
-      bio: 'সফটওয়্যার স্থপতি ও প্রতিষ্ঠাতা সভাপতি, আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন পরিষদ।',
-      image: 'https://res.cloudinary.com/rim6yblt/image/upload/v1793589750/amra-muhammadpuri/profiles/si06kruhb8tpfsyky1ed.png',
-      coverImage: 'https://res.cloudinary.com/rim6yblt/image/upload/v1793589754/amra-muhammadpuri/profiles/of4semfr7yvwqn8buku2.png',
+      phone: '01711000001',
+      bio: 'সিস্টেম অ্যাডমিনিস্ট্রেটর ও সভাপতি। প্ল্যাটফর্মের সার্বিক নিয়ন্ত্রণ ও পরিচালনার দায়িত্বে নিয়োজিত।',
+      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
+      coverImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&h=400&fit=crop',
       orgRole: 'PRESIDENT',
       memberNumber: 'AMP-2026-0001',
-      profession: 'সফটওয়্যার ইঞ্জিনিয়ার ও সমাজকর্মী',
+      profession: 'সফটওয়্যার স্থপতি ও উদ্যোক্তা',
       monthlyContribution: 500,
       status: 'ACTIVE',
     },
     {
-      email: 'admin@amra-muhammadpuri.org',
-      name: 'মোঃ কাউসার আহমেদ',
-      role: 'ADMIN',
-      phone: '01711000001',
-      bio: 'সফটওয়্যার ইঞ্জিনিয়ার ও সমাজকর্মী। মোহাম্মদপুরের টেকসই উন্নয়নে নিবেদিত।',
-      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
-      coverImage: null,
+      email: 'president@amra-muhammadpuri.org',
+      name: 'সভাপতি - ড. সাইদুর রহমান',
+      role: 'USER',
+      phone: '01711000010',
+      bio: 'নির্বাহী সভাপতি, আমরা মোহাম্মদপুরী পরিষদ। নীতি নির্ধারণ ও প্রাতিষ্ঠানিক উন্নয়নে নিবেদিত।',
+      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
+      coverImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&h=400&fit=crop',
       orgRole: 'PRESIDENT',
       memberNumber: 'AMP-2026-0000',
-      profession: 'সফটওয়্যার স্থপতি',
+      profession: 'অধ্যাপক ও গবেষক',
       monthlyContribution: 500,
       status: 'ACTIVE',
     },
     {
       email: 'treasurer@amra-muhammadpuri.org',
-      name: 'ইঞ্জি. সামিউল ইসলাম',
+      name: 'কোষাধ্যক্ষ - সামিউল ইসলাম',
       role: 'USER',
       phone: '01711000002',
-      bio: 'তাজমহল রোড নিবাসী, কোষাধ্যক্ষ ও চার্টার্ড ফাইন্যান্স প্রফেশনাল।',
+      bio: 'তাজমহল রোড নিবাসী, কোষাধ্যক্ষ ও চার্টার্ড অ্যাকাউন্ট্যান্ট। স্বচ্ছ অডিট ও তহবিল ব্যবস্থাপক।',
       image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
       coverImage: null,
       orgRole: 'TREASURER',
@@ -132,10 +132,10 @@ async function main() {
     },
     {
       email: 'gs@amra-muhammadpuri.org',
-      name: 'তানভীর হোসেন',
+      name: 'সাধারণ সম্পাদক - তানভীর হোসেন',
       role: 'USER',
       phone: '01711000003',
-      bio: 'বাবর রোড নাগরিক ফোরামের সক্রিয় কর্মী ও সাধারণ সম্পাদক।',
+      bio: 'বাবর রোড নাগরিক ফোরামের সক্রিয় কর্মী ও সাধারণ সম্পাদক। মিটিং ও কমিটি সমন্বয়ক।',
       image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
       coverImage: null,
       orgRole: 'GENERAL_SECRETARY',
@@ -145,11 +145,25 @@ async function main() {
       status: 'ACTIVE',
     },
     {
+      email: 'moderator@amra-muhammadpuri.org',
+      name: 'মডারেটর - রাকিবুল হাসান',
+      role: 'MODERATOR',
+      phone: '01711000008',
+      bio: 'কমিউনিটি সেফটি ও কনটেন্ট মডারেটর। পোস্ট রিভিউ এবং সাইবার নীতি তদারককারী।',
+      image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop',
+      coverImage: null,
+      orgRole: 'MODERATOR',
+      memberNumber: 'AMP-2026-0005',
+      profession: 'ডিজিটাল মিডিয়া কনসালটেন্ট',
+      monthlyContribution: 200,
+      status: 'ACTIVE',
+    },
+    {
       email: 'member@amra-muhammadpuri.org',
-      name: 'সালমান ফারসি',
+      name: 'সদস্য - সালমান ফারসি',
       role: 'USER',
       phone: '01711000004',
-      bio: 'সলিমুল্লাহ রোড নিবাসী, নিয়মিত সক্রিয় দাতা ও সংগঠক।',
+      bio: 'সলিমুল্লাহ রোড নিবাসী, নিয়মিত সক্রিয় দাতা ও সাধারণ ভোটার সদস্য।',
       image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&h=200&fit=crop',
       coverImage: null,
       orgRole: 'MEMBER',
@@ -160,10 +174,10 @@ async function main() {
     },
     {
       email: 'applicant@amra-muhammadpuri.org',
-      name: 'ফারহানা রহমান',
+      name: 'আবেদনকারী - ফারহানা রহমান',
       role: 'USER',
       phone: '01711000005',
-      bio: 'নুরজাহান রোড নিবাসী, শিক্ষক। সংগঠনে যোগদানে আগ্রহী।',
+      bio: 'নুরজাহান রোড নিবাসী, সহকারী প্রধান শিক্ষক। সংগঠনে যোগদানে আগ্রহী ও আবেদন পেন্ডিং।',
       image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop',
       coverImage: null,
       orgRole: 'MEMBER',
@@ -174,10 +188,10 @@ async function main() {
     },
     {
       email: 'user@amra-muhammadpuri.org',
-      name: 'আরিফুর রহমান',
+      name: 'সাধারণ নাগরিক - আরিফুর রহমান',
       role: 'USER',
       phone: '01711000006',
-      bio: 'কাটাসুর নিবাসী, সামাজিক মাধ্যমের নিয়মিত সাধারণ ব্যবহারকারী।',
+      bio: 'কাটাসুর নিবাসী, সামাজিক মাধ্যমের নিয়মিত সাধারণ নাগরিক ব্যবহারকারী। কোনো সদস্যপদ নেই।',
       image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop',
       coverImage: null,
       orgRole: null,
@@ -185,6 +199,20 @@ async function main() {
       profession: 'গ্রাফিক ডিজাইনার',
       monthlyContribution: null,
       status: null,
+    },
+    {
+      email: 'kausardev90@gmail.com',
+      name: 'Md Kausar',
+      role: 'ADMIN',
+      phone: '01711000000',
+      bio: 'সফটওয়্যার স্থপতি ও প্রতিষ্ঠাতা সভাপতি, আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন পরিষদ।',
+      image: 'https://res.cloudinary.com/rim6yblt/image/upload/v1793589750/amra-muhammadpuri/profiles/si06kruhb8tpfsyky1ed.png',
+      coverImage: 'https://res.cloudinary.com/rim6yblt/image/upload/v1793589754/amra-muhammadpuri/profiles/of4semfr7yvwqn8buku2.png',
+      orgRole: 'PRESIDENT',
+      memberNumber: 'AMP-2026-0007',
+      profession: 'সফটওয়্যার ইঞ্জিনিয়ার ও সমাজকর্মী',
+      monthlyContribution: 500,
+      status: 'ACTIVE',
     },
   ];
 
@@ -386,69 +414,137 @@ async function main() {
   }
 
   // --------------------------------------------------------------------------
-  // 6. Seed Social Media Posts with Reactions & Comments
+  // 6. Seed Social Media Posts with Backgrounds, Reactions & Nested Comments
   // --------------------------------------------------------------------------
-  const existingPosts = await prisma.post.findMany({ take: 1 });
-  if (existingPosts.length === 0 && adminUser) {
-    const post1 = await prisma.post.create({
-      data: {
-        authorId: adminUser.id,
-        content: 'তাজমহল রোড পার্ক ও সংলগ্ন সড়ক ড্রেনেজ সংস্কার কাজ আজ সকাল থেকে শুরু হয়েছে। কাজের সময় সাময়িক অসুবিধা হতে পারে, এলাকাবাসীর আন্তরিক সহযোগিতা কাম্য।',
-        category: 'MY_BLOCK',
-        blockBadge: 'তাজমহল রোড',
-        location: 'তাজমহল রোড পার্ক সংলগ্ন, মোহাম্মদপুর',
-        privacy: 'PUBLIC',
-      },
-    });
+  const treasurerUser = createdUsers.get('treasurer@amra-muhammadpuri.org');
+  const memberUser = createdUsers.get('member@amra-muhammadpuri.org');
+  const gsUser = createdUsers.get('gs@amra-muhammadpuri.org');
+  const generalUser = createdUsers.get('user@amra-muhammadpuri.org');
 
-    const treasurerUser = createdUsers.get('treasurer@amra-muhammadpuri.org');
-    if (treasurerUser) {
-      const post2 = await prisma.post.create({
+  const seedFeedPosts = [
+    {
+      author: adminUser,
+      content: 'মোহাম্মদপুরকে একটি পরিচ্ছন্ন, সবুজ ও নিরাপদ আদর্শ আবাসিক এলাকা গড়ে তোলাই আমাদের লক্ষ্য। সবাইকে জানাই শুভেচ্ছা! 🌿✨',
+      category: 'GENERAL',
+      blockBadge: 'তাজমহল রোড',
+      bgColor: 'lime-green',
+      location: 'তাজমহল রোড, মোহাম্মদপুর',
+    },
+    {
+      author: gsUser || adminUser,
+      content: 'বাবর রোড ও সলিমুল্লাহ রোডের সড়ক বাতিগুলোর সংস্কার সম্পন্ন হয়েছে। এখন পুরো লেন উজ্জ্বল ও নিরাপদ। কোনো সড়কবাতি নষ্ট থাকলে নিচে কমেন্টে জানান। 💡',
+      category: 'GENERAL',
+      blockBadge: 'বাবর রোড',
+      bgColor: 'sunset-fire',
+      location: 'বাবর রোড, মোহাম্মদপুর',
+    },
+    {
+      author: treasurerUser || adminUser,
+      content: 'তাজমহল রোড পার্ক ও সংলগ্ন সড়ক ড্রেনেজ সংস্কার কাজ আজ সকাল থেকে শুরু হয়েছে। কাজের সময় সাময়িক অসুবিধা হতে পারে, এলাকাবাসীর আন্তরিক সহযোগিতা কাম্য। 🏗️',
+      category: 'MY_BLOCK',
+      blockBadge: 'তাজমহল রোড',
+      location: 'তাজমহল রোড পার্ক সংলগ্ন, মোহাম্মদপুর',
+      bgColor: null,
+    },
+    {
+      author: memberUser || adminUser,
+      content: 'জরুরি ট্রাফিক আপডেট: বসিলা ব্রিজে তীব্র যানজট। রামচন্দ্রপুর ও তিন রাস্তার মোড়ের যাত্রীদের বিকল্প হিসেবে কাটাসুর সড়ক ব্যবহারের অনুরোধ করা হচ্ছে। 🚨',
+      category: 'EMERGENCY',
+      isEmergency: true,
+      blockBadge: 'বসিলা',
+      bgColor: null,
+      location: 'বসিলা ব্রিজ গোলচত্বর',
+    },
+  ];
+
+  for (const postData of seedFeedPosts) {
+    if (!postData.author) continue;
+    let post = await prisma.post.findFirst({
+      where: { content: postData.content },
+    });
+    if (!post) {
+      post = await prisma.post.create({
         data: {
-          authorId: treasurerUser.id,
-          content: 'বাবর রোড ও সলিমুল্লাহ রোডের সড়ক বাতিগুলোর সংস্কার সম্পন্ন হয়েছে। এখন পুরো লেন উজ্জ্বল ও নিরাপদ। কোনো সড়কবাতি নষ্ট থাকলে নিচে কমেন্টে জানান।',
-          category: 'GENERAL',
-          blockBadge: 'বাবর রোড',
-          location: 'বাবর রোড, মোহাম্মদপুর',
+          authorId: postData.author.id,
+          content: postData.content,
+          category: postData.category,
+          blockBadge: postData.blockBadge,
+          bgColor: postData.bgColor,
+          location: postData.location,
+          isEmergency: postData.isEmergency ?? false,
           privacy: 'PUBLIC',
         },
       });
 
-      const memberUser = createdUsers.get('member@amra-muhammadpuri.org');
-      if (memberUser) {
-        await prisma.post.create({
-          data: {
-            authorId: memberUser.id,
-            content: 'জরুরি ট্রাফিক আপডেট: বসিলা ব্রিজে তীব্র যানজট। রামচন্দ্রপুর ও তিন রাস্তার মোড়ের যাত্রীদের বিকল্প হিসেবে কাটাসুর সড়ক ব্যবহারের অনুরোধ করা হচ্ছে।',
-            category: 'EMERGENCY',
-            isEmergency: true,
-            blockBadge: 'বসিলা',
-            location: 'বসিলা ব্রিজ গোলচত্বর',
-            privacy: 'PUBLIC',
-          },
+      // Add reactions
+      if (memberUser && memberUser.id !== post.authorId) {
+        await prisma.postLike.upsert({
+          where: { postId_userId: { postId: post.id, userId: memberUser.id } },
+          update: { type: 'LOVE' },
+          create: { postId: post.id, userId: memberUser.id, type: 'LOVE' },
         });
+      }
+      if (adminUser && adminUser.id !== post.authorId) {
+        await prisma.postLike.upsert({
+          where: { postId_userId: { postId: post.id, userId: adminUser.id } },
+          update: { type: 'LIKE' },
+          create: { postId: post.id, userId: adminUser.id, type: 'LIKE' },
+        });
+      }
 
-        // Add Likes & Comments
-        await prisma.postLike.create({
-          data: { postId: post1.id, userId: memberUser.id, type: 'LIKE' },
-        });
-        await prisma.postLike.create({
-          data: { postId: post2.id, userId: adminUser.id, type: 'LIKE' },
-        });
-
-        await prisma.comment.create({
+      // Add a root comment
+      if (treasurerUser) {
+        const rootComment = await prisma.comment.create({
           data: {
-            postId: post1.id,
-            authorId: memberUser.id,
+            postId: post.id,
+            authorId: treasurerUser.id,
             content: 'চমৎকার উদ্যোগ! ড্রেন পরিষ্কার থাকায় এবার বর্ষায় পানি জমবে না আশা করি।',
           },
         });
+
+        // Add a nested reply comment (testing infinite nested reply)
+        if (generalUser) {
+          await prisma.comment.create({
+            data: {
+              postId: post.id,
+              authorId: generalUser.id,
+              parentId: rootComment.id,
+              content: 'সম্পূর্ণ একমত ভাই! সবাই সচেতন থাকলে এলাকা সুন্দর থাকবে।',
+            },
+          });
+        }
       }
     }
-    console.info('✅ Seeded realistic community feed posts, likes and comments.');
   }
 
   // --------------------------------------------------------------------------
+  // 6.1 Seed Stories for the Feed Story Carousel
+  // --------------------------------------------------------------------------
+  const storyUsers = [adminUser, treasurerUser, gsUser, memberUser].filter(Boolean);
+  const sampleStoryMedia = [
+    { title: 'তাজমহল রোড ভোর', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600&fit=crop' },
+    { title: 'বৃক্ষরোপণ কর্মসূচি', url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600&fit=crop' },
+    { title: 'মোহাম্মদপুর পার্ক', url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=600&fit=crop' },
+  ];
+
+  for (let i = 0; i < sampleStoryMedia.length && i < storyUsers.length; i++) {
+    const sUser = storyUsers[i];
+    const sMedia = sampleStoryMedia[i];
+    const existingStory = await prisma.story.findFirst({
+      where: { authorId: sUser.id, title: sMedia.title },
+    });
+    if (!existingStory) {
+      await prisma.story.create({
+        data: {
+          authorId: sUser.id,
+          title: sMedia.title,
+          mediaUrl: sMedia.url,
+          expiresAt: new Date(Date.now() + 86400000 * 2), // 48 hours
+        },
+      });
+    }
+  }
+  console.info('✅ Seeded realistic community feed posts, comments, nested replies & active stories.');
   // 7. Seed Friendships & Requests
   // --------------------------------------------------------------------------
   const userAdmin = createdUsers.get('kausardev90@gmail.com') || createdUsers.get('admin@amra-muhammadpuri.org');

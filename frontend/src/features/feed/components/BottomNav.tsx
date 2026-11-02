@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { Home, Landmark, Plus, Bell, User } from 'lucide-react';
 import { useSession } from '@/lib/auth/auth-client';
 import { useFeedModal } from '../context/FeedModalContext';
-import { useOrgMembershipStatusQuery } from '@/features/organization/hooks/useOrganizationQueries';
 
 interface BottomNavProps {
   onCreatePostClick?: () => void;
@@ -21,41 +20,6 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
   const isOrganization = pathname.startsWith('/organization');
   const isNotifications = pathname === '/notifications';
   const isProfile = pathname.startsWith('/profile') || pathname.startsWith('/dashboard');
-
-  // Query organization membership status (only enabled if user is logged in)
-  const { data: membershipData } = useOrgMembershipStatusQuery(Boolean(session?.user));
-  const membership = membershipData?.membership;
-  const application = membershipData?.latestApplication;
-  const isActiveMember = membership?.status === 'ACTIVE';
-  const isOfficer =
-    Boolean(
-      membership &&
-        ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(
-          membership.orgRole,
-        ),
-    ) || (session?.user as any)?.role === 'ADMIN';
-
-  // Smart Role-based destination:
-  // - If not logged in or not joined: take to /organization/apply
-  // - If joined as Officer / Admin: take to /organization/admin
-  // - If joined as Active Member: take to /organization/member
-  // - If approved awaiting payment: take to /organization/payment
-  const orgHref = React.useMemo(() => {
-    if (!session?.user) {
-      return '/organization/apply';
-    }
-    if (isOfficer) {
-      return '/organization/admin';
-    }
-    if (isActiveMember) {
-      return '/organization/member';
-    }
-    if (application?.status === 'APPROVED' && membership?.status === 'APPROVED_PAYMENT_PENDING') {
-      return '/organization/payment';
-    }
-    // Not a member yet: take to apply page to join
-    return '/organization/apply';
-  }, [session?.user, isOfficer, isActiveMember, application?.status, membership?.status]);
 
   const handleCenterPlusClick = () => {
     if (onCreatePostClick) {
@@ -89,9 +53,9 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             <span className="text-[11px] leading-none">হোম</span>
           </Link>
 
-          {/* Organization (Role-based smart destination) */}
+          {/* Organization */}
           <Link
-            href={orgHref}
+            href="/organization"
             className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
               isOrganization
                 ? 'text-brand-emerald dark:text-brand-mint font-bold'

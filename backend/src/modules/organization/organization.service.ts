@@ -507,7 +507,7 @@ export class OrganizationService {
       this.prisma.contributionPayment.findMany({
         orderBy: { paidAt: 'desc' },
         take: 8,
-        include: { user: { select: { name: true, email: true } } },
+        include: { user: { select: { id: true, name: true, email: true, image: true } } },
       }),
       this.prisma.orgFund.findMany({ orderBy: { balance: 'desc' } }),
       this.prisma.contributionPayment.aggregate({

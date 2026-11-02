@@ -23,6 +23,10 @@ import {
   Loader2,
   TrendingUp,
   Check,
+  X,
+  Phone,
+  Mail,
+  Calendar,
 } from 'lucide-react';
 import {
   useOrgAdminStatsQuery,
@@ -34,7 +38,6 @@ import {
   useOrgNoticesQuery,
   useOrgMutations,
 } from '@/features/organization/hooks/useOrganizationQueries';
-import { useSession } from '@/lib/auth/auth-client';
 import type { OrgApplication } from '@/features/organization/types';
 
 type AdminTab =
@@ -53,7 +56,6 @@ function toBengaliNumber(num: number | string): string {
 }
 
 export default function OrganizationAdminPage() {
-  const { data: session } = useSession();
   const [activeTab, setActiveTab] = React.useState<AdminTab>('APPLICATIONS');
 
   // Application Filters & Search
@@ -312,10 +314,10 @@ export default function OrganizationAdminPage() {
       {/* =========================================================================
           1. Hero Header Banner (Consistent Muhammodpury Signature Branding)
          ========================================================================= */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-emerald via-emerald-800 to-brand-charcoal text-white p-6 sm:p-8 shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-emerald via-emerald-800 to-brand-charcoal text-white p-5 sm:p-8 shadow-xl">
         <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-white/5 blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-semibold text-emerald-100 backdrop-blur-md">
               <ShieldCheck className="w-4 h-4 text-brand-gold" />
@@ -329,55 +331,27 @@ export default function OrganizationAdminPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {/* Action Buttons - Perfectly Aligned Side-by-Side in 1 Row */}
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
             <button
               type="button"
               onClick={() => {
                 setTrxType('INCOME');
                 setTrxModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white text-brand-emerald font-bold text-xs shadow-lg hover:bg-emerald-50 active:scale-95 transition-all cursor-pointer"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-white text-brand-emerald font-bold text-xs shadow-lg hover:bg-emerald-50 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
             >
-              <Plus className="w-4 h-4 text-brand-emerald stroke-[2.5]" />
-              <span>জমা লিপিবদ্ধ</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setTrxType('EXPENSE');
-                setTrxModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-lg active:scale-95 transition-all cursor-pointer"
-            >
-              <Minus className="w-4 h-4 text-white stroke-[2.5]" />
-              <span>ব্যয় লিপিবদ্ধ</span>
+              <Plus className="w-4 h-4 text-brand-emerald stroke-[2.5] shrink-0" />
+              <span>লেনদেন লিপিবদ্ধ</span>
             </button>
 
             <Link
               href="/organization"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors whitespace-nowrap"
             >
               <span>সংগঠন হোম</span>
-              <span>→</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-white/90 shrink-0" />
             </Link>
-          </div>
-        </div>
-
-        {/* Admin Identifier Footer Bar */}
-        <div className="relative z-10 mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-emerald-100/80">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>লগইনকৃত অ্যাডমিন:</span>
-            <span className="font-bold text-white">
-              {session?.user?.name || 'অ্যাডমিন'}
-            </span>
-            <span className="text-emerald-200/60">({session?.user?.email})</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-[11px]">
-            <span>স্বচ্ছতা স্ট্যাটাস: <strong className="text-brand-gold">সর্বজনীন লাইভ অডিট</strong></span>
-            <span>সর্বশেষ সিঙ্ক: <strong>আজ</strong></span>
           </div>
         </div>
       </div>
@@ -387,28 +361,28 @@ export default function OrganizationAdminPage() {
          ========================================================================= */}
       <div className="space-y-3 sm:space-y-4">
         {/* Card 1: বর্তমান মোট ক্যাশ (Net Balance) */}
-        <div className="relative rounded-3xl bg-gradient-to-r from-[#121c2e] via-[#0d1e33] to-[#0f243b] p-5 sm:p-6 border border-cyan-500/25 shadow-lg space-y-4 overflow-hidden text-white">
+        <div className="relative rounded-3xl bg-white dark:bg-gradient-to-r dark:from-[#0E1714] dark:via-[#14231E] dark:to-[#172722] p-5 sm:p-6 border border-slate-200/80 dark:border-brand-emerald/35 shadow-soft dark:shadow-glass space-y-4 overflow-hidden text-slate-900 dark:text-white transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-slate-300 font-medium">
+            <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium">
               বর্তমান মোট ক্যাশ (Net Balance)
             </span>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/70 text-cyan-300 text-[11px] font-bold border border-cyan-500/30">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-brand-emerald/20 text-brand-emerald dark:text-brand-mint text-[11px] font-bold border border-emerald-200/80 dark:border-brand-emerald/40">
+              <ShieldCheck className="w-3.5 h-3.5 text-brand-emerald dark:text-brand-mint" />
               <span>সেফ ফান্ড</span>
             </div>
           </div>
 
-          <div className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl text-cyan-400 font-bold">৳</span>
+          <div className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl text-brand-emerald dark:text-brand-mint font-bold">৳</span>
             <span>{toBengaliNumber(totalBalance)}</span>
           </div>
 
-          <div className="pt-2 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-              <TrendingUp className="w-3.5 h-3.5" />
+          <div className="pt-2 border-t border-slate-100 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 text-brand-emerald dark:text-brand-mint font-semibold">
+              <TrendingUp className="w-3.5 h-3.5 text-brand-emerald dark:text-brand-mint" />
               <span>আয় +১২.৫% বৃদ্ধি</span>
             </div>
-            <span className="text-[11px] text-slate-400 font-normal">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
               সর্বশেষ আপডেট: আজ ৩:৩০ PM
             </span>
           </div>
@@ -417,33 +391,33 @@ export default function OrganizationAdminPage() {
         {/* Sub-Stat Cards (মোট জমা ও মোট খরচ - 2 Column Grid) */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {/* Card 2: মোট জমা */}
-          <div className="rounded-2xl sm:rounded-3xl bg-[#0f1d2c] p-4 sm:p-5 border border-teal-500/25 space-y-2 text-white">
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#121F1B] p-4 sm:p-5 border border-slate-200/80 dark:border-brand-emerald/30 shadow-soft space-y-2 text-slate-900 dark:text-white transition-colors">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-brand-emerald/20 text-brand-emerald dark:text-brand-mint flex items-center justify-center">
                 <ArrowUpRight className="w-4 h-4" />
               </div>
-              <span className="text-xs sm:text-sm text-slate-300 font-semibold">মোট জমা</span>
+              <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-semibold">মোট জমা</span>
             </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-black text-teal-300 tracking-tight">
+            <div className="text-xl sm:text-2xl md:text-3xl font-black text-brand-emerald dark:text-brand-mint tracking-tight">
               ৳ {toBengaliNumber(totalIncome)}
             </div>
-            <p className="text-[11px] text-teal-400 font-medium flex items-center gap-1">
+            <p className="text-[11px] text-brand-emerald dark:text-emerald-400 font-medium flex items-center gap-1">
               <span>▲ ৳১৫,০০০ গত সপ্তাহ</span>
             </p>
           </div>
 
           {/* Card 3: মোট খরচ */}
-          <div className="rounded-2xl sm:rounded-3xl bg-[#1a1424] p-4 sm:p-5 border border-rose-500/25 space-y-2 text-white">
+          <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1C1619] p-4 sm:p-5 border border-slate-200/80 dark:border-rose-500/30 shadow-soft space-y-2 text-slate-900 dark:text-white transition-colors">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center">
                 <ArrowDownRight className="w-4 h-4" />
               </div>
-              <span className="text-xs sm:text-sm text-slate-300 font-semibold">মোট খরচ</span>
+              <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-semibold">মোট খরচ</span>
             </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-black text-rose-300 tracking-tight">
+            <div className="text-xl sm:text-2xl md:text-3xl font-black text-rose-600 dark:text-rose-300 tracking-tight">
               ৳ {toBengaliNumber(totalExpense)}
             </div>
-            <p className="text-[11px] text-rose-400 font-medium flex items-center gap-1">
+            <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
               <span>▼ -৫% বাজেট এর মধ্যে</span>
             </p>
           </div>
@@ -549,17 +523,23 @@ export default function OrganizationAdminPage() {
       </div>
 
       {/* =========================================================================
-          4. Tab 1: Member Applications Review (সদস্যপদ আবেদন)
+          4. Tab 1: Member Applications Review (সদস্যপদ আবেদন - Seamless Clean Open Layout)
          ========================================================================= */}
       {activeTab === 'APPLICATIONS' && (
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
+        <div className="space-y-4">
+          {/* Header & Filter Toolbar (Open flat layout, zero boxiness) */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                সদস্যপদ আবেদন পর্যালোচনা
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                কার্যনির্বাহী কমিটি দ্বারা আবেদনকারীর তথ্য যাচাই করে সদস্যপদ অনুমোদন বা বাতিল করুন
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  সদস্যপদ আবেদন পর্যালোচনা
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-brand-emerald dark:text-brand-mint bg-brand-emerald/10">
+                  {toBengaliNumber(filteredApplications.length)} টি আবেদন
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                আবেদনকারীর তথ্য যাচাই করে সদস্যপদ অনুমোদন বা বাতিল করুন
               </p>
             </div>
 
@@ -569,10 +549,10 @@ export default function OrganizationAdminPage() {
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="নাম বা ফোন দিয়ে খুঁজুন..."
+                  placeholder="নাম, ফোন বা পেশা খুঁজুন..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald"
+                  className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald w-44 sm:w-56 transition-all"
                 />
               </div>
 
@@ -582,19 +562,19 @@ export default function OrganizationAdminPage() {
                   onClick={() => setAppFilter('PENDING')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                     appFilter === 'PENDING'
-                      ? 'bg-white dark:bg-brand-charcoal text-brand-emerald shadow-xs font-bold'
-                      : 'text-slate-500'
+                      ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  অপেক্ষমাণ
+                  অপেক্ষমাণ {pendingAppsCount > 0 && `(${toBengaliNumber(pendingAppsCount)})`}
                 </button>
                 <button
                   type="button"
                   onClick={() => setAppFilter('APPROVED')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                     appFilter === 'APPROVED'
-                      ? 'bg-white dark:bg-brand-charcoal text-brand-emerald shadow-xs font-bold'
-                      : 'text-slate-500'
+                      ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   অনুমোদিত
@@ -604,8 +584,8 @@ export default function OrganizationAdminPage() {
                   onClick={() => setAppFilter('REJECTED')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                     appFilter === 'REJECTED'
-                      ? 'bg-white dark:bg-brand-charcoal text-brand-emerald shadow-xs font-bold'
-                      : 'text-slate-500'
+                      ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   বাতিলকৃত
@@ -615,8 +595,8 @@ export default function OrganizationAdminPage() {
                   onClick={() => setAppFilter('ALL')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                     appFilter === 'ALL'
-                      ? 'bg-white dark:bg-brand-charcoal text-brand-emerald shadow-xs font-bold'
-                      : 'text-slate-500'
+                      ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   সবগুলো
@@ -646,305 +626,382 @@ export default function OrganizationAdminPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredApplications.map((app) => (
-                <div
-                  key={app.id}
-                  className="rounded-2xl bg-slate-50 dark:bg-white/5 p-4 border border-slate-200/80 dark:border-white/10 space-y-3 hover:border-brand-emerald/40 transition-all"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-brand-emerald/10 text-brand-emerald flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden relative">
-                        {app.user?.image ? (
-                          <Image
-                            src={app.user.image}
-                            alt={app.fullName || 'User'}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          app.fullName?.charAt(0) || 'স'
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          {app.fullName}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {app.profession || 'পেশা উল্লেখ নেই'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        app.status === 'PENDING'
-                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                          : app.status === 'APPROVED'
-                          ? 'bg-brand-emerald/15 text-brand-emerald'
-                          : 'bg-rose-500/15 text-rose-600'
-                      }`}
-                    >
-                      {app.status === 'PENDING'
-                        ? 'অপেক্ষমাণ'
-                        : app.status === 'APPROVED'
-                        ? 'অনুমোদিত'
-                        : 'বাতিলকৃত'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/60 dark:border-white/5">
-                    <div>
-                      <span className="text-[11px] text-slate-400 block">মোবাইল নম্বর</span>
-                      <span className="font-semibold">{app.phone}</span>
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-400 block">মাসিক অনুদান অঙ্গীকার</span>
-                      <span className="font-bold text-brand-emerald">
-                        ৳ {toBengaliNumber(app.monthlyContribution)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-400 block">আবেদনের তারিখ</span>
-                      <span>
-                        {new Date(app.submittedAt || app.createdAt).toLocaleDateString('bn-BD')}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-400 block">ইমেইল</span>
-                      <span className="truncate block" title={app.user?.email || 'N/A'}>
-                        {app.user?.email || 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Actions for PENDING applications */}
-                  {app.status === 'PENDING' && (
-                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickApprove(app.id)}
-                        disabled={mutations.reviewApplication.isPending}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-brand-emerald hover:bg-brand-emerald-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            <>
+              {/* Seamless Clean Table (No outer box, pure icons without background boxes) */}
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full text-left border-collapse min-w-[700px]">
+                  <thead>
+                    <tr className="border-b border-slate-200/60 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <th className="py-2.5 px-3 min-w-[200px] whitespace-nowrap">আবেদনকারী</th>
+                      <th className="py-2.5 px-3 min-w-[170px] whitespace-nowrap">যোগাযোগ তথ্য</th>
+                      <th className="py-2.5 px-3 min-w-[130px] whitespace-nowrap">অঙ্গীকার চাঁদা</th>
+                      <th className="py-2.5 px-3 min-w-[120px] whitespace-nowrap">আবেদনের তারিখ</th>
+                      <th className="py-2.5 px-3 text-center min-w-[100px] whitespace-nowrap">স্ট্যাটাস</th>
+                      <th className="py-2.5 px-3 text-right min-w-[90px] whitespace-nowrap">কার্যক্রম</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
+                    {filteredApplications.map((app) => (
+                      <tr
+                        key={app.id}
+                        className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group"
                       >
-                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        <span>অনুমোদন করুন</span>
-                      </button>
+                        {/* 1. Applicant (Proper single-line alignment) */}
+                        <td className="py-3.5 px-3 min-w-[200px]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-brand-emerald/10 text-brand-emerald flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden relative ring-1 ring-brand-emerald/20">
+                              {app.user?.image ? (
+                                <Image
+                                  src={app.user.image}
+                                  alt={app.fullName || 'User'}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                app.fullName?.charAt(0) || 'স'
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-sm text-slate-900 dark:text-white whitespace-nowrap group-hover:text-brand-emerald transition-colors">
+                                {app.fullName}
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {app.profession || 'পেশা উল্লেখ নেই'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
 
-                      <button
-                        type="button"
-                        onClick={() => setReviewModalApp(app)}
-                        className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 text-xs font-bold transition-all cursor-pointer active:scale-95"
-                      >
-                        বাতিল
-                      </button>
-                    </div>
-                  )}
+                        {/* 2. Contact */}
+                        <td className="py-3.5 px-3 space-y-1 min-w-[170px]">
+                          <a
+                            href={`tel:${app.phone}`}
+                            className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-emerald transition-colors whitespace-nowrap"
+                          >
+                            <Phone className="w-3 h-3 text-slate-400" />
+                            <span>{app.phone}</span>
+                          </a>
+                          <div
+                            className="flex items-center gap-1.5 text-[11px] text-slate-400 whitespace-nowrap truncate max-w-[170px]"
+                            title={app.user?.email || 'N/A'}
+                          >
+                            <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate">{app.user?.email || 'N/A'}</span>
+                          </div>
+                        </td>
 
-                  {app.status === 'REJECTED' && app.rejectionReason && (
-                    <p className="text-[11px] text-rose-500 bg-rose-50 dark:bg-rose-950/20 p-2 rounded-xl">
-                      বাতিলের কারণ: {app.rejectionReason}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
+                        {/* 3. Monthly Contribution */}
+                        <td className="py-3.5 px-3 min-w-[130px] whitespace-nowrap">
+                          <span className="font-bold font-mono text-brand-emerald dark:text-brand-mint text-xs">
+                            ৳ {toBengaliNumber(app.monthlyContribution)}
+                            <span className="text-[10px] font-normal text-slate-400 ml-0.5">/মাস</span>
+                          </span>
+                        </td>
+
+                        {/* 4. Date */}
+                        <td className="py-3.5 px-3 text-slate-600 dark:text-slate-400 min-w-[120px] whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            <span>
+                              {new Date(app.submittedAt || app.createdAt).toLocaleDateString('bn-BD')}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* 5. Status Badge */}
+                        <td className="py-3.5 px-3 text-center min-w-[100px] whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+                              app.status === 'PENDING'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : app.status === 'APPROVED'
+                                ? 'text-emerald-600 dark:text-brand-mint'
+                                : 'text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                app.status === 'PENDING'
+                                  ? 'bg-amber-500 animate-pulse'
+                                  : app.status === 'APPROVED'
+                                  ? 'bg-emerald-500'
+                                  : 'bg-rose-500'
+                              }`}
+                            />
+                            {app.status === 'PENDING'
+                              ? 'অপেক্ষমাণ'
+                              : app.status === 'APPROVED'
+                              ? 'অনুমোদিত'
+                              : 'বাতিলকৃত'}
+                          </span>
+                        </td>
+
+                        {/* 6. Actions (PURE ICONS ONLY - NO background box!) */}
+                        <td className="py-3.5 px-3 text-right min-w-[90px] whitespace-nowrap">
+                          {app.status === 'PENDING' ? (
+                            <div className="inline-flex items-center gap-3 justify-end">
+                              {/* Quick Approve: Pure checkmark icon without background box */}
+                              <button
+                                type="button"
+                                onClick={() => handleQuickApprove(app.id)}
+                                disabled={mutations.reviewApplication.isPending}
+                                className="text-emerald-500 hover:text-emerald-400 hover:scale-125 active:scale-75 transition-transform cursor-pointer disabled:opacity-40 p-1"
+                                title="সদস্যপদ অনুমোদন করুন"
+                                aria-label="অনুমোদন করুন"
+                              >
+                                <Check className="w-5 h-5 stroke-[2.5]" />
+                              </button>
+
+                              {/* Reject: Pure cross icon without background box */}
+                              <button
+                                type="button"
+                                onClick={() => setReviewModalApp(app)}
+                                className="text-rose-500 hover:text-rose-400 hover:scale-125 active:scale-75 transition-transform cursor-pointer p-1"
+                                title="আবেদন বাতিল করুন"
+                                aria-label="বাতিল করুন"
+                              >
+                                <X className="w-5 h-5 stroke-[2.5]" />
+                              </button>
+                            </div>
+                          ) : app.status === 'APPROVED' ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-500 text-xs font-semibold">
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>অনুমোদিত</span>
+                            </span>
+                          ) : (
+                            <div className="space-y-0.5">
+                              <span className="inline-flex items-center gap-1 text-rose-500 text-xs font-semibold">
+                                <XCircle className="w-4 h-4" />
+                                <span>বাতিল</span>
+                              </span>
+                              {app.rejectionReason && (
+                                <p
+                                  className="text-[10px] text-slate-400 max-w-[140px] truncate ml-auto"
+                                  title={app.rejectionReason}
+                                >
+                                  {app.rejectionReason}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
 
       {/* =========================================================================
-          5. Tab 2: Multi-Fund Ledger Management (তহবিল ও বাজেট)
+          5. Tab 2: Multi-Fund Ledger Management (তহবিল ও বাজেট - Seamless Open Table)
          ========================================================================= */}
       {activeTab === 'FUNDS' && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                  সংগঠনের ৪টি কল্যাণ তহবিল
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  প্রতিটি তহবিলের নির্ধারিত লক্ষ্য, বর্তমান ব্যালেন্স ও সরাসরি লেনদেন এন্ট্রি
-                </p>
-              </div>
+        <div className="space-y-4">
+          {/* Header (Clean, Minimal & Direct) */}
+          <div className="flex items-center justify-between gap-3 pb-1">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              কল্যাণ তহবিল ({toBengaliNumber(funds.length)}টি)
+            </h2>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTrxType('INCOME');
-                    setTrxModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow hover:bg-brand-emerald-hover cursor-pointer transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>লেনদেন যুক্ত করুন</span>
-                </button>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTrxType('INCOME');
+                setTrxModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow-xs hover:bg-brand-emerald-hover cursor-pointer transition-all active:scale-95 shrink-0 whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>লেনদেন যুক্ত করুন</span>
+            </button>
+          </div>
 
-            {/* Funds Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {funds.map((fund) => {
-                const bal = fund.balance ?? fund.currentBalance ?? 0;
-                return (
-                  <div
-                    key={fund.id}
-                    className="rounded-2xl bg-slate-50 dark:bg-white/5 p-5 border border-slate-200/80 dark:border-white/10 space-y-4 hover:border-brand-emerald/40 transition-all flex flex-col justify-between"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-brand-emerald bg-brand-emerald/10 px-2 py-0.5 rounded-md">
-                            {fund.code}
-                          </span>
-                          <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1">
-                            {fund.name}
-                          </h3>
+          {/* Seamless Open Treasury Ledger (No nested box cards, smooth horizontal scrolling) */}
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-left border-collapse min-w-[580px]">
+              <thead>
+                <tr className="border-b border-slate-200/60 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-2.5 px-3 min-w-[240px] whitespace-nowrap">তহবিল বিবরণ ও কোড</th>
+                  <th className="py-2.5 px-3 min-w-[110px] whitespace-nowrap">মোট লেনদেন</th>
+                  <th className="py-2.5 px-3 min-w-[120px] whitespace-nowrap">বর্তমান ব্যালেন্স</th>
+                  <th className="py-2.5 px-3 text-right min-w-[60px] whitespace-nowrap">অ্যাকশন</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
+                {funds.map((fund) => {
+                  const bal = fund.balance ?? fund.currentBalance ?? 0;
+                  return (
+                    <tr
+                      key={fund.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group"
+                    >
+                      {/* 1. Fund Details */}
+                      <td className="py-2.5 sm:py-3 px-3 min-w-[240px]">
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-brand-emerald/10 text-brand-emerald flex items-center justify-center shrink-0 mt-0.5">
+                            <Wallet className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white group-hover:text-brand-emerald transition-colors">
+                                {fund.name}
+                              </span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-emerald bg-brand-emerald/10 px-1.5 py-0.5 rounded">
+                                {fund.code}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                              {fund.description || 'সংগঠনের নির্ধারিত সামাজিক ও নাগরিক কল্যাণ তহবিল।'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs text-slate-400 block">বর্তমান ব্যালেন্স</span>
-                          <span className="text-xl font-extrabold text-brand-emerald">
-                            ৳ {toBengaliNumber(bal)}
+                      </td>
+
+                      {/* 2. Total Transactions */}
+                      <td className="py-2.5 sm:py-3 px-3 min-w-[110px] whitespace-nowrap text-slate-600 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium">
+                          {toBengaliNumber(fund._count?.transactions || 0)} টি লেনদেন
+                        </span>
+                      </td>
+
+                      {/* 3. Current Balance (Compact small text for better UX) */}
+                      <td className="py-2.5 sm:py-3 px-3 min-w-[120px] whitespace-nowrap">
+                        <div className="flex items-baseline gap-1 font-mono">
+                          <span className="text-[11px] font-bold text-brand-emerald">৳</span>
+                          <span className="text-xs sm:text-sm font-bold text-brand-emerald dark:text-brand-mint">
+                            {toBengaliNumber(bal)}
                           </span>
                         </div>
-                      </div>
+                      </td>
 
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        {fund.description || 'সংগঠনের নির্ধারিত সামাজিক ও নাগরিক কল্যাণ তহবিল।'}
-                      </p>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-slate-400">
-                        মোট রেকর্ডকৃত লেনদেন: {toBengaliNumber(fund._count?.transactions || 0)} টি
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTrxFundId(fund.id);
-                          setTrxType('INCOME');
-                          setTrxModalOpen(true);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-white dark:bg-brand-charcoal text-brand-emerald font-bold text-xs border border-brand-emerald/30 hover:bg-brand-emerald hover:text-white transition-colors cursor-pointer"
-                      >
-                        + এন্ট্রি দিন
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                      {/* 4. Action (Pure Standalone Icon Only - No text, no background box) */}
+                      <td className="py-2.5 sm:py-3 px-3 text-right min-w-[60px] whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTrxFundId(fund.id);
+                            setTrxType('INCOME');
+                            setTrxModalOpen(true);
+                          }}
+                          className="text-brand-emerald hover:text-brand-emerald-hover hover:scale-125 active:scale-75 transition-transform p-1 cursor-pointer inline-flex items-center justify-end"
+                          title="এই তহবিলে লেনদেন এন্ট্রি দিন"
+                          aria-label="লেনদেন এন্ট্রি দিন"
+                        >
+                          <Plus className="w-5 h-5 stroke-[2.5]" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       {/* =========================================================================
-          6. Tab 3: Transactions & Member Payments Ledger (লেনদেন লেজার)
+          6. Tab 3: Transactions & Member Payments Ledger (লেনদেন লেজার - Seamless Open Table)
          ========================================================================= */}
       {activeTab === 'TRANSACTIONS' && (
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                লেনদেন ও চাঁদা আদায় লেজার
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  লেনদেন ও চাঁদা আদায় লেজার
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-brand-emerald dark:text-brand-mint bg-brand-emerald/10">
+                  {toBengaliNumber((stats?.recentTransactions?.length || 0) + (stats?.recentPayments?.length || 0))} টি রেকর্ড
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 সকল তহবিলের জমা-খরচ এবং সদস্যদের মাসিক অনুদানের হিসাব খাতা
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setTrxView('FUNDS')}
-                  className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    trxView === 'FUNDS'
-                      ? 'bg-white dark:bg-brand-charcoal text-brand-emerald shadow-xs font-bold'
-                      : 'text-slate-500'
-                  }`}
-                >
-                  তহবিল লেনদেন ({stats?.recentTransactions?.length || 0})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTrxView('PAYMENTS')}
-                  className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    trxView === 'PAYMENTS'
-                      ? 'bg-white dark:bg-brand-charcoal text-brand-emerald shadow-xs font-bold'
-                      : 'text-slate-500'
-                  }`}
-                >
-                  সদস্য চাঁদা পরিশোধ ({stats?.recentPayments?.length || 0})
-                </button>
-              </div>
-
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => setTrxModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow hover:bg-brand-emerald-hover cursor-pointer"
+                onClick={() => setTrxView('FUNDS')}
+                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                  trxView === 'FUNDS'
+                    ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
               >
-                + নতুন লেনদেন
+                তহবিল লেনদেন ({stats?.recentTransactions?.length || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrxView('PAYMENTS')}
+                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                  trxView === 'PAYMENTS'
+                    ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                সদস্য চাঁদা ({stats?.recentPayments?.length || 0})
               </button>
             </div>
           </div>
 
-          {/* Subview 1: Fund Transactions */}
+          {/* Subview 1: Fund Transactions (Responsive Full-Width Feed, No Scrolling Required) */}
           {trxView === 'FUNDS' && (
-            <div className="space-y-3">
+            <div className="w-full">
               {stats?.recentTransactions && stats.recentTransactions.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
                   {stats.recentTransactions.map((tx) => (
                     <div
                       key={tx.id}
-                      className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
+                      className="py-3 px-1 sm:px-2 flex items-start justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors group"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <div
-                          className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
-                            tx.type === 'EXPENSE'
-                              ? 'bg-rose-500/10 text-rose-600'
-                              : 'bg-teal-500/10 text-teal-600'
-                          }`}
+                          className="shrink-0 mt-0.5"
+                          title={tx.type === 'EXPENSE' ? 'ব্যয় / খরচ' : 'জমা / অনুদান'}
                         >
                           {tx.type === 'EXPENSE' ? (
-                            <ArrowDownRight className="w-4 h-4" />
+                            <ArrowDownRight className="w-4 h-4 text-rose-500 stroke-[2.5]" />
                           ) : (
-                            <ArrowUpRight className="w-4 h-4" />
+                            <ArrowUpRight className="w-4 h-4 text-emerald-500 stroke-[2.5]" />
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-snug group-hover:text-brand-emerald transition-colors break-words">
                             {tx.title}
                           </h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {tx.fund?.name || 'তহবিল'} •{' '}
-                            {new Date(tx.createdAt).toLocaleDateString('bn-BD', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span>{tx.fund?.name || 'তহবিল'}</span>
+                            <span className="opacity-40">•</span>
+                            <span>
+                              {new Date(tx.createdAt).toLocaleDateString('bn-BD', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </span>
                           </p>
                         </div>
                       </div>
 
                       <div className="text-right shrink-0">
                         <div
-                          className={`text-xs sm:text-sm font-extrabold ${
-                            tx.type === 'EXPENSE' ? 'text-rose-600' : 'text-teal-600'
+                          className={`font-mono font-bold text-xs sm:text-sm ${
+                            tx.type === 'EXPENSE'
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-emerald-600 dark:text-brand-mint'
                           }`}
                         >
-                          {tx.type === 'EXPENSE' ? '- ' : '+ '}৳{' '}
-                          {toBengaliNumber(Math.abs(tx.amount))}
+                          {tx.type === 'EXPENSE' ? '- ' : '+ '}৳ {toBengaliNumber(Math.abs(tx.amount))}
                         </div>
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             tx.type === 'EXPENSE'
-                              ? 'bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300'
-                              : 'bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300'
+                              ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300'
+                              : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-brand-mint'
                           }`}
                         >
                           {tx.type === 'EXPENSE' ? 'অনুমোদিত ব্যয়' : 'জমা / অনুদান'}
@@ -969,35 +1026,48 @@ export default function OrganizationAdminPage() {
             </div>
           )}
 
-          {/* Subview 2: Member Payments */}
+          {/* Subview 2: Member Payments (Date Under Name, No Huge Gap, No Scrolling) */}
           {trxView === 'PAYMENTS' && (
-            <div className="space-y-3">
+            <div className="w-full">
               {stats?.recentPayments && stats.recentPayments.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
                   {stats.recentPayments.map((p) => (
                     <div
                       key={p.id}
-                      className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
+                      className="py-3 px-1 sm:px-2 flex items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors group"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-2xl bg-brand-emerald/10 text-brand-emerald flex items-center justify-center font-bold text-xs shrink-0">
-                          {p.user?.name?.charAt(0) || 'স'}
+                      {/* Left: Avatar + Member Name + Period/Date directly underneath */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="w-9 h-9 rounded-full bg-brand-emerald/10 text-brand-emerald flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden relative ring-1 ring-brand-emerald/20">
+                          {p.user?.image ? (
+                            <Image
+                              src={p.user.image}
+                              alt={p.user.name || 'User'}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            p.user?.name?.charAt(0) || 'স'
+                          )}
                         </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate group-hover:text-brand-emerald transition-colors">
                             {p.user?.name || 'সদস্য'}
                           </h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            মাসিক কিস্তি • মাস: {toBengaliNumber(p.periodMonth)}/{toBengaliNumber(p.periodYear)}
+                          {/* Date / Period directly under the name */}
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            মাসিক কিস্তি • {toBengaliNumber(p.periodMonth)}/{toBengaliNumber(p.periodYear)}
                           </p>
                         </div>
                       </div>
 
+                      {/* Right: Paid Amount + Status Badge */}
                       <div className="text-right shrink-0">
-                        <div className="text-xs sm:text-sm font-extrabold text-brand-emerald">
+                        <div className="font-mono font-bold text-xs sm:text-sm text-brand-emerald dark:text-brand-mint">
                           + ৳ {toBengaliNumber(p.amount)}
                         </div>
-                        <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-emerald/15 text-brand-emerald">
+                        <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-emerald/15 text-brand-emerald">
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand-emerald" />
                           পরিশোধিত
                         </span>
                       </div>
@@ -1023,55 +1093,53 @@ export default function OrganizationAdminPage() {
       )}
 
       {/* =========================================================================
-          7. Tab 4: Committees & Designations (কমিটি ও পদবি)
+          7. Tab 4: Committees & Designations (কমিটি ও পদবি - Flat Open Layout)
          ========================================================================= */}
       {activeTab === 'COMMITTEES' && (
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 সাংগঠনিক কাঠামো ও কার্যনির্বাহী পরিষদ
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 সংগঠনের আনুষ্ঠানিক পদবি, দায়িত্ব ও কার্যনির্বাহী কমিটির তালিকা
               </p>
             </div>
           </div>
 
-          {/* Designations Grid */}
-          <div className="space-y-3">
+          {/* Designations Grid (Clean Flat Badges) */}
+          <div className="space-y-2.5">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              নির্ধারিত প্রাতিষ্ঠানিক পদবিসমূহ ({designations.length})
+              নির্ধারিত প্রাতিষ্ঠানিক পদবিসমূহ ({toBengaliNumber(designations.length)})
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="flex flex-wrap gap-2">
               {designations.map((d) => (
                 <div
                   key={d.id}
-                  className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 space-y-1"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs"
                 >
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{d.title}</span>
                   <span className="text-[10px] font-bold text-brand-emerald bg-brand-emerald/10 px-1.5 py-0.5 rounded">
                     লেভেল {toBengaliNumber(d.level)}
                   </span>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                    {d.title}
-                  </h4>
-                  <p className="text-[10px] text-slate-400">{d.code}</p>
+                  <span className="text-[10px] text-slate-400 font-mono">{d.code}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Committees list */}
-          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-white/5">
+          {/* Committees list (Open Flat Cards) */}
+          <div className="space-y-3 pt-3 border-t border-slate-200/60 dark:border-white/10">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              বর্তমান সক্রিয় কমিটিসমূহ ({committees.length})
+              বর্তমান সক্রিয় কমিটিসমূহ ({toBengaliNumber(committees.length)})
             </h3>
             {committees.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {committees.map((c) => (
                   <div
                     key={c.id}
-                    className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2"
+                    className="border-l-2 border-l-brand-emerald pl-4 py-2 space-y-1 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors rounded-r-xl"
                   >
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                       {c.name}
@@ -1079,9 +1147,8 @@ export default function OrganizationAdminPage() {
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {c.description || 'সংগঠনের নির্ধারিত কার্যনির্বাহী কমিটি।'}
                     </p>
-                    <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-200/50 dark:border-white/5">
-                      কার্যকাল শুরু:{' '}
-                      {c.startDate ? new Date(c.startDate).toLocaleDateString('bn-BD') : 'চলমান'}
+                    <div className="text-[11px] text-slate-400 pt-1">
+                      কার্যকাল শুরু: {c.startDate ? new Date(c.startDate).toLocaleDateString('bn-BD') : 'চলমান'}
                     </div>
                   </div>
                 ))}
@@ -1094,16 +1161,21 @@ export default function OrganizationAdminPage() {
       )}
 
       {/* =========================================================================
-          8. Tab 5: Notices Management (বিজ্ঞপ্তি ব্যবস্থাপনা)
+          8. Tab 5: Notices Management (বিজ্ঞপ্তি ব্যবস্থাপনা - Open Timeline Feed)
          ========================================================================= */}
       {activeTab === 'NOTICES' && (
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                প্রাতিষ্ঠানিক নোটিশ ও বিজ্ঞপ্তি
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 pb-1">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 dark:text-white truncate">
+                  প্রাতিষ্ঠানিক নোটিশ ও বিজ্ঞপ্তি
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-brand-emerald dark:text-brand-mint bg-brand-emerald/10 shrink-0">
+                  {toBengaliNumber(notices.length)} টি বিজ্ঞপ্তি
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                 জরুরি নোটিশ প্রকাশ, জনগুরুত্বপূর্ণ বার্তা ও সদস্যদের জন্য নির্দেশনা
               </p>
             </div>
@@ -1111,21 +1183,21 @@ export default function OrganizationAdminPage() {
             <button
               type="button"
               onClick={() => setNoticeModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow hover:bg-brand-emerald-hover cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow-xs hover:bg-brand-emerald-hover cursor-pointer transition-all active:scale-95 shrink-0 whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>নতুন বিজ্ঞপ্তি প্রকাশ</span>
             </button>
           </div>
 
           {notices.length > 0 ? (
-            <div className="space-y-3">
+            <div className="divide-y divide-slate-100 dark:divide-white/5">
               {notices.map((n) => (
                 <div
                   key={n.id}
-                  className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2 hover:border-brand-emerald/40 transition-colors"
+                  className="py-4 space-y-2 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
                 >
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
@@ -1176,16 +1248,21 @@ export default function OrganizationAdminPage() {
       )}
 
       {/* =========================================================================
-          9. Tab 6: Elections Management (ডিজিটাল নির্বাচন পরিচালনা)
+          9. Tab 6: Elections Management (ডিজিটাল নির্বাচন পরিচালনা - Seamless Layout)
          ========================================================================= */}
       {activeTab === 'ELECTIONS' && (
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                গণতান্ত্রিক ডিজিটাল নির্বাচন পরিচালনা
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 pb-1">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 dark:text-white truncate">
+                  গণতান্ত্রিক ডিজিটাল নির্বাচন পরিচালনা
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-amber-500 bg-amber-500/10 shrink-0">
+                  {toBengaliNumber(elections.length)} টি নির্বাচন
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                 তফশিল ঘোষণা, লাইভ ভোটগ্রহণ চালু/বন্ধ এবং ফলাফল চূড়ান্তকরণ
               </p>
             </div>
@@ -1193,19 +1270,19 @@ export default function OrganizationAdminPage() {
             <button
               type="button"
               onClick={() => setElectionModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-xs cursor-pointer transition-all active:scale-95 shrink-0 whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>নতুন নির্বাচনী তফশিল</span>
             </button>
           </div>
 
           {elections.length > 0 ? (
-            <div className="space-y-4">
+            <div className="divide-y divide-slate-100 dark:divide-white/5">
               {elections.map((elec) => (
                 <div
                   key={elec.id}
-                  className="rounded-2xl bg-slate-50 dark:bg-white/5 p-5 border border-slate-200/80 dark:border-white/10 space-y-4"
+                  className="py-4 space-y-3 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-1">
@@ -1228,7 +1305,7 @@ export default function OrganizationAdminPage() {
                             : elec.status}
                         </span>
                         <span className="text-xs text-slate-400">
-                          মোট পদ: {elec.positions?.length || 1} টি
+                          মোট পদ: {toBengaliNumber(elec.positions?.length || 1)} টি
                         </span>
                       </div>
                       <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -1241,13 +1318,13 @@ export default function OrganizationAdminPage() {
                       )}
                     </div>
 
-                    {/* Election Controls */}
+                    {/* Election Controls (Pure Icons / Clean Compact Buttons) */}
                     <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
                       {elec.status !== 'VOTING_ACTIVE' && elec.status !== 'FINALIZED' && (
                         <button
                           type="button"
                           onClick={() => handleStartVoting(elec.id, elec.title)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs transition-colors cursor-pointer"
                         >
                           <Play className="w-3 h-3 fill-current" />
                           <span>ভোটগ্রহণ শুরু</span>
@@ -1258,7 +1335,7 @@ export default function OrganizationAdminPage() {
                         <button
                           type="button"
                           onClick={() => handleCloseVoting(elec.id, elec.title)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
                         >
                           <Square className="w-3 h-3 fill-current" />
                           <span>ভোটগ্রহণ সমাপ্ত</span>
@@ -1269,7 +1346,7 @@ export default function OrganizationAdminPage() {
                         <button
                           type="button"
                           onClick={() => handleFinalizeElection(elec.id, elec.title)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-emerald hover:bg-brand-emerald-hover text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-emerald hover:bg-brand-emerald-hover text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>ফলাফল চূড়ান্ত করুন</span>
@@ -1279,27 +1356,28 @@ export default function OrganizationAdminPage() {
                       <button
                         type="button"
                         onClick={() => handleDeleteElection(elec.id, elec.title)}
-                        className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-rose-500 hover:scale-110 active:scale-90 transition-transform p-1.5 cursor-pointer"
                         title="নির্বাচন মুছুন"
+                        aria-label="মুছুন"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 stroke-[2]" />
                       </button>
                     </div>
                   </div>
 
                   {/* Positions details */}
                   {elec.positions && elec.positions.length > 0 && (
-                    <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap gap-2 text-xs">
+                    <div className="pt-2 flex flex-wrap gap-2 text-xs">
                       {elec.positions.map((pos) => (
                         <div
                           key={pos.id}
-                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-[11px]"
                         >
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
                             {pos.designation?.title || 'পদবি'}
                           </span>
-                          <span className="text-[11px] text-slate-400 ml-1.5">
-                            (সর্বোচ্চ বিজয়ী: {toBengaliNumber(pos.maxWinners)})
+                          <span className="text-slate-400">
+                            (বিজয়ী: {toBengaliNumber(pos.maxWinners)})
                           </span>
                         </div>
                       ))}
@@ -1380,20 +1458,31 @@ export default function OrganizationAdminPage() {
                 </button>
               </div>
 
-              {/* Fund Selector */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  উদ্দিষ্ট তহবিল নির্বাচন করুন
-                </label>
+              {/* Fund Selector (Short, clean text with separate balance info to prevent layout breakage) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label htmlFor="trx-fund-select">উদ্দিষ্ট তহবিল</label>
+                  {(() => {
+                    const selected = funds.find((f) => f.id === trxFundId) || funds[0];
+                    if (!selected) return null;
+                    const bal = selected.balance ?? selected.currentBalance ?? 0;
+                    return (
+                      <span className="text-[11px] font-semibold text-brand-emerald dark:text-brand-mint font-mono">
+                        ব্যালেন্স: ৳{toBengaliNumber(bal)}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <select
+                  id="trx-fund-select"
                   value={trxFundId}
                   onChange={(e) => setTrxFundId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald cursor-pointer"
                   required
                 >
                   {funds.map((f) => (
-                    <option key={f.id} value={f.id} className="text-slate-900 dark:text-white dark:bg-slate-900">
-                      {f.name} ({f.code}) — বর্তমান: ৳{toBengaliNumber(f.balance ?? f.currentBalance ?? 0)}
+                    <option key={f.id} value={f.id} className="text-slate-900 dark:text-white dark:bg-slate-900 py-1">
+                      {f.name}
                     </option>
                   ))}
                 </select>
