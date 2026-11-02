@@ -1,0 +1,162 @@
+import { z } from 'zod';
+
+export const ApplyMembershipSchema = z.object({
+  fullName: z.string().min(2, 'সম্পূর্ণ নাম কমপক্ষে ২ অক্ষরের হতে হবে').max(100),
+  phone: z.string().min(11, 'সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন').max(15),
+  profession: z.string().min(2, 'পেশা উল্লেখ করুন').max(100),
+  monthlyContribution: z.coerce
+    .number()
+    .min(50, 'মাসিক অনুদান সর্বনিম্ন ৫০ টাকা হতে হবে'),
+  agreedToMonthlyFee: z
+    .boolean()
+    .refine((val) => val === true, 'আপনাকে প্রতি মাসে নির্ধারিত চাঁদা পরিশোধে সম্মতি দিতে হবে'),
+});
+
+export const InitialPaymentSchema = z.object({
+  paymentMethod: z.enum(['BKASH', 'NAGAD', 'ROCKET', 'BANK', 'CASH']),
+  trxId: z.string().optional(),
+  senderNumber: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const PayContributionSchema = z.object({
+  periodMonth: z.coerce.number().min(1).max(12),
+  periodYear: z.coerce.number().min(2020).max(2050),
+  amount: z.coerce.number().min(50, 'অনুদান সর্বনিম্ন ৫০ টাকা হতে হবে'),
+  paymentMethod: z.enum(['BKASH', 'NAGAD', 'ROCKET', 'BANK', 'CASH']),
+  trxId: z.string().optional(),
+  senderNumber: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const ChangeContributionSchema = z.object({
+  newAmount: z.coerce.number().min(50, 'নতুন মাসিক অনুদান সর্বনিম্ন ৫০ টাকা হতে হবে'),
+  reason: z.string().optional(),
+});
+
+export const ReviewApplicationSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED']),
+  rejectionReason: z.string().optional(),
+});
+
+export const CreateFundSchema = z.object({
+  name: z.string().min(2, 'তহবিলের নাম আবশ্যক'),
+  code: z.string().min(2, 'তহবিল কোড আবশ্যক').toUpperCase(),
+  description: z.string().optional(),
+  openingBalance: z.coerce.number().min(0).default(0),
+});
+
+export const FundTransactionSchema = z.object({
+  fundId: z.string().uuid(),
+  type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER', 'CONTRIBUTION']),
+  amount: z.coerce.number().positive('পরিমাণ অবশ্যই ধনাত্মক সংখ্যা হতে হবে'),
+  title: z.string().min(2, 'বিবরণ আবশ্যক'),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  receiptUrl: z.string().optional(),
+  toFundId: z.string().uuid().optional(), // For fund transfer
+});
+
+export const CreateCommitteeSchema = z.object({
+  name: z.string().min(2, 'কমিটির নাম আবশ্যক'),
+  description: z.string().optional(),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+});
+
+export const AssignCommitteeMemberSchema = z.object({
+  committeeId: z.string().uuid(),
+  userId: z.string().uuid(),
+  designationId: z.string().uuid(),
+  customTitle: z.string().optional(),
+});
+
+export const CreateMeetingSchema = z.object({
+  title: z.string().min(2, 'মিটিংয়ের বিষয় আবশ্যক'),
+  description: z.string().optional(),
+  date: z.string(),
+  location: z.string().min(2, 'স্থান উল্লেখ করুন'),
+  agenda: z.string().optional(),
+});
+
+export const RecordAttendanceSchema = z.object({
+  attendees: z.array(
+    z.object({
+      userId: z.string().uuid(),
+      attended: z.boolean(),
+      notes: z.string().optional(),
+    }),
+  ),
+  minutes: z.string().optional(),
+});
+
+export const CreateNoticeSchema = z.object({
+  title: z.string().min(2, 'বিজ্ঞপ্তির শিরোনাম আবশ্যক'),
+  content: z.string().min(5, 'বিজ্ঞপ্তির বিবরণ আবশ্যক'),
+  priority: z.enum(['URGENT', 'NORMAL', 'LOW']).default('NORMAL'),
+  isPinned: z.boolean().default(false),
+  isPublic: z.boolean().default(false),
+  expiresAt: z.string().optional(),
+});
+
+export const CreateProjectSchema = z.object({
+  title: z.string().min(2, 'প্রকল্পের নাম আবশ্যক'),
+  description: z.string().min(5, 'প্রকল্পের বিবরণ আবশ্যক'),
+  budget: z.coerce.number().min(0).default(0),
+  progress: z.coerce.number().min(0).max(100).default(0),
+  status: z.enum(['PLANNING', 'ACTIVE', 'COMPLETED', 'ON_HOLD']).default('ACTIVE'),
+  isPublic: z.boolean().default(true),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  images: z.array(z.string()).default([]),
+});
+
+export const CreateDocumentSchema = z.object({
+  title: z.string().min(2, 'ফাইলের শিরোনাম আবশ্যক'),
+  description: z.string().optional(),
+  fileUrl: z.string().url('সঠিক ফাইল লিংক দিন'),
+  fileType: z.string().optional(),
+  fileSize: z.coerce.number().optional(),
+  category: z.enum(['POLICY', 'FINANCE', 'MEETING_MINUTES', 'RECEIPT', 'GENERAL']).default('GENERAL'),
+  accessLevel: z.enum(['PUBLIC', 'MEMBERS_ONLY', 'OFFICERS_ONLY']).default('MEMBERS_ONLY'),
+});
+
+// Digital Election Schemas
+export const CreateElectionSchema = z.object({
+  title: z.string().min(3, 'নির্বাচনের নাম আবশ্যক'),
+  description: z.string().optional(),
+  nominationStartDate: z.string(),
+  nominationEndDate: z.string(),
+  votingStartDate: z.string(),
+  votingEndDate: z.string(),
+  rules: z.string().optional(),
+  positions: z.array(
+    z.object({
+      designationId: z.string().uuid(),
+      maxWinners: z.coerce.number().min(1).default(1),
+    }),
+  ).min(1, 'কমপক্ষে একটি পদের নির্বাচন নির্ধারণ করুন'),
+});
+
+export const SubmitNominationSchema = z.object({
+  positionId: z.string().uuid(),
+  candidateName: z.string().min(2, 'প্রার্থীর নাম আবশ্যক'),
+  candidatePhoto: z.string().optional(),
+  experience: z.string().optional(),
+  manifesto: z.string().min(10, 'নির্বাচনী ইশতেহার কমপক্ষে ১০ অক্ষরের হতে হবে'),
+});
+
+export const ReviewNominationSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED']),
+  reviewNotes: z.string().optional(),
+});
+
+export const CastVoteSchema = z.object({
+  ballots: z.array(
+    z.object({
+      positionId: z.string().uuid(),
+      candidateNominationId: z.string().uuid(),
+    }),
+  ).min(1, 'কমপক্ষে একটি পদে ভোট প্রদান করতে হবে'),
+});
+

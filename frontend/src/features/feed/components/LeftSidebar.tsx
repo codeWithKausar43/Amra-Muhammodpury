@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   UserCheck,
   MessageSquare,
+  Landmark,
 } from 'lucide-react';
 
 interface LeftSidebarProps {
@@ -146,6 +147,15 @@ export function LeftSidebar({ activeBlock, onSelectBlock }: LeftSidebarProps) {
             >
               <Users className="w-4 h-4 text-slate-500" />
               <span>এলাকা ভিত্তিক ফোরাম</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/organization"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors group"
+            >
+              <Landmark className="w-4 h-4 text-brand-emerald" />
+              <span className="font-semibold text-brand-emerald dark:text-brand-mint">সংগঠন ও পরিষদ</span>
             </Link>
           </li>
           <li>

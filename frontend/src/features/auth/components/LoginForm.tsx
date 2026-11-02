@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, Loader2, AlertCircle } from 'lucide-react';
 import { signIn } from '@/lib/auth/auth-client';
 import { loginFormSchema, LoginFormValues } from '../schemas/auth.schema';
+import { FloatingInput } from './FloatingInput';
 import { PasswordInput } from './PasswordInput';
 import { GoogleLoginButton } from './GoogleLoginButton';
 
@@ -72,39 +73,25 @@ export function LoginForm() {
         </div>
       )}
 
-      {/* Email Field */}
-      <div className="space-y-1.5">
-        <label
-          htmlFor="email"
-          className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
-        >
-          ইমেইল ঠিকানা
-        </label>
-        <div className="relative flex items-center">
-          <div className="absolute left-3.5 pointer-events-none text-slate-400 dark:text-slate-500">
-            <Mail className="w-4 h-4" />
-          </div>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="example@domain.com"
-            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm transition-all outline-none bg-white/80 dark:bg-brand-charcoal-dark/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-emerald dark:focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-            {...register('email')}
-          />
-        </div>
-        {errors.email && (
-          <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errors.email.message}</p>
-        )}
-      </div>
+      {/* Email Field with Floating Label */}
+      <FloatingInput
+        id="email"
+        type="email"
+        autoComplete="email"
+        label="ইমেইল ঠিকানা"
+        icon={Mail}
+        error={errors.email?.message}
+        disabled={isSubmitting}
+        {...register('email')}
+      />
 
-      {/* Password Field */}
+      {/* Password Field with Floating Label */}
       <PasswordInput
         label="পাসওয়ার্ড"
         id="password"
         autoComplete="current-password"
-        placeholder="••••••••"
         error={errors.password?.message}
+        disabled={isSubmitting}
         {...register('password')}
       />
 
@@ -136,33 +123,36 @@ export function LoginForm() {
         {isSubmitting ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>লগইন করা হচ্ছে...</span>
+            <span>লগইন হচ্ছে...</span>
           </>
         ) : (
           <span>লগইন করুন</span>
         )}
       </button>
 
-      {/* Divider */}
-      <div className="relative my-4 flex items-center justify-center">
-        <div className="border-t border-slate-200 dark:border-white/10 w-full" />
-        <span className="bg-transparent px-3 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-medium">
-          অথবা
-        </span>
-        <div className="border-t border-slate-200 dark:border-white/10 w-full" />
+      {/* Social Google Login Divider */}
+      <div className="relative py-2">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-200 dark:border-white/10" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white dark:bg-brand-charcoal px-3 text-slate-400 font-medium">
+            অথবা
+          </span>
+        </div>
       </div>
 
-      {/* Google Login */}
+      {/* Google OAuth Login */}
       <GoogleLoginButton />
 
-      {/* Register Link */}
+      {/* Link to Registration */}
       <div className="text-center pt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-        নতুন সদস্য?{' '}
+        কোনো অ্যাকাউন্ট নেই?{' '}
         <Link
           href="/register"
           className="font-semibold text-brand-emerald dark:text-brand-mint hover:underline transition-all"
         >
-          অ্যাকাউন্ট তৈরি করুন
+          নতুন অ্যাকাউন্ট তৈরি করুন
         </Link>
       </div>
     </form>

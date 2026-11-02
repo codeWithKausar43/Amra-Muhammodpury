@@ -16,10 +16,7 @@ export const registerFormSchema = z
       .regex(bangladeshMobileRegex, 'সঠিক বাংলাদেশী মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)'),
     password: z
       .string()
-      .min(8, 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে')
-      .regex(/[A-Z]/, 'কমপক্ষে একটি বড় হাতের অক্ষর (A-Z) থাকতে হবে')
-      .regex(/[a-z]/, 'কমপক্ষে একটি ছোট হাতের অক্ষর (a-z) থাকতে হবে')
-      .regex(/[0-9]/, 'কমপক্ষে একটি সংখ্যা (০-৯) থাকতে হবে'),
+      .min(6, 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে'),
     confirmPassword: z.string().min(1, 'পাসওয়ার্ড নিশ্চিত করুন'),
     profileImage: z.string().nullable().optional(),
     tempImageToken: z.string().nullable().optional(),
@@ -37,10 +34,7 @@ export const resetPasswordSchema = z
   .object({
     password: z
       .string()
-      .min(8, 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে')
-      .regex(/[A-Z]/, 'কমপক্ষে একটি বড় হাতের অক্ষর (A-Z) থাকতে হবে')
-      .regex(/[a-z]/, 'কমপক্ষে একটি ছোট হাতের অক্ষর (a-z) থাকতে হবে')
-      .regex(/[0-9]/, 'কমপক্ষে একটি সংখ্যা (০-৯) থাকতে হবে'),
+      .min(6, 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে'),
     confirmPassword: z.string().min(1, 'পাসওয়ার্ড নিশ্চিত করুন'),
   })
   .refine((data) => data.password === data.confirmPassword, {

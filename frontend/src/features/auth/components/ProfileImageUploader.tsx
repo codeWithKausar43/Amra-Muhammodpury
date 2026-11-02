@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Camera, X, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Camera, X, CheckCircle2, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
 import Image from 'next/image';
@@ -49,9 +49,9 @@ export function ProfileImageUploader({
 
     setError(null);
     setUploading(true);
-    setProgress(10);
+    setProgress(15);
 
-    // Local preview immediately for smooth UX
+    // Instant local preview
     const localPreview = URL.createObjectURL(file);
     setPreviewUrl(localPreview);
 
@@ -77,7 +77,7 @@ export function ProfileImageUploader({
         throw new Error('Upload signature generation failed');
       }
 
-      setProgress(40);
+      setProgress(45);
 
       // 3. Direct upload to Cloudinary
       const formData = new FormData();
@@ -102,7 +102,7 @@ export function ProfileImageUploader({
       const uploadedAsset = await uploadRes.json();
       setProgress(85);
 
-      // 4. Confirm upload with backend to record metadata
+      // 4. Confirm upload with backend
       await apiClient('/uploads/confirm', {
         method: 'POST',
         body: JSON.stringify({
@@ -144,7 +144,7 @@ export function ProfileImageUploader({
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center space-y-2">
+    <div className="w-full flex flex-col items-center justify-center space-y-1.5 py-1">
       <input
         ref={fileInputRef}
         type="file"
@@ -154,13 +154,15 @@ export function ProfileImageUploader({
         disabled={disabled || uploading}
       />
 
+      {/* Compact, Consistent Avatar Frame */}
       <div
         onClick={() => !uploading && fileInputRef.current?.click()}
-        className={`relative group cursor-pointer w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center overflow-hidden ${
+        className={`relative group cursor-pointer w-20 h-20 rounded-full border-2 transition-all duration-200 flex items-center justify-center overflow-hidden ${
           previewUrl
-            ? 'border-brand-emerald ring-4 ring-brand-emerald/10 shadow-md'
-            : 'border-slate-300 dark:border-white/20 hover:border-brand-emerald dark:hover:border-brand-emerald bg-slate-50 dark:bg-brand-charcoal-dark/50'
+            ? 'border-brand-emerald shadow-sm ring-2 ring-brand-emerald/20'
+            : 'border-dashed border-slate-300 dark:border-white/20 hover:border-brand-emerald dark:hover:border-brand-emerald bg-slate-50/80 dark:bg-brand-charcoal-dark/60 hover:bg-slate-100 dark:hover:bg-brand-charcoal'
         }`}
+        title={previewUrl ? 'ছবি পরিবর্তন করুন' : 'প্রোফাইল ছবি যোগ করুন'}
       >
         {previewUrl ? (
           <>
@@ -168,27 +170,25 @@ export function ProfileImageUploader({
               src={previewUrl}
               alt="Profile preview"
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-200 group-hover:scale-105"
               unoptimized
             />
             {uploading ? (
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex flex-col items-center justify-center text-white">
-                <Loader2 className="w-6 h-6 animate-spin text-brand-mint" />
-                <span className="text-[10px] mt-1 font-semibold">{progress}%</span>
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white z-10">
+                <Loader2 className="w-5 h-5 animate-spin text-brand-mint" />
+                <span className="text-[9px] mt-0.5 font-semibold">{progress}%</span>
               </div>
             ) : (
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                <RefreshCw className="w-5 h-5" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white z-10">
+                <Camera className="w-4 h-4 text-brand-mint" />
+                <span className="text-[9px] font-semibold mt-0.5">পরিবর্তন</span>
               </div>
             )}
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center p-2 text-center text-slate-400 dark:text-slate-500 group-hover:text-brand-emerald transition-colors">
-            <div className="w-9 h-9 rounded-full bg-brand-mint/50 dark:bg-white/5 flex items-center justify-center mb-1 text-brand-emerald dark:text-brand-mint">
-              <Camera className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-medium leading-tight">ছবি যোগ করুন</span>
-            <span className="text-[9px] text-slate-400 opacity-75">(ঐচ্ছিক)</span>
+          <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-brand-emerald transition-colors">
+            <Camera className="w-6 h-6 stroke-[1.75]" />
+            <span className="text-[10px] font-medium mt-1">ছবি যোগ</span>
           </div>
         )}
 
@@ -196,16 +196,20 @@ export function ProfileImageUploader({
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow hover:bg-red-700 transition-colors z-10"
+            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow transition-colors z-20 cursor-pointer"
             title="ছবি মুছে ফেলুন"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3 h-3" />
           </button>
         )}
       </div>
 
+      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+        প্রোফাইল ছবি <span className="text-[11px] text-slate-400 dark:text-slate-500">(ঐচ্ছিক)</span>
+      </p>
+
       {success && !uploading && (
-        <div className="flex items-center gap-1.5 text-xs text-brand-emerald dark:text-brand-mint font-medium animate-fadeIn">
+        <div className="flex items-center gap-1 text-[11px] text-brand-emerald dark:text-brand-mint font-medium animate-fadeIn">
           <CheckCircle2 className="w-3.5 h-3.5" />
           <span>ছবি সফলভাবে যুক্ত হয়েছে</span>
         </div>

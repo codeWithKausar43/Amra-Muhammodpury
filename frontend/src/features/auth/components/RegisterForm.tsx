@@ -9,8 +9,8 @@ import { User, Mail, Phone, Loader2, AlertCircle, CheckCircle2 } from 'lucide-re
 import { signUp } from '@/lib/auth/auth-client';
 import { apiClient } from '@/lib/api/client';
 import { registerFormSchema, RegisterFormValues } from '../schemas/auth.schema';
+import { FloatingInput } from './FloatingInput';
 import { PasswordInput } from './PasswordInput';
-import { PasswordStrength } from './PasswordStrength';
 import { ProfileImageUploader } from './ProfileImageUploader';
 
 export function RegisterForm() {
@@ -23,7 +23,6 @@ export function RegisterForm() {
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -37,8 +36,6 @@ export function RegisterForm() {
       tempImageToken: null,
     },
   });
-
-  const watchedPassword = watch('password');
 
   const handleProfileImageUploaded = (url: string | null, tempToken: string | null) => {
     setValue('profileImage', url);
@@ -131,7 +128,7 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 pt-1">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-1">
       {serverError && (
         <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-300 text-xs sm:text-sm animate-fadeIn">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
@@ -139,110 +136,63 @@ export function RegisterForm() {
         </div>
       )}
 
-      {/* Optional Profile Image Uploader */}
-      <div className="pb-1">
-        <ProfileImageUploader
-          onImageUploaded={handleProfileImageUploaded}
-          disabled={isSubmitting}
-        />
-      </div>
+      {/* Clean Profile Image Uploader */}
+      <ProfileImageUploader
+        onImageUploaded={handleProfileImageUploaded}
+        disabled={isSubmitting}
+      />
 
-      {/* Full Name */}
-      <div className="space-y-1">
-        <label
-          htmlFor="name"
-          className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
-        >
-          আপনার পূর্ণ নাম
-        </label>
-        <div className="relative flex items-center">
-          <div className="absolute left-3.5 pointer-events-none text-slate-400 dark:text-slate-500">
-            <User className="w-4 h-4" />
-          </div>
-          <input
-            id="name"
-            type="text"
-            placeholder="যেমন: তানভীর আহমেদ"
-            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm transition-all outline-none bg-white/80 dark:bg-brand-charcoal-dark/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-emerald dark:focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-            {...register('name')}
-          />
-        </div>
-        {errors.name && (
-          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{errors.name.message}</p>
-        )}
-      </div>
+      {/* Full Name with Floating Label */}
+      <FloatingInput
+        id="name"
+        label="আপনার পূর্ণ নাম"
+        icon={User}
+        error={errors.name?.message}
+        disabled={isSubmitting}
+        {...register('name')}
+      />
 
-      {/* Email Address */}
-      <div className="space-y-1">
-        <label
-          htmlFor="reg-email"
-          className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
-        >
-          আপনার ইমেইল ঠিকানা
-        </label>
-        <div className="relative flex items-center">
-          <div className="absolute left-3.5 pointer-events-none text-slate-400 dark:text-slate-500">
-            <Mail className="w-4 h-4" />
-          </div>
-          <input
-            id="reg-email"
-            type="email"
-            autoComplete="email"
-            placeholder="example@domain.com"
-            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm transition-all outline-none bg-white/80 dark:bg-brand-charcoal-dark/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-emerald dark:focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-            {...register('email')}
-          />
-        </div>
-        {errors.email && (
-          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{errors.email.message}</p>
-        )}
-      </div>
+      {/* Email Address with Floating Label */}
+      <FloatingInput
+        id="reg-email"
+        type="email"
+        autoComplete="email"
+        label="আপনার ইমেইল ঠিকানা"
+        icon={Mail}
+        error={errors.email?.message}
+        disabled={isSubmitting}
+        {...register('email')}
+      />
 
-      {/* Bangladesh Mobile Number */}
-      <div className="space-y-1">
-        <label
-          htmlFor="phone"
-          className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
-        >
-          মোবাইল নম্বর
-        </label>
-        <div className="relative flex items-center">
-          <div className="absolute left-3.5 pointer-events-none text-slate-400 dark:text-slate-500">
-            <Phone className="w-4 h-4" />
-          </div>
-          <input
-            id="phone"
-            type="tel"
-            placeholder="017XXXXXXXX"
-            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm transition-all outline-none bg-white/80 dark:bg-brand-charcoal-dark/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-emerald dark:focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-            {...register('phone')}
-          />
-        </div>
-        {errors.phone && (
-          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{errors.phone.message}</p>
-        )}
-      </div>
+      {/* Mobile Number with Clean Floating Label */}
+      <FloatingInput
+        id="phone"
+        type="tel"
+        autoComplete="tel"
+        label="মোবাইল নম্বর"
+        icon={Phone}
+        error={errors.phone?.message}
+        disabled={isSubmitting}
+        {...register('phone')}
+      />
 
-      {/* Password */}
-      <div className="space-y-1">
-        <PasswordInput
-          label="পাসওয়ার্ড তৈরি করুন"
-          id="reg-password"
-          autoComplete="new-password"
-          placeholder="••••••••"
-          error={errors.password?.message}
-          {...register('password')}
-        />
-        <PasswordStrength password={watchedPassword} />
-      </div>
-
-      {/* Confirm Password */}
+      {/* Password with Floating Label */}
       <PasswordInput
-        label="পাসওয়ার্ড নিশ্চিত করুন"
-        id="reg-confirm-password"
+        id="reg-password"
+        label="পাসওয়ার্ড তৈরি করুন"
         autoComplete="new-password"
-        placeholder="••••••••"
+        error={errors.password?.message}
+        disabled={isSubmitting}
+        {...register('password')}
+      />
+
+      {/* Confirm Password with Floating Label */}
+      <PasswordInput
+        id="reg-confirm-password"
+        label="পাসওয়ার্ড নিশ্চিত করুন"
+        autoComplete="new-password"
         error={errors.confirmPassword?.message}
+        disabled={isSubmitting}
         {...register('confirmPassword')}
       />
 

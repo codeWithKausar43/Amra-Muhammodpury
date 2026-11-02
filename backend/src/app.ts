@@ -18,6 +18,7 @@ import { savedRoutes } from './modules/saved/saved.routes.js';
 import { searchRoutes } from './modules/search/search.routes.js';
 import { profileRoutes } from './modules/profile/profile.routes.js';
 import { safetyRoutes } from './modules/safety/safety.routes.js';
+import { organizationRoutes } from './modules/organization/organization.routes.js';
 import { errorResponse } from './utils/api-response.js';
 import { HTTP_STATUS } from './constants/status-codes.js';
 
@@ -80,6 +81,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
       await v1.register(searchRoutes);
       await v1.register(profileRoutes);
       await v1.register(safetyRoutes);
+      await v1.register(organizationRoutes, { prefix: '/org' });
     },
     { prefix: '/api/v1' },
   );

@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
   // Fetch complete profile on mount
   React.useEffect(() => {
-    let isMounted = true;
+    const isMounted = true;
 
     async function loadUserProfile() {
       try {

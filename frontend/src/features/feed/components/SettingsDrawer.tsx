@@ -24,6 +24,7 @@ import {
   Check,
   Shield,
   Eye,
+  Landmark,
 } from 'lucide-react';
 
 interface SettingsDrawerProps {
@@ -191,6 +192,18 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                   <span className="text-sm font-medium">হোম টাইমলাইন</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+
+              <Link
+                href="/organization"
+                onClick={onClose}
+                className="flex items-center justify-between py-2.5 px-3 rounded-xl text-brand-emerald dark:text-brand-mint bg-brand-emerald/5 dark:bg-brand-emerald/10 hover:bg-brand-emerald/10 dark:hover:bg-brand-emerald/20 transition-colors group cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5">
+                  <Landmark className="w-5 h-5 text-brand-emerald dark:text-brand-mint shrink-0" />
+                  <span className="text-sm font-semibold">আমরা মোহাম্মদপুরী (সংগঠন ও পরিষদ)</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-brand-emerald group-hover:translate-x-0.5 transition-transform" />
               </Link>
 
               <Link

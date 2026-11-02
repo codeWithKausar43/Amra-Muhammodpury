@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { forgetPassword } from '@/lib/auth/auth-client';
 import { forgotPasswordSchema, ForgotPasswordValues } from '../schemas/auth.schema';
+import { FloatingInput } from './FloatingInput';
 
 export function ForgotPasswordForm() {
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -80,31 +81,17 @@ export function ForgotPasswordForm() {
         </div>
       )}
 
-      {/* Email input */}
-      <div className="space-y-1.5">
-        <label
-          htmlFor="forgot-email"
-          className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
-        >
-          আপনার ইমেইল ঠিকানা
-        </label>
-        <div className="relative flex items-center">
-          <div className="absolute left-3.5 pointer-events-none text-slate-400 dark:text-slate-500">
-            <Mail className="w-4 h-4" />
-          </div>
-          <input
-            id="forgot-email"
-            type="email"
-            autoComplete="email"
-            placeholder="example@domain.com"
-            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm transition-all outline-none bg-white/80 dark:bg-brand-charcoal-dark/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-emerald dark:focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-            {...register('email')}
-          />
-        </div>
-        {errors.email && (
-          <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errors.email.message}</p>
-        )}
-      </div>
+      {/* Email input with Floating Label */}
+      <FloatingInput
+        id="forgot-email"
+        type="email"
+        autoComplete="email"
+        label="আপনার ইমেইল ঠিকানা"
+        icon={Mail}
+        error={errors.email?.message}
+        disabled={isSubmitting}
+        {...register('email')}
+      />
 
       {/* Submit Button */}
       <button

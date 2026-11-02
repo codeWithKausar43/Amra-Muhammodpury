@@ -18,10 +18,7 @@ export const registrationValidationSchema = z.object({
     .regex(bangladeshMobileRegex, 'Invalid Bangladesh mobile number (e.g. 01712345678)'),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
+    .min(6, 'Password must be at least 6 characters'),
   profileImageToken: z.string().optional(),
 });
 

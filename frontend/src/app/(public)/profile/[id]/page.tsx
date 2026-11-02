@@ -29,7 +29,8 @@ import { PostCard } from '@/features/feed/components/PostCard';
 
 export default function UserProfilePage() {
   const params = useParams();
-  const userId = params.id as string;
+  const rawId = params?.id;
+  const userId = (Array.isArray(rawId) ? rawId[0] : (rawId as string)) || '';
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const mutations = useSocialMutations();

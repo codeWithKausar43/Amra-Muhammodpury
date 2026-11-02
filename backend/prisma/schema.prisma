@@ -43,6 +43,16 @@ model User {
   blockedUsers           BlockedUser[]      @relation("blocker")
   blockedByUsers         BlockedUser[]      @relation("blocked")
   reports                Report[]           @relation("reporter")
+  // Organization & Membership Relations
+  orgMemberships         OrgMembership[]
+  orgApplications        OrgApplication[]
+  contributionAgreements ContributionAgreement[]
+  contributionPayments   ContributionPayment[]
+  committeeAssignments   OrgCommitteeMember[]
+  meetingAttendances     OrgMeetingAttendance[]
+  electionNominations    ElectionNomination[]
+  voterParticipations    VoterParticipation[]
+
 
   @@map("user")
 }
@@ -383,4 +393,362 @@ model Report {
   @@index([targetType, targetId])
   @@index([status])
   @@map("report")
+}
+
+// ==========================================
+// ORGANIZATION & GOVERNANCE MODELS
+// ==========================================
+
+model OrgMembership {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status              String    @default("PENDING") // PENDING, APPROVED_PAYMENT_PENDING, ACTIVE, REJECTED, SUSPENDED, ARCHIVED
+  memberNumber        String?   @unique // e.g. AMP-2026-0001
+  profession          String?
+  monthlyContribution Float     @default(50.0)
+  orgRole             String    @default("MEMBER") // PRESIDENT, TREASURER, MODERATOR, MEMBER
+  joinedAt            DateTime?
+  lastPaymentDate     DateTime?
+  notes               String?   @db.Text
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([status])
+  @@index([orgRole])
+  @@map("org_membership")
+}
+
+model OrgApplication {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName            String
+  phone               String
+  profession          String
+  monthlyContribution Float     // Minimum 50.0 BDT
+  agreedToMonthlyFee  Boolean   @default(true)
+  status              String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedBy          String?
+  rejectionReason     String?   @db.Text
+  submittedAt         DateTime  @default(now())
+  reviewedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("org_application")
+}
+
+model ContributionAgreement {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthlyAmount Float
+  effectiveFrom DateTime @default(now())
+  isCurrent     Boolean  @default(true)
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@map("contribution_agreement")
+}
+
+model ContributionChangeRequest {
+  id             String    @id @default(uuid())
+  userId         String
+  previousAmount Float
+  newAmount      Float     // Minimum 50 BDT
+  reason         String?   @db.Text
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedBy     String?
+  createdAt      DateTime  @default(now())
+  reviewedAt     DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@map("contribution_change_request")
+}
+
+model OrgFund {
+  id           String            @id @default(uuid())
+  name         String            // সাধারণ তহবিল, শিক্ষা তহবিল ইত্যাদি
+  code         String            @unique // GENERAL, EDUCATION, MEDICAL, WELFARE, EMERGENCY
+  description  String?
+  balance      Float             @default(0.0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  transactions FundTransaction[]
+
+  @@map("org_fund")
+}
+
+model ContributionPayment {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Float
+  periodMonth   Int      // 1 - 12
+  periodYear    Int      // 2026, 2027...
+  paymentMethod String   // BKASH, NAGAD, ROCKET, BANK, CASH
+  trxId         String?
+  senderNumber  String?
+  receiptNumber String   @unique // REC-2026-0001
+  status        String   @default("VERIFIED") // PENDING, VERIFIED, REJECTED
+  verifiedBy    String?
+  notes         String?
+  paidAt        DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([periodYear, periodMonth])
+  @@map("contribution_payment")
+}
+
+model FundTransaction {
+  id          String   @id @default(uuid())
+  fundId      String
+  fund        OrgFund  @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  type        String   // INCOME, EXPENSE, TRANSFER, CONTRIBUTION
+  amount      Float
+  title       String
+  description String?  @db.Text
+  category    String?
+  referenceId String?
+  performedBy String
+  receiptUrl  String?
+  createdAt   DateTime @default(now())
+
+  @@index([fundId])
+  @@index([type])
+  @@map("fund_transaction")
+}
+
+model OrgCommittee {
+  id          String               @id @default(uuid())
+  name        String
+  description String?              @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  members     OrgCommitteeMember[]
+
+  @@map("org_committee")
+}
+
+model OrgDesignation {
+  id                String               @id @default(uuid())
+  name              String               // সভাপতি, সাধারণ সম্পাদক, কোষাধ্যক্ষ...
+  code              String               @unique // PRESIDENT, GENERAL_SECRETARY, VICE_PRESIDENT, TREASURER...
+  rank              Int                  @default(10)
+  committeeMembers  OrgCommitteeMember[]
+  electionPositions ElectionPosition[]
+
+  @@map("org_designation")
+}
+
+model OrgCommitteeMember {
+  id            String         @id @default(uuid())
+  committeeId   String
+  committee     OrgCommittee   @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designationId String
+  designation   OrgDesignation @relation(fields: [designationId], references: [id], onDelete: Restrict)
+  customTitle   String?
+  assignedAt    DateTime       @default(now())
+
+  @@index([committeeId])
+  @@index([userId])
+  @@map("org_committee_member")
+}
+
+model OrgMeeting {
+  id          String                 @id @default(uuid())
+  title       String
+  description String?                @db.Text
+  date        DateTime
+  location    String
+  agenda      String?                @db.Text
+  minutes     String?                @db.Text
+  status      String                 @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  createdAt   DateTime               @default(now())
+  attendances OrgMeetingAttendance[]
+
+  @@map("org_meeting")
+}
+
+model OrgMeetingAttendance {
+  id        String     @id @default(uuid())
+  meetingId String
+  meeting   OrgMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attended  Boolean    @default(true)
+  notes     String?
+
+  @@unique([meetingId, userId])
+  @@map("org_meeting_attendance")
+}
+
+model OrgNotice {
+  id          String    @id @default(uuid())
+  title       String
+  content     String    @db.Text
+  priority    String    @default("NORMAL") // URGENT, NORMAL, LOW
+  isPinned    Boolean   @default(false)
+  isPublic    Boolean   @default(false) // If true, visible to general social users
+  publishedBy String
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([isPinned])
+  @@index([isPublic])
+  @@map("org_notice")
+}
+
+model OrgProject {
+  id          String    @id @default(uuid())
+  title       String
+  description String    @db.Text
+  budget      Float     @default(0.0)
+  spent       Float     @default(0.0)
+  progress    Int       @default(0) // 0 to 100
+  status      String    @default("ACTIVE") // PLANNING, ACTIVE, COMPLETED, ON_HOLD
+  isPublic    Boolean   @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  images      String[]  @default([])
+  createdAt   DateTime  @default(now())
+
+  @@index([status])
+  @@map("org_project")
+}
+
+model OrgDocument {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?
+  category    String   // POLICY, FINANCE, MEETING_MINUTES, RECEIPT, GENERAL
+  accessLevel String   @default("MEMBERS_ONLY") // PUBLIC, MEMBERS_ONLY, OFFICERS_ONLY
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([accessLevel])
+  @@map("org_document")
+}
+
+// ==========================================
+// DIGITAL ELECTION & SECRET BALLOT MODELS
+// ==========================================
+
+model Election {
+  id                   String               @id @default(uuid())
+  title                String
+  description          String?              @db.Text
+  nominationStartDate  DateTime
+  nominationEndDate    DateTime
+  votingStartDate      DateTime
+  votingEndDate        DateTime
+  status               String               @default("DRAFT") // DRAFT, NOMINATION_OPEN, CANDIDATE_REVIEW, CANDIDATES_PUBLISHED, VOTING_ACTIVE, VOTING_CLOSED, RESULTS_REVIEW, FINALIZED, CANCELLED
+  rules                String?              @db.Text
+  tieBreakRule         String               @default("ELECTION_COMMISSION_LOTTERY")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  positions            ElectionPosition[]
+  nominations          ElectionNomination[]
+  participations       VoterParticipation[]
+  secretBallots        SecretBallot[]
+  results              ElectionResult[]
+
+  @@index([status])
+  @@map("election")
+}
+
+model ElectionPosition {
+  id            String               @id @default(uuid())
+  electionId    String
+  election      Election             @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  designationId String
+  designation   OrgDesignation       @relation(fields: [designationId], references: [id], onDelete: Restrict)
+  maxWinners    Int                  @default(1)
+  nominations   ElectionNomination[]
+  ballots       SecretBallot[]
+  results       ElectionResult[]
+
+  @@index([electionId])
+  @@map("election_position")
+}
+
+model ElectionNomination {
+  id             String           @id @default(uuid())
+  electionId     String
+  election       Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  positionId     String
+  position       ElectionPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidateName  String
+  candidatePhoto String?
+  experience     String?          @db.Text
+  manifesto      String           @db.Text
+  status         String           @default("PENDING") // PENDING, APPROVED, REJECTED, WITHDRAWN
+  reviewNotes    String?
+  createdAt      DateTime         @default(now())
+
+  @@unique([electionId, positionId, userId])
+  @@index([electionId])
+  @@index([positionId])
+  @@map("election_nomination")
+}
+
+model VoterParticipation {
+  id             String   @id @default(uuid())
+  electionId     String
+  election       Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  participatedAt DateTime @default(now())
+  receiptToken   String   @unique // Cryptographic proof issued to voter
+
+  @@unique([electionId, userId])
+  @@index([electionId])
+  @@map("voter_participation")
+}
+
+model SecretBallot {
+  id                    String           @id @default(uuid())
+  electionId            String
+  election              Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  positionId            String
+  position              ElectionPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  candidateNominationId String
+  ballotToken           String           // Cryptographic anonymous ballot hash (NEVER stores userId)
+  castAt                DateTime         @default(now())
+
+  @@index([electionId, positionId])
+  @@map("secret_ballot")
+}
+
+model ElectionResult {
+  id                  String           @id @default(uuid())
+  electionId          String
+  election            Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  positionId          String
+  position            ElectionPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  winnerNominationId  String?
+  votesCount          Int              @default(0)
+  isWinner            Boolean          @default(false)
+  finalizedAt         DateTime?
+
+  @@index([electionId])
+  @@map("election_result")
 }
