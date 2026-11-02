@@ -348,4 +348,18 @@ export const organizationService = {
     });
     return res.data!;
   },
+
+  async updateElectionStatus(electionId: string, status: string): Promise<Election> {
+    const res = await apiClient<ApiResponse<Election>>(`/org/admin/elections/${electionId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    return res.data!;
+  },
+
+  async deleteElection(electionId: string): Promise<void> {
+    await apiClient<ApiResponse<null>>(`/org/admin/elections/${electionId}`, {
+      method: 'DELETE',
+    });
+  },
 };

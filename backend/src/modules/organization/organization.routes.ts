@@ -333,5 +333,22 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
       successResponse(election, 'নির্বাচনী ফলাফল চূড়ান্ত হয়েছে এবং দায়িত্বপ্রাপ্ত কর্মকর্তাদের পদবি বরাদ্দ করা হয়েছে'),
     );
   });
+
+  // Update election status
+  fastify.patch('/admin/elections/:id/status', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const { status } = request.body as { status: string };
+    const updated = await service.updateElectionStatus(session.user.id, id, status);
+    return reply.send(successResponse(updated, 'নির্বাচনী স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে'));
+  });
+
+  // Delete election
+  fastify.delete('/admin/elections/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    await service.deleteElection(session.user.id, id);
+    return reply.send(successResponse(null, 'নির্বাচন সফলভাবে মুছে ফেলা হয়েছে'));
+  });
 };
 

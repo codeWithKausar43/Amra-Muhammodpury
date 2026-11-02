@@ -1,4 +1,4 @@
-// Prisma Schema for আমরা মুহাম্মদপুরী
+// Prisma Schema for আমরা মোহাম্মদপুরী
 
 generator client {
   provider = "prisma-client-js"

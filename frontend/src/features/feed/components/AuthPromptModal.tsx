@@ -33,7 +33,7 @@ export function AuthPromptModal({ isOpen, onClose }: AuthPromptModalProps) {
 
         <div className="space-y-1.5">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-            মুহাম্মদপুরী পরিবারে যুক্ত হোন
+            মোহাম্মদপুরী পরিবারে যুক্ত হোন
           </h3>
           <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
             লাইক দিতে, মন্তব্য করতে বা আপনার এলাকার পোস্ট প্রকাশ করতে অনুগ্রহ করে একাউন্টে প্রবেশ করুন।

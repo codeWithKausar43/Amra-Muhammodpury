@@ -602,7 +602,7 @@ export default function DashboardPage() {
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={3}
-                placeholder="আপনার সম্পর্কে বা মুহাম্মদপুরে আপনার এলাকা সম্পর্কে কিছু লিখুন..."
+                placeholder="আপনার সম্পর্কে বা মোহাম্মদপুরে আপনার এলাকা সম্পর্কে কিছু লিখুন..."
                 className="w-full text-xs sm:text-sm px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:border-brand-emerald focus:ring-1 focus:ring-brand-emerald resize-none leading-relaxed"
               />
               <p className="text-[11px] text-slate-400">

@@ -365,6 +365,24 @@ export function useOrgMutations() {
     },
   });
 
+  const updateElectionStatus = useMutation({
+    mutationFn: (vars: { electionId: string; status: string }) =>
+      organizationService.updateElectionStatus(vars.electionId, vars.status),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.all });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.detail(vars.electionId) });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+    },
+  });
+
+  const deleteElection = useMutation({
+    mutationFn: (vars: { electionId: string }) => organizationService.deleteElection(vars.electionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.all });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+    },
+  });
+
   return {
     applyMembership,
     submitInitialPayment,
@@ -383,5 +401,7 @@ export function useOrgMutations() {
     reviewNomination,
     castVote,
     finalizeElection,
+    updateElectionStatus,
+    deleteElection,
   };
 }

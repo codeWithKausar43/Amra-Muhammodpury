@@ -108,7 +108,7 @@ export default function FriendsPage() {
             <span>বন্ধু ও পরিচিত মহল</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            মুহাম্মদপুরের প্রতিবেশী ও বন্ধুদের সাথে কানেক্ট থাকুন
+            মোহাম্মদপুরের প্রতিবেশী ও বন্ধুদের সাথে কানেক্ট থাকুন
           </p>
         </div>
 
@@ -231,7 +231,7 @@ export default function FriendsPage() {
                             {friend.name}
                           </p>
                           <p className="text-[11px] text-slate-400 truncate">
-                            {friend.bio || 'মুহাম্মদপুরী সদস্য'}
+                            {friend.bio || 'মোহাম্মদপুরী সদস্য'}
                           </p>
                         </div>
                       </Link>
@@ -293,7 +293,7 @@ export default function FriendsPage() {
                               {req.sender.name}
                             </p>
                             <p className="text-[11px] text-slate-400">
-                              {req.sender.bio || 'মুহাম্মদপুরী নাগরিক'}
+                              {req.sender.bio || 'মোহাম্মদপুরী নাগরিক'}
                             </p>
                           </div>
                         </Link>
@@ -392,7 +392,7 @@ export default function FriendsPage() {
                     আপাতত কোনো নতুন পরামর্শ নেই
                   </p>
                   <p className="text-xs text-slate-400">
-                    মুহাম্মদপুরের অন্যান্য বাসিন্দারা যুক্ত হলে স্বয়ংক্রিয়ভাবে এখানে প্রদর্শিত হবে।
+                    মোহাম্মদপুরের অন্যান্য বাসিন্দারা যুক্ত হলে স্বয়ংক্রিয়ভাবে এখানে প্রদর্শিত হবে।
                   </p>
                 </div>
               ) : (
@@ -428,7 +428,7 @@ export default function FriendsPage() {
                             {cand.mutualFriendsCount} জন পারস্পরিক বন্ধু
                           </span>
                         ) : (
-                          <span>মুহাম্মদপুরী সদস্য</span>
+                          <span>মোহাম্মদপুরী সদস্য</span>
                         )}
                       </div>
 

@@ -160,3 +160,16 @@ export const CastVoteSchema = z.object({
   ).min(1, 'কমপক্ষে একটি পদে ভোট প্রদান করতে হবে'),
 });
 
+export const UpdateElectionStatusSchema = z.object({
+  status: z.enum([
+    'DRAFT',
+    'NOMINATION_OPEN',
+    'NOMINATION_CLOSED',
+    'VOTING_ACTIVE',
+    'VOTING_CLOSED',
+    'RESULTS_REVIEW',
+    'COMPLETED',
+    'CANCELLED',
+  ]),
+});
+

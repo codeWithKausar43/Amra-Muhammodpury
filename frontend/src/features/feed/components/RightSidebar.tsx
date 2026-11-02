@@ -25,13 +25,13 @@ const EMERGENCY_CONTACTS = [
     color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/40',
   },
   {
-    name: 'মুহাম্মদপুর থানা পুলিশ',
+    name: 'মোহাম্মদপুর থানা পুলিশ',
     number: '০১৩২০-০৪০৮৮৪',
     icon: ShieldAlert,
     color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40',
   },
   {
-    name: 'ফায়ার সার্ভিস মুহাম্মদপুর',
+    name: 'ফায়ার সার্ভিস মোহাম্মদপুর',
     number: '০২-৯১১৯৯৯৯',
     icon: Flame,
     color: 'text-red-500 bg-red-50 dark:bg-red-950/40',
@@ -88,7 +88,7 @@ export function RightSidebar() {
           <span>নাগরিক অঙ্গীকার</span>
         </div>
         <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-          নির্দিষ্ট স্থানে ময়লা ফেলুন, ড্রেন বন্ধ করবেন না এবং গাছপালার যত্ন নিন। আসুন আমাদের মুহাম্মদপুরকে
+          নির্দিষ্ট স্থানে ময়লা ফেলুন, ড্রেন বন্ধ করবেন না এবং গাছপালার যত্ন নিন। আসুন আমাদের মোহাম্মদপুরকে
           সুন্দর ও পরিচ্ছন্ন রাখি।
         </p>
       </div>

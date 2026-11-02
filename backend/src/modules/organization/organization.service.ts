@@ -66,7 +66,7 @@ export class OrganizationService {
 
     return {
       organizationName: 'আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন ও সামাজিক সংগঠন',
-      tagline: 'মুহাম্মদপুরের উন্নয়ন, নিরাপত্তা ও সামাজিক ঐক্যের মঞ্চ',
+      tagline: 'মোহাম্মদপুরের উন্নয়ন, নিরাপত্তা ও সামাজিক ঐক্যের মঞ্চ',
       established: 2026,
       stats: {
         activeMembers: activeMembersCount,
@@ -1226,6 +1226,39 @@ export class OrganizationService {
         where: { id: electionId },
         data: { status: 'FINALIZED' },
       });
+    });
+  }
+
+  public async updateElectionStatus(
+    userId: string,
+    electionId: string,
+    status: string,
+  ) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const election = await this.prisma.election.findUnique({ where: { id: electionId } });
+    if (!election) throw new NotFoundError('নির্বাচন পাওয়া যায়নি');
+
+    return this.prisma.election.update({
+      where: { id: electionId },
+      data: { status: status as any },
+    });
+  }
+
+  public async deleteElection(userId: string, electionId: string) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const election = await this.prisma.election.findUnique({ where: { id: electionId } });
+    if (!election) throw new NotFoundError('নির্বাচন পাওয়া যায়নি');
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.secretBallot.deleteMany({ where: { electionId } });
+      await tx.voterParticipation.deleteMany({ where: { electionId } });
+      await tx.electionNomination.deleteMany({ where: { electionId } });
+      await tx.electionPosition.deleteMany({ where: { electionId } });
+      return tx.election.delete({ where: { id: electionId } });
     });
   }
 }

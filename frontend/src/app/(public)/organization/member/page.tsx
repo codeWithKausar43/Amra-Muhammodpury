@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import {
   useOrgMemberDashboardQuery,
+  useOrgElectionsQuery,
   useOrgMutations,
 } from '@/features/organization/hooks/useOrganizationQueries';
 
@@ -36,7 +37,12 @@ const MONTH_NAMES_BN = [
 
 export default function MemberDashboardPage() {
   const { data: dashboard, isLoading } = useOrgMemberDashboardQuery();
+  const { data: elections = [] } = useOrgElectionsQuery();
   const mutations = useOrgMutations();
+
+  const activeElection = elections.find(
+    (e) => e.status === 'VOTING_ACTIVE' || e.status === 'NOMINATION_OPEN',
+  );
 
   // Payment modal state
   const [payModalOpen, setPayModalOpen] = React.useState(false);
@@ -300,28 +306,30 @@ export default function MemberDashboardPage() {
           </div>
         </div>
 
-        {/* Digital Election Quick Action */}
-        <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 space-y-3 text-left">
-          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-sm">
-            <Vote className="w-5 h-5" />
-            <span>সদস্য অধিকার • ডিজিটাল ভোটাধিকার</span>
+        {/* Digital Election Quick Action (Strictly visible ONLY when Superadmin created an active election) */}
+        {activeElection && (
+          <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 space-y-3 text-left animate-in fade-in">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-sm">
+              <Vote className="w-5 h-5" />
+              <span>সদস্য অধিকার • ডিজিটাল ভোটাধিকার</span>
+            </div>
+            <h4 className="text-base font-bold text-slate-900 dark:text-white">
+              {activeElection.title}
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              একজন সক্রিয় সদস্য হিসেবে আপনি ডিজিটাল নির্বাচনের বৈধ ভোটার। আপনি পদসমূহে প্রার্থী হতে এবং সম্পূর্ণ গোপন ব্যালটে ভোট দিতে পারবেন।
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/organization/elections"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow transition-colors"
+              >
+                <span>নির্বাচনী বুথে প্রবেশ করুন</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
-          <h4 className="text-base font-bold text-slate-900 dark:text-white">
-            সংগঠনের কার্যনির্বাহী নির্বাচন
-          </h4>
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            একজন সক্রিয় সদস্য হিসেবে আপনি ডিজিটাল নির্বাচনের বৈধ ভোটার। আপনি সভাপতি, কোষাধ্যক্ষ ও অন্যান্য পদে প্রার্থী হতে এবং গোপন ব্যালটে ভোট দিতে পারবেন।
-          </p>
-          <div className="pt-2">
-            <Link
-              href="/organization/elections"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow transition-colors"
-            >
-              <span>নির্বাচনী বুথে প্রবেশ করুন</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Pay Contribution Modal */}

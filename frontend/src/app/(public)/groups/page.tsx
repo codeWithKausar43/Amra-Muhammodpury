@@ -93,7 +93,7 @@ export default function GroupsPage() {
             <span>কমিউনিটি ও গ্রুপসমূহ</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            মুহাম্মদপুরের বিভিন্ন মহল্লা ও সাধারণ স্বার্থভিত্তিক কমিউনিটি
+            মোহাম্মদপুরের বিভিন্ন মহল্লা ও সাধারণ স্বার্থভিত্তিক কমিউনিটি
           </p>
         </div>
 
@@ -216,7 +216,7 @@ export default function GroupsPage() {
                             {group.name}
                           </h4>
                           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
-                            {group.description || 'মুহাম্মদপুরী কমিউনিটি গ্রুপ।'}
+                            {group.description || 'মোহাম্মদপুরী কমিউনিটি গ্রুপ।'}
                           </p>
                         </div>
                       </div>
@@ -279,7 +279,7 @@ export default function GroupsPage() {
                             </h4>
                           </Link>
                           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
-                            {group.description || 'মুহাম্মদপুরী কমিউনিটি গ্রুপ।'}
+                            {group.description || 'মোহাম্মদপুরী কমিউনিটি গ্রুপ।'}
                           </p>
                         </div>
                       </div>

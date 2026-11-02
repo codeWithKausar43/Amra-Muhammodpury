@@ -314,7 +314,7 @@ export function PostCard({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `আমরা মুহাম্মদপুরী - ${post.author.name}-এর পোস্ট`,
+          title: `আমরা মোহাম্মদপুরী - ${post.author.name}-এর পোস্ট`,
           text: post.content.slice(0, 100),
           url: window.location.href,
         });

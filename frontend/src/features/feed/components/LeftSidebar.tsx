@@ -155,7 +155,7 @@ export function LeftSidebar({ activeBlock, onSelectBlock }: LeftSidebarProps) {
               className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors group"
             >
               <Landmark className="w-4 h-4 text-brand-emerald" />
-              <span className="font-semibold text-brand-emerald dark:text-brand-mint">সংগঠন ও পরিষদ</span>
+              <span className="font-semibold text-brand-emerald dark:text-brand-mint">আমাদের সংগঠন</span>
             </Link>
           </li>
           <li>
@@ -175,7 +175,7 @@ export function LeftSidebar({ activeBlock, onSelectBlock }: LeftSidebarProps) {
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-brand-emerald" />
-            মুহাম্মদপুরের ব্লকসমূহ
+            মোহাম্মদপুরের ব্লকসমূহ
           </span>
           {activeBlock && (
             <button

@@ -3,7 +3,6 @@
 import * as React from 'react';
 import Link from 'next/link';
 import {
-  Award,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -132,14 +131,10 @@ export default function MembershipApplyPage() {
 
       {/* Header Card */}
       <div className="bg-gradient-to-br from-brand-emerald/10 via-brand-mint/15 to-transparent rounded-2xl p-5 sm:p-6 border border-brand-emerald/20 text-left space-y-2">
-        <div className="flex items-center gap-2 text-brand-emerald font-bold text-sm">
-          <Award className="w-5 h-5" />
-          <span>আমরা মোহাম্মদপুরী • প্রাতিষ্ঠানিক সদস্যপদ আবেদন</span>
-        </div>
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white text-balance">
           সংগঠনের সম্মানিত সদস্য হোন
         </h1>
-        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
           মোহাম্মদপুরের টেকসই উন্নয়ন ও সেবামূলক কার্যক্রমে অংশ নিতে এবং নির্বাচনে ভোটাধিকার প্রয়োগ করতে প্রাতিষ্ঠানিক সদস্যপদ গ্রহণ করুন।
         </p>
       </div>
@@ -159,7 +154,7 @@ export default function MembershipApplyPage() {
         {/* Full Name */}
         <div className="space-y-1.5 text-left">
           <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
-            পূর্ণ নাম (জাতীয় পরিচয়পত্র / দাপ্তরিক নাম অনুযায়ী) *
+            পূর্ণ নাম *
           </label>
           <input
             type="text"
@@ -174,7 +169,7 @@ export default function MembershipApplyPage() {
         {/* Mobile Number */}
         <div className="space-y-1.5 text-left">
           <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
-            মোবাইল নম্বর (যোগাযোগ ও ভেরিফিকেশনের জন্য) *
+            মোবাইল নম্বর *
           </label>
           <input
             type="tel"
@@ -206,7 +201,7 @@ export default function MembershipApplyPage() {
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <DollarSign className="w-4 h-4 text-brand-emerald" />
-              <span>মাসিক অনুদানের পরিমাণ (ন্যূনতম ৳৫০) *</span>
+              <span>মাসিক অনুদানের পরিমাণ *</span>
             </label>
             <span className="text-xs font-extrabold text-brand-emerald">
               ৳{monthlyContribution} / মাস

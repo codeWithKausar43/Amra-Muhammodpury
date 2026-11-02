@@ -167,7 +167,7 @@ export default function HomePage() {
           {isPostsLoading && posts.length === 0 ? (
             <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
-              <span className="text-xs font-medium">মুহাম্মদপুরের পোস্টসমূহ লোড হচ্ছে...</span>
+              <span className="text-xs font-medium">মোহাম্মদপুরের পোস্টসমূহ লোড হচ্ছে...</span>
             </div>
           ) : (category === 'MY_POSTS' || category === 'MY_BLOCK') && !session?.user ? (
             /* Unauthenticated user clicking "আমার পোস্ট" tab */
@@ -199,8 +199,8 @@ export default function HomePage() {
               </p>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {category === 'MY_POSTS' || category === 'MY_BLOCK'
-                  ? 'মুহাম্মদপুরের উন্নয়ন বা আপনার অভিজ্ঞতা নিয়ে প্রথম পোস্টটি শেয়ার করুন!'
-                  : 'মুহাম্মদপুরের প্রথম আপডেটটি আপনি নিজেই শেয়ার করুন!'}
+                  ? 'মোহাম্মদপুরের উন্নয়ন বা আপনার অভিজ্ঞতা নিয়ে প্রথম পোস্টটি শেয়ার করুন!'
+                  : 'মোহাম্মদপুরের প্রথম আপডেটটি আপনি নিজেই শেয়ার করুন!'}
               </p>
               {(category === 'MY_POSTS' || category === 'MY_BLOCK') && session?.user && (
                 <button
@@ -235,7 +235,7 @@ export default function HomePage() {
                     সব খবর পড়া শেষ!
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    মুহাম্মদপুরের সম্প্রীতি ও পরিচ্ছন্নতা আমাদের অহংকার।
+                    মোহাম্মদপুরের সম্প্রীতি ও পরিচ্ছন্নতা আমাদের অহংকার।
                   </p>
                 </div>
               </div>

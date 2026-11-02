@@ -182,7 +182,7 @@ export function CreatePostModal({
       setStatusText('পোস্ট প্রকাশ হচ্ছে...');
       const created = await feedService.createPost({
         content: content.trim(),
-        blockBadge: 'মুহাম্মদপুর',
+        blockBadge: 'মোহাম্মদপুর',
         location: location || undefined,
         bgColor: selectedFiles.length === 0 && selectedBg ? selectedBg : undefined,
         mediaIds,
@@ -241,7 +241,7 @@ export function CreatePostModal({
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-slate-900 dark:text-white">
-                {user?.name || 'মুহাম্মদপুরী সদস্য'}
+                {user?.name || 'মোহাম্মদপুরী সদস্য'}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full">
@@ -276,7 +276,7 @@ export function CreatePostModal({
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="আপনার মনে কী চলছে? মুহাম্মদপুরের খবর, উন্নয়ন বা অভিজ্ঞতা শেয়ার করুন..."
+              placeholder="আপনার মনে কী চলছে? মোহাম্মদপুরের খবর, উন্নয়ন বা অভিজ্ঞতা শেয়ার করুন..."
               rows={previewUrls.length > 0 ? 3 : 4}
               className="w-full resize-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 bg-transparent outline-none border-0 focus:ring-0 leading-relaxed"
             />

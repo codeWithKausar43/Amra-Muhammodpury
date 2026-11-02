@@ -26,7 +26,7 @@ export function EmergencyNoticeCard({ onAcknowledge }: EmergencyNoticeCardProps)
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
-                মুহাম্মদপুর সেন্ট্রাল হেল্পডেস্ক
+                মোহাম্মদপুর সেন্ট্রাল হেল্পডেস্ক
               </h3>
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 fill-emerald-100 dark:fill-emerald-950 shrink-0" />
             </div>

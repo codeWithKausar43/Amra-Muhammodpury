@@ -67,6 +67,13 @@ export default function DigitalElectionPage() {
 
   const isActiveMember = membershipData?.membership?.status === 'ACTIVE';
   const hasVoted = electionDetail?.hasVoted || Boolean(voteReceiptToken);
+  const isOfficer =
+    Boolean(
+      membershipData?.membership &&
+        ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(
+          membershipData.membership.orgRole,
+        ),
+    ) || (session?.user as any)?.role === 'ADMIN';
 
   const handleSelectCandidate = (positionId: string, candidateNominationId: string) => {
     setSelectedCandidates((prev) => ({
@@ -200,6 +207,64 @@ export default function DigitalElectionPage() {
               {el.title} ({el.status})
             </button>
           ))}
+        </div>
+      )}
+
+      {/* If No Elections Exist */}
+      {(!electionDetail || elections.length === 0) && (
+        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-8 sm:p-12 border border-slate-200/80 dark:border-white/10 text-center space-y-4 shadow-soft">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+            <Vote className="w-8 h-8" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              বর্তমানে কোনো সক্রিয় নির্বাচন চলমান নেই
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+              সুপারঅ্যাডমিন কর্তৃক নতুন নির্বাচনী তফশিল ঘোষণা ও লাইভ ভোটগ্রহণ চালু করা হলে এই কেন্দ্রে আপনার গোপন ডিজিটাল ব্যালট প্রদর্শিত হবে।
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              href="/organization"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
+            >
+              সংগঠন হোমে ফিরুন
+            </Link>
+            {isOfficer && (
+              <Link
+                href="/organization/admin"
+                className="px-4 py-2 rounded-xl bg-brand-gold hover:brightness-105 text-slate-950 text-xs font-bold shadow transition-all"
+              >
+                প্রশাসনিক প্যানেল থেকে তফশিল ঘোষণা করুন →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Draft State Notice */}
+      {electionDetail && electionDetail.status === 'DRAFT' && (
+        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-3xl p-8 border border-slate-200/80 dark:border-white/10 text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 flex items-center justify-center mx-auto">
+            <Vote className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              {electionDetail.title} (খসড়া তফশিল)
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              এই নির্বাচনের তফশিল বর্তমানে খসড়া আকারে সংরক্ষিত রয়েছে। সুপারঅ্যাডমিন কর্তৃক লাইভ ভোটগ্রহণ শুরু করা হলে সকল সক্রিয় সদস্যের জন্য গোপন ব্যালট উন্মুক্ত হবে।
+            </p>
+          </div>
+          {isOfficer && (
+            <Link
+              href="/organization/admin"
+              className="inline-block px-4 py-2 rounded-xl bg-brand-gold text-slate-950 text-xs font-bold shadow hover:brightness-105"
+            >
+              অ্যাডমিন প্যানেল থেকে ভোটগ্রহণ শুরু করুন →
+            </Link>
+          )}
         </div>
       )}
 
@@ -417,46 +482,42 @@ export default function DigitalElectionPage() {
         <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 border border-slate-200/80 dark:border-white/10 shadow-soft text-left space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-brand-gold" />
-              <span>প্রার্থী মনোনয়ন উইন্ডো উন্মুক্ত</span>
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <span>মনোনয়নপত্র দাখিল উইন্ডো উন্মুক্ত</span>
             </h3>
             {isActiveMember && (
               <button
                 type="button"
-                onClick={() => {
-                  setNomPositionId(electionDetail.positions[0]?.id || '');
-                  setNomModalOpen(true);
-                }}
+                onClick={() => setNomModalOpen(true)}
                 className="px-4 py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold hover:bg-emerald-800 transition-colors cursor-pointer"
               >
-                মনোনয়নপত্র জমা দিন
+                প্রার্থী হিসেবে মনোনয়ন দাখিল
               </button>
             )}
           </div>
-          <p className="text-xs text-slate-500">
-            মনোনয়নপত্র জমার সময়সীমা:{' '}
-            {new Date(electionDetail.nominationEndDate).toLocaleDateString('bn-BD', {
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            কার্যনির্বাহী কমিটির বিভিন্ন পদের জন্য যোগ্য সক্রিয় সদস্যরা নির্ধারিত সময়ের মধ্যে মনোনয়ন দাখিল করতে পারবেন।
           </p>
         </div>
       )}
 
-      {/* Finalized Election Results */}
-      {electionDetail?.status === 'FINALIZED' && (
+      {/* Election Final Results (if finalized) */}
+      {(electionDetail?.status === 'FINALIZED' || electionDetail?.status === 'RESULTS_REVIEW') && (
         <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-4 text-left">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-white/5">
-            <Award className="w-5 h-5 text-brand-gold" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              চূড়ান্ত সরকারি নির্বাচনী ফলাফল
-            </h3>
+            <Award className="w-6 h-6 text-brand-gold" />
+            <div>
+              <h3 className="text-base font-black text-slate-900 dark:text-white">
+                নির্বাচনী ফলাফল ও নির্বাচিত নেতৃবৃন্দ
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                গোপন ব্যালট গণনার পর চূড়ান্তভাবে ঘোষিত ফলাফল
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(electionDetail.results || []).map((res) => (
+            {(electionDetail?.results || []).map((res) => (
               <div
                 key={res.id}
                 className={`p-4 rounded-xl border flex items-center justify-between ${
@@ -466,7 +527,7 @@ export default function DigitalElectionPage() {
                 }`}
               >
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                  <span className="text-[10px] font-bold text-brand-emerald uppercase">
                     {res.position.designation.title}
                   </span>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">

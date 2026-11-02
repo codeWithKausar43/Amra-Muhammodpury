@@ -114,7 +114,7 @@ export function Navbar({ onSearch }: NavbarProps) {
                     router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
                   }
                 }}
-                placeholder="মুহাম্মদপুরের পোস্ট, সড়ক বা বিষয় খুঁজুন..."
+                placeholder="মোহাম্মদপুরের পোস্ট, সড়ক বা বিষয় খুঁজুন..."
                 className="w-full pl-10 pr-9 py-2 rounded-full text-xs sm:text-sm bg-slate-100 dark:bg-white/5 border border-transparent focus:border-brand-emerald/40 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition-all"
               />
               {searchQuery && (
@@ -269,7 +269,7 @@ export function Navbar({ onSearch }: NavbarProps) {
                     router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
                   }
                 }}
-                placeholder="মুহাম্মদপুরের পোস্ট বা বিষয় খুঁজুন..."
+                placeholder="মোহাম্মদপুরের পোস্ট বা বিষয় খুঁজুন..."
                 className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none"
               />
               {searchQuery && (

@@ -1,4 +1,4 @@
-# আমরা মুহাম্মদপুরী (Amra Muhammadpuri)
+# আমরা মোহাম্মদপুরী (Amra Muhammadpuri)
 
 > Modern, scalable, production-ready community platform monorepo.
 

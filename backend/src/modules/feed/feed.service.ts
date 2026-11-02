@@ -650,7 +650,7 @@ export class FeedService {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const story = await this.prisma.story.create({
       data: {
-        title: input.title || 'মুহাম্মদপুরী স্টোরি',
+        title: input.title || 'মোহাম্মদপুরী স্টোরি',
         mediaUrl: input.mediaUrl,
         expiresAt,
         authorId,

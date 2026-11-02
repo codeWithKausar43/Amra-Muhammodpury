@@ -17,13 +17,13 @@ if (env.SMTP_HOST && env.SMTP_USER) {
 
 export const emailService = {
   async sendVerificationEmail(to: string, url: string, name: string) {
-    const subject = 'আপনার ইমেইল যাচাই করুন — আমরা মুহাম্মদপুরী';
+    const subject = 'আপনার ইমেইল যাচাই করুন — আমরা মোহাম্মদপুরী';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
-        <h2 style="color: #087A55; margin-bottom: 16px;">আমরা মুহাম্মদপুরী</h2>
+        <h2 style="color: #087A55; margin-bottom: 16px;">আমরা মোহাম্মদপুরী</h2>
         <p style="font-size: 16px; color: #1e293b;">আসসালামু আলাইকুম ${name},</p>
         <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-          আমরা মুহাম্মদপুরী কমিউনিটি প্ল্যাটফর্মে আপনার অ্যাকাউন্ট নিবন্ধন সম্পন্ন করতে অনুগ্রহ করে নিচের বাটনে ক্লিক করে আপনার ইমেইল যাচাই করুন:
+          আমরা মোহাম্মদপুরী কমিউনিটি প্ল্যাটফর্মে আপনার অ্যাকাউন্ট নিবন্ধন সম্পন্ন করতে অনুগ্রহ করে নিচের বাটনে ক্লিক করে আপনার ইমেইল যাচাই করুন:
         </p>
         <div style="margin: 28px 0; text-align: center;">
           <a href="${url}" style="background-color: #087A55; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
@@ -57,10 +57,10 @@ export const emailService = {
   },
 
   async sendResetPasswordEmail(to: string, url: string) {
-    const subject = 'পাসওয়ার্ড রিসেট নির্দেশনা — আমরা মুহাম্মদপুরী';
+    const subject = 'পাসওয়ার্ড রিসেট নির্দেশনা — আমরা মোহাম্মদপুরী';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
-        <h2 style="color: #087A55; margin-bottom: 16px;">আমরা মুহাম্মদপুরী</h2>
+        <h2 style="color: #087A55; margin-bottom: 16px;">আমরা মোহাম্মদপুরী</h2>
         <p style="font-size: 16px; color: #1e293b;">আসসালামু আলাইকুম,</p>
         <p style="font-size: 14px; color: #475569; line-height: 1.6;">
           আপনার পাসওয়ার্ড পরিবর্তনের জন্য একটি অনুরোধ পেয়েছি। পাসওয়ার্ড রিসেট করতে নিচের বাটনে ক্লিক করুন:

@@ -181,7 +181,7 @@ export default function UserProfilePage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {user.bio || 'মুহাম্মদপুরী কমিউনিটির একজন সদস্য।'}
+                  {user.bio || 'মোহাম্মদপুরী কমিউনিটির একজন সদস্য।'}
                 </p>
               </div>
             </div>
@@ -329,7 +329,7 @@ export default function UserProfilePage() {
                   rows={3}
                   value={editBio}
                   onChange={(e) => setEditBio(e.target.value)}
-                  placeholder="আপনার পেশা, আগ্রহ বা মুহাম্মদপুরের এলাকা..."
+                  placeholder="আপনার পেশা, আগ্রহ বা মোহাম্মদপুরের এলাকা..."
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-brand-emerald resize-none"
                 />
               </div>

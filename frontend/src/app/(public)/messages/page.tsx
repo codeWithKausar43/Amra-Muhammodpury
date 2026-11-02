@@ -144,7 +144,7 @@ export default function MessagesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                          {conv.otherUser?.name || 'মুহাম্মদপুরী সদস্য'}
+                          {conv.otherUser?.name || 'মোহাম্মদপুরী সদস্য'}
                         </p>
                         <span className="text-[10px] text-slate-400 shrink-0">
                           {new Date(conv.updatedAt).toLocaleTimeString('bn-BD', {

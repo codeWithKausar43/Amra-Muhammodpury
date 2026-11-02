@@ -2,7 +2,7 @@
   "name": "amra-muhammadpuri",
   "version": "0.1.0",
   "private": true,
-  "description": "আমরা মুহাম্মদপুরী - Monorepo for Community Platform",
+  "description": "আমরা মোহাম্মদপুরী - Monorepo for Community Platform",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "concurrently -k -p \"[{name}]\" -n \"FRONTEND,BACKEND\" -c \"cyan.bold,green.bold\" \"pnpm run dev:frontend\" \"pnpm run dev:backend\"",

@@ -28,7 +28,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASSWORD: z.string().optional().default(''),
-  SMTP_FROM: z.string().default('আমরা মুহাম্মদপুরী <no-reply@amra-muhammadpuri.org>'),
+  SMTP_FROM: z.string().default('আমরা মোহাম্মদপুরী <no-reply@amra-muhammadpuri.org>'),
 
   // Cloudinary Media Configuration
   CLOUDINARY_CLOUD_NAME: z.string().default('rim6yblt'),

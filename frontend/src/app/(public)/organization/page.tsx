@@ -3,11 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import {
-  ShieldCheck,
   Award,
   Vote,
-  Users,
-  Building,
   CheckCircle2,
   Clock,
   TrendingUp,
@@ -15,6 +12,8 @@ import {
   CreditCard,
   Settings,
   Sparkles,
+  Lock,
+  HeartHandshake,
 } from 'lucide-react';
 import {
   useOrgOverviewQuery,
@@ -33,10 +32,17 @@ export default function OrganizationPage() {
   const application = membershipData?.latestApplication;
   const isActiveMember = membership?.status === 'ACTIVE';
   const isOfficer =
-    Boolean(membership && ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(membership.orgRole)) ||
-    (session?.user as any)?.role === 'ADMIN';
+    Boolean(
+      membership &&
+        ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(
+          membership.orgRole,
+        ),
+    ) || (session?.user as any)?.role === 'ADMIN';
 
-  const activeElection = elections.find((e) => e.status === 'VOTING_ACTIVE' || e.status === 'NOMINATION_OPEN');
+  // Only elections with active voting or open nomination are considered active
+  const activeElection = elections.find(
+    (e) => e.status === 'VOTING_ACTIVE' || e.status === 'NOMINATION_OPEN',
+  );
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6">
@@ -45,15 +51,11 @@ export default function OrganizationPage() {
         <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-white/5 blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-emerald-100 border border-white/10">
-              <ShieldCheck className="w-4 h-4 text-brand-gold" />
-              <span>নিবন্ধিত নাগরিক উন্নয়ন পরিষদ • প্রতিষ্ঠা ২০২৬</span>
-            </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
               আমরা মোহাম্মদপুরী
             </h1>
             <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed font-normal">
-              মুহাম্মদপুরের নাগরিক উন্নয়ন, নিরাপত্তা, সামাজিক ঐক্য ও জবাবদিহিতা নিশ্চিতকরণে স্থানীয় বাসিন্দাদের প্রাতিষ্ঠানিক সংগঠন।
+              মোহাম্মদপুরের নাগরিক উন্নয়ন, নিরাপত্তা, সামাজিক ঐক্য ও জবাবদিহিতা নিশ্চিতকরণে স্থানীয় বাসিন্দাদের প্রাতিষ্ঠানিক সংগঠন।
             </p>
           </div>
 
@@ -103,109 +105,23 @@ export default function OrganizationPage() {
               </Link>
             )}
 
-            <Link
-              href="/organization/elections"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold backdrop-blur-md transition-colors"
-            >
-              <Vote className="w-3.5 h-3.5 text-brand-gold" />
-              <span>ডিজিটাল নির্বাচন কেন্দ্র</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Real Metrics Counter */}
-        <div className="grid grid-cols-3 gap-2 pt-6 mt-6 border-t border-white/15 text-center">
-          <div>
-            <div className="text-xl sm:text-2xl font-black text-white">
-              {overview?.stats.activeMembers ?? 1} জন
-            </div>
-            <div className="text-[11px] sm:text-xs text-emerald-200">নিবন্ধিত সক্রিয় সদস্য</div>
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-black text-brand-gold">
-              {overview?.stats.activeProjects ?? 2} টি
-            </div>
-            <div className="text-[11px] sm:text-xs text-emerald-200">চলমান উন্নয়ন প্রকল্প</div>
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-black text-white">
-              {overview?.stats.totalFundsCount ?? 4} টি
-            </div>
-            <div className="text-[11px] sm:text-xs text-emerald-200">স্বচ্ছ নাগরিক তহবিল</div>
+            {/* Voting Center Button: ONLY visible when an election is created and active AND user is a member/officer */}
+            {activeElection && (isActiveMember || isOfficer) && (
+              <Link
+                href="/organization/elections"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-md transition-all animate-in fade-in"
+              >
+                <Vote className="w-3.5 h-3.5 text-slate-950" />
+                <span>ডিজিটাল নির্বাচন কেন্দ্র</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 2. Status Banner for Current User */}
-      {session?.user && (
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/10 shadow-soft">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-brand-emerald/10 dark:bg-brand-emerald/20 flex items-center justify-center text-brand-emerald shrink-0">
-                {isActiveMember ? (
-                  <CheckCircle2 className="w-6 h-6 text-brand-emerald" />
-                ) : application?.status === 'PENDING' ? (
-                  <Clock className="w-6 h-6 text-amber-500" />
-                ) : (
-                  <Building className="w-6 h-6 text-brand-emerald" />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    {isActiveMember
-                      ? 'আপনি একজন সক্রিয় প্রাতিষ্ঠানিক সদস্য'
-                      : application?.status === 'PENDING'
-                      ? 'আপনার সদস্যপদ আবেদন প্রক্রিয়াধীন'
-                      : 'সাধারণ সামাজিক প্ল্যাটফর্ম ব্যবহারকারী'}
-                  </h3>
-                  {isActiveMember && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-emerald/15 text-brand-emerald">
-                      {membership.memberId}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {isActiveMember
-                    ? `পদবি: ${membership.designation?.title || 'সাধারণ সদস্য'} • মাসিক অনুদান: ৳${membershipData?.currentAgreement?.agreedAmount || 50}`
-                    : application?.status === 'PENDING'
-                    ? 'কার্যনির্বাহী কমিটির অনুমোদন সম্পন্ন হলে প্রারম্ভিক কিস্তির জন্য জানানো হবে।'
-                    : 'সামাজিক টাইমলাইন সবার জন্য উন্মুক্ত। প্রাতিষ্ঠানিক সুবিধা ও ভোটাধিকার পেতে সদস্যপদ আবেদন করুন।'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {isActiveMember ? (
-                <Link
-                  href="/organization/member"
-                  className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-brand-emerald text-white text-xs font-semibold hover:bg-emerald-800 transition-colors text-center"
-                >
-                  সদস্য ড্যাশবোর্ডে প্রবেশ
-                </Link>
-              ) : application?.status === 'APPROVED' && membership?.status === 'APPROVED_PAYMENT_PENDING' ? (
-                <Link
-                  href="/organization/payment"
-                  className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-brand-gold text-slate-900 text-xs font-bold hover:brightness-105 transition-all text-center"
-                >
-                  কিস্তি পরিশোধ
-                </Link>
-              ) : !application ? (
-                <Link
-                  href="/organization/apply"
-                  className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-brand-emerald text-white text-xs font-semibold hover:bg-emerald-800 transition-colors text-center"
-                >
-                  সদস্য হতে আবেদন করুন
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Active Election Notice Card */}
-      {activeElection && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 2. Active Election Notice Card (Strictly visible ONLY when an election is created & active by Superadmin AND user is a member/officer) */}
+      {activeElection && (isActiveMember || isOfficer) && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
               <Vote className="w-5 h-5" />
@@ -221,7 +137,7 @@ export default function OrganizationPage() {
                 {activeElection.title}
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                গোপন ব্যালটের মাধ্যমে আপনার ভোটাধিকার প্রয়োগ করুন।
+                সক্রিয় প্রাতিষ্ঠানিক সদস্য হিসেবে গোপন ব্যালটের মাধ্যমে আপনার ভোটাধিকার প্রয়োগ করুন।
               </p>
             </div>
           </div>
@@ -234,91 +150,239 @@ export default function OrganizationPage() {
         </div>
       )}
 
-      {/* 4. Two Tier Architecture Explanation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Tier A: General Social Platform */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 border border-slate-200/80 dark:border-white/10 space-y-3">
-          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-base">
-            <Users className="w-5 h-5 text-slate-500" />
-            <span>১. উন্মুক্ত সামাজিক যোগাযোগ মাধ্যম</span>
-          </div>
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            মুহাম্মদপুরের যে কোনো সাধারণ নাগরিক কোনো ফি বা সদস্যপদ ছাড়াই প্ল্যাটফর্মের সোশ্যাল ফিচারগুলো ব্যবহার করতে পারেন:
+      {/* 4. Why Join & Membership Benefits (Seamless, Non-Boxy Modern Layout) */}
+      <div className="py-4 sm:py-6 space-y-6">
+        <div className="text-left space-y-1.5 max-w-3xl">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug">
+            কেন আমরা সংগঠনে যুক্ত হবো?
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
+            মোহাম্মদপুরের নাগরিক উন্নয়ন, নিরাপত্তা ও পারস্পরিক সহযোগিতায় স্থানীয় বাসিন্দাদের একমাত্র গণতান্ত্রিক ও স্বচ্ছ প্রাতিষ্ঠানিক ঐক্যমঞ্চ।
           </p>
-          <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 list-disc pl-4">
-            <li>টাইমলাইনে পোস্ট তৈরি, ছবি ও ভিডিও প্রকাশ</li>
-            <li>লাইক, কমেন্ট ও বন্ধুদের সাথে মেসেজিং</li>
-            <li>এলাকা ভিত্তিক ফোরাম ও গ্রুপে মত প্রকাশ</li>
-            <li>জরুরি সামাজিক বিজ্ঞপ্তি পর্যবেক্ষণ</li>
-          </ul>
         </div>
 
-        {/* Tier B: Institutional Organization Member */}
-        <div className="bg-gradient-to-br from-brand-emerald/5 to-brand-mint/10 dark:from-brand-emerald/10 dark:to-transparent rounded-2xl p-5 border border-brand-emerald/30 space-y-3">
-          <div className="flex items-center gap-2 text-brand-emerald dark:text-brand-mint font-bold text-base">
-            <Award className="w-5 h-5 text-brand-emerald" />
-            <span>২. প্রাতিষ্ঠানিক সংগঠন সদস্যপদ</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10 pt-2">
+          {/* Column 1: Core Values & Why Join */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/10">
+              <div className="w-7 h-7 rounded-xl bg-brand-emerald/10 text-brand-emerald flex items-center justify-center">
+                <HeartHandshake className="w-4 h-4" />
+              </div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                সামাজিক লক্ষ্য ও নাগরিক অংশীদারিত্ব
+              </h3>
+            </div>
+
+            <div className="space-y-3.5">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-brand-emerald flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    নাগরিক অধিকার ও সার্বিক নিরাপত্তা
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    মহল্লাভিত্তিক শান্তি-শৃঙ্খলা, পরিচ্ছন্ন পরিবেশ এবং সম্মিলিত নাগরিক নিরাপত্তা নেটওয়ার্ক গড়ে তোলা।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-brand-emerald flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    জরুরি মানবিক ও চিকিৎসা সহায়তা
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    মোহাম্মদপুরের অস্বচ্ছল, অসুস্থ বা দুর্যোগকবলিত প্রতিবেশীদের চিকিৎসাসেবা ও অর্থ সহায়তায় তাৎক্ষণিক পাশে থাকা।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-brand-emerald flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    শতভাগ স্বচ্ছতা ও উন্মুক্ত হিসাবরক্ষণ
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    সদস্যদের অবদানের প্রতিটি টাকার প্রকাশ্য লাইভ হিসাব ও নাগরিক নজরদারির পূর্ণ নিশ্চয়তা।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-brand-emerald flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    সামাজিক ঐক্য ও ভ্রাতৃত্ববোধ
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    রাজনৈতিক প্রভাবমুক্ত একটি নিরপেক্ষ মঞ্চ, যেখানে এলাকা উন্নয়নের প্রশ্নে সব বাসিন্দা একতাবদ্ধ।
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            অনুমোদিত ও নিয়মিত মাসিক চাঁদা (সর্বনিম্ন ৳৫০) প্রদানকারী সদস্যদের জন্য বিশেষ প্রাতিষ্ঠানিক অধিকার:
-          </p>
-          <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-disc pl-4">
-            <li>ডিজিটাল সদস্য পরিচয়পত্র ও আজীবন সদস্য নম্বর</li>
-            <li>ডিজিটাল গোপন ব্যালট নির্বাচনের প্রার্থী হওয়া ও ভোটাধিকার</li>
-            <li>নাগরিক তহবিল ব্যয় ও অর্থ বরাদ্দে সিদ্ধান্ত নেওয়ার ক্ষমতা</li>
-            <li>মাসিক সাধারণ সভা ও নীতি-নির্ধারণে সরাসরি অংশগ্রহণ</li>
-          </ul>
+
+          {/* Column 2: Membership Rights & Privileges */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/10">
+              <div className="w-7 h-7 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <Award className="w-4 h-4" />
+              </div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                সদস্যদের বিশেষ অধিকার ও সুবিধাসমূহ
+              </h3>
+            </div>
+
+            <div className="space-y-3.5">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    ডিজিটাল সদস্য পরিচয়পত্র
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    ভেরিফায়েড কিউআর কোড সম্বলিত আজীবন সদস্য নম্বর ও ডিজিটাল স্মার্ট আইডি কার্ড।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    গণতান্ত্রিক নেতৃত্ব ও ভোটাধিকার
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    কার্যনির্বাহী কমিটির বিভিন্ন পদে নির্বাচনে প্রার্থী হওয়ার যোগ্যতা এবং ডিজিটাল গোপন ব্যালটে ভোটদানের ক্ষমতা।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    তহবিল বরাদ্দে সরাসরি সিদ্ধান্ত
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    সংগঠনের নাগরিক কল্যাণ তহবিলের অর্থ কোন উন্নয়নমূলক খাতে ব্যয় হবে সে বিষয়ে ভোটাধিকার প্রয়োগ।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    নীতি-নির্ধারণে সরাসরি অংশীদারিত্ব
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    মাসিক সাধারণ সভা, ফোরাম বিতর্ক এবং সংগঠনের বার্ষিক কর্মপরিকল্পনা প্রণয়নে সক্রিয় অংশগ্রহণ।
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 5. Organization Transparency & Funds */}
-      <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-brand-emerald" />
-              <span>স্বচ্ছ আর্থিক তহবিল ও নাগরিক হিসাবরক্ষণ</span>
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              সংগঠনের প্রতিটি টাকার আয়, ব্যয় ও অনুদান সম্পূর্ণ উন্মুক্ত লেজারে সংরক্ষিত
-            </p>
+      {/* 5. Organization Financial Funds & Treasury (Protected: ONLY visible when connected as an Active Member) */}
+      {isActiveMember ? (
+        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 space-y-4 animate-in fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-brand-emerald" />
+                <span>স্বচ্ছ আর্থিক তহবিল ও নাগরিক হিসাবরক্ষণ</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                সদস্যদের অবদানে গঠিত তহবিলের লাইভ হিসাবরক্ষণ ও স্বচ্ছ ব্যালেন্স
+              </p>
+            </div>
+            <Link
+              href="/organization/member"
+              className="text-xs font-semibold text-brand-emerald hover:underline hidden sm:inline"
+            >
+              সদস্য লেজার দেখুন →
+            </Link>
           </div>
-          <Link
-            href="/dashboard"
-            className="text-xs font-semibold text-brand-emerald hover:underline hidden sm:inline"
-          >
-            বিস্তারিত লেজার দেখুন →
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">সাধারণ পরিচালন তহবিল</span>
-            <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳১,০০,০০০</div>
-            <span className="text-[10px] text-brand-emerald font-semibold">কার্যক্রম সক্রিয়</span>
-          </div>
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">শিক্ষা ও মেধা সহায়তা</span>
-            <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৫০,০০০</div>
-            <span className="text-[10px] text-blue-500 font-semibold">স্কলারশিপ ফান্ড</span>
-          </div>
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">চিকিৎসা সহায়তা তহবিল</span>
-            <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৭৫,০০০</div>
-            <span className="text-[10px] text-rose-500 font-semibold">স্বাস্থ্যসেবা ফান্ড</span>
-          </div>
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">জরুরি ত্রাণ ও দুর্যোগ</span>
-            <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳২৫,০০০</div>
-            <span className="text-[10px] text-amber-500 font-semibold">রিজার্ভ ফান্ড</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">সাধারণ পরিচালন তহবিল</span>
+              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳১,৫০,০০০</div>
+              <span className="text-[10px] text-brand-emerald font-semibold">কার্যক্রম সক্রিয়</span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">শিক্ষা ও মেধা সহায়তা</span>
+              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৬৫,০০০</div>
+              <span className="text-[10px] text-blue-500 font-semibold">স্কলারশিপ ফান্ড</span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">চিকিৎসা সহায়তা তহবিল</span>
+              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৮০,০০০</div>
+              <span className="text-[10px] text-rose-500 font-semibold">স্বাস্থ্যসেবা ফান্ড</span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">জরুরি ত্রাণ ও দুর্যোগ</span>
+              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৪০,০০০</div>
+              <span className="text-[10px] text-amber-500 font-semibold">রিজার্ভ ফান্ড</span>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        /* Modern, Non-Boxy Left-Aligned Preview Banner */
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 shadow-md">
+          <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 text-left">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-emerald-300 text-xs font-semibold backdrop-blur-sm">
+                <Lock className="w-3.5 h-3.5" />
+                <span>সদস্যদের জন্য সংরক্ষিত</span>
+              </div>
+              <h3 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white">
+                অভ্যন্তরীণ তহবিল হিসাবরক্ষণ ও প্রাতিষ্ঠানিক সুযোগ
+              </h3>
+              <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed font-normal">
+                সংগঠনের ৪টি বিশেষায়িত কল্যাণ তহবিল, আয়-ব্যয় অডিট লেজার, অভ্যন্তরীণ নোটিশ ও ডিজিটাল নির্বাচন শুধুমাত্র অনুমোদিত সক্রিয় সদস্যদের জন্য সংরক্ষিত। মোহাম্মদপুরের নাগরিক উন্নয়ন ও নীতি-নির্ধারণে ভোটাধিকার পেতে সদস্যপদ গ্রহণ করুন।
+              </p>
+            </div>
 
-      {/* 6. Ongoing Projects & Public Notices */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Public Notices */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 border border-slate-200/80 dark:border-white/10 space-y-3">
+            <div className="shrink-0 pt-1 md:pt-0">
+              <Link
+                href="/organization/apply"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-emerald-950 font-bold text-xs sm:text-sm hover:bg-emerald-50 shadow-md active:scale-95 transition-all"
+              >
+                <span>সদস্য হতে আবেদন করুন</span>
+                <span className="text-emerald-700">→</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Organizational Notices (Protected: ONLY visible to Active Members) */}
+      {isActiveMember && (
+        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 border border-slate-200/80 dark:border-white/10 space-y-3 animate-in fade-in">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <FileText className="w-4 h-4 text-brand-emerald" />
@@ -346,42 +410,7 @@ export default function OrganizationPage() {
             )}
           </div>
         </div>
-
-        {/* Public Projects */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 border border-slate-200/80 dark:border-white/10 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Building className="w-4 h-4 text-brand-emerald" />
-              <span>চলমান এলাকা উন্নয়ন প্রকল্প</span>
-            </h4>
-          </div>
-
-          <div className="space-y-2.5">
-            {overview?.publicProjects && overview.publicProjects.length > 0 ? (
-              overview.publicProjects.map((p) => (
-                <div
-                  key={p.id}
-                  className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-left"
-                >
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{p.title}</span>
-                    <span className="text-brand-emerald font-semibold">{p.progress}% সম্পন্ন</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden mb-1.5">
-                    <div
-                      className="h-full bg-brand-emerald rounded-full transition-all"
-                      style={{ width: `${p.progress}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{p.description}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-400 py-4 text-center">বর্তমানে কোনো চলমান প্রকল্প নেই</p>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

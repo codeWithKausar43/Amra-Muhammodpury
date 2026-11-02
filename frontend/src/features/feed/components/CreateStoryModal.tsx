@@ -131,7 +131,7 @@ export function CreateStoryModal({
 
       // 4. Create real story record in database
       const createdStory = await feedService.createStory({
-        title: caption.trim() || 'মুহাম্মদপুরী স্টোরি',
+        title: caption.trim() || 'মোহাম্মদপুরী স্টোরি',
         mediaUrl: asset.secure_url,
       });
 
@@ -222,7 +222,7 @@ export function CreateStoryModal({
                       )}
                     </div>
                     <span className="text-xs font-bold text-white drop-shadow-md truncate max-w-[140px]">
-                      {user?.name || 'মুহাম্মদপুরী'}
+                      {user?.name || 'মোহাম্মদপুরী'}
                     </span>
                   </div>
                 </div>

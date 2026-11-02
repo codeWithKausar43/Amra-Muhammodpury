@@ -49,8 +49,16 @@ export interface OrgApplication {
   agreedToMonthlyFee: boolean;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   rejectionReason: string | null;
+  submittedAt?: string;
   createdAt: string;
   reviewedAt: string | null;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    image: string | null;
+  };
 }
 
 export interface ContributionAgreement {
@@ -129,6 +137,25 @@ export interface OrgAdminStats {
   elections: {
     activeElections: number;
   };
+  recentTransactions?: Array<{
+    id: string;
+    fundId: string;
+    type: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'CONTRIBUTION';
+    amount: number;
+    title: string;
+    description?: string | null;
+    createdAt: string;
+    fund?: { name: string; code: string };
+  }>;
+  recentPayments?: Array<{
+    id: string;
+    amount: number;
+    periodMonth: number;
+    periodYear: number;
+    status: string;
+    paidAt: string;
+    user?: { name: string; email: string };
+  }>;
 }
 
 export interface OrgFund {
@@ -136,10 +163,12 @@ export interface OrgFund {
   name: string;
   code: string;
   description: string | null;
-  currentBalance: number;
-  isDefault: boolean;
-  createdAt: string;
+  balance?: number;
+  currentBalance?: number;
+  isDefault?: boolean;
+  createdAt?: string;
   transactions?: OrgTransaction[];
+  _count?: { transactions: number };
 }
 
 export interface OrgTransaction {

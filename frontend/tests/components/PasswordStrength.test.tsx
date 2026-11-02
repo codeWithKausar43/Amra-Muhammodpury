@@ -10,7 +10,7 @@ describe('PasswordStrength Component', () => {
 
   it('renders weak for short password', () => {
     render(<PasswordStrength password="abc" />);
-    expect(screen.getByText('দুর্বল')).toBeInTheDocument();
+    expect(screen.getByText('ছোট')).toBeInTheDocument();
   });
 
   it('renders strong when all conditions are fulfilled', () => {

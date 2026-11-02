@@ -14,11 +14,11 @@ export function HeroBanner() {
       <div className="relative z-10 max-w-2xl space-y-3">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-emerald-100 text-[11px] font-bold border border-white/20">
           <Sparkles className="w-3.5 h-3.5 text-brand-gold" />
-          <span>মুহাম্মদপুরের নাগরিকদের জন্য তৈরি প্রথম সোশ্যাল হাব</span>
+          <span>মোহাম্মদপুরের নাগরিকদের জন্য তৈরি প্রথম সোশ্যাল হাব</span>
         </div>
 
         <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight leading-tight">
-          আমরা মুহাম্মদপুরী — সম্প্রীতি, উন্নয়ন ও ঐক্যের বন্ধন
+          আমরা মোহাম্মদপুরী — সম্প্রীতি, উন্নয়ন ও ঐক্যের বন্ধন
         </h1>
 
         <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">

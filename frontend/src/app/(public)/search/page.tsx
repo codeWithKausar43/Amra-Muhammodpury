@@ -58,7 +58,7 @@ export default function SearchPage() {
         <input
           type="text"
           autoFocus
-          placeholder="মুহাম্মদপুরের মানুষ, পোস্ট বা গ্রুপ খুঁজুন..."
+          placeholder="মোহাম্মদপুরের মানুষ, পোস্ট বা গ্রুপ খুঁজুন..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-brand-charcoal-dark/80 border border-slate-200 dark:border-white/10 text-sm text-slate-900 dark:text-white outline-none focus:border-brand-emerald shadow-sm"
@@ -166,7 +166,7 @@ export default function SearchPage() {
                         {person.name}
                       </p>
                       <p className="text-[11px] text-slate-400 truncate">
-                        {person.bio || 'মুহাম্মদপুরী সদস্য'}
+                        {person.bio || 'মোহাম্মদপুরী সদস্য'}
                       </p>
                     </div>
                   </Link>

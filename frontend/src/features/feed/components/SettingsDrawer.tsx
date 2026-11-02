@@ -201,7 +201,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
               >
                 <div className="flex items-center gap-3.5">
                   <Landmark className="w-5 h-5 text-brand-emerald dark:text-brand-mint shrink-0" />
-                  <span className="text-sm font-semibold">আমরা মোহাম্মদপুরী (সংগঠন ও পরিষদ)</span>
+                  <span className="text-sm font-semibold">আমাদের সংগঠন</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-brand-emerald group-hover:translate-x-0.5 transition-transform" />
               </Link>
