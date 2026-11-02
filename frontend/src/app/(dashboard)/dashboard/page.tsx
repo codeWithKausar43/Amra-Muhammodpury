@@ -11,7 +11,6 @@ import {
   Phone,
   ShieldCheck,
   LogOut,
-  Home,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -25,7 +24,6 @@ import {
   KeyRound,
   FileText,
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { socialService, UserProfileData } from '@/features/social/services/social.service';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
@@ -359,30 +357,23 @@ export default function DashboardPage() {
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-6 animate-in fade-in duration-200">
       {/* Top Header Bar */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/10">
+      <div className="pb-3.5 border-b border-slate-200/80 dark:border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-emerald to-emerald-800 flex items-center justify-center text-white font-bold text-lg shadow-glow">
-            <span>ম</span>
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">
-              অ্যাকাউন্ট সেটিংস ও ড্যাশবোর্ড
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              আমরা মুহাম্মদপুরী • আপনার তথ্যাদি নিয়ন্ত্রণ ও আপডেট করুন
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
           <Link
             href="/"
-            className="p-2 text-slate-600 dark:text-slate-300 hover:text-brand-emerald rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
-            title="হোমে ফিরুন"
+            className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-emerald to-emerald-800 flex items-center justify-center text-white font-bold text-lg shadow-glow shrink-0 hover:opacity-90 transition-opacity"
+            title="হোমে ফিরে যান"
           >
-            <Home className="w-5 h-5" />
+            <span>ম</span>
           </Link>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
+              অ্যাকাউন্ট সেটিংস ও ড্যাশবোর্ড
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              আমরা মোহাম্মদপুরী • আপনার তথ্যাদি নিয়ন্ত্রণ ও আপডেট করুন
+            </p>
+          </div>
         </div>
       </div>
 
@@ -464,7 +455,7 @@ export default function DashboardPage() {
             <div className="space-y-0.5">
               <div className="flex items-center justify-center sm:justify-start gap-1.5">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {currentUser?.name || 'মুহাম্মদপুরী সদস্য'}
+                  {currentUser?.name || 'মোহাম্মদপুরী সদস্য'}
                 </h2>
                 <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500 text-white shrink-0" />
               </div>
@@ -476,7 +467,7 @@ export default function DashboardPage() {
                   {currentUser?.role === 'ADMIN' ? 'অ্যাডমিন' : 'কমিউনিটি সদস্য'}
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  • আমরা মুহাম্মদপুরী পরিবার
+                  • আমরা মোহাম্মদপুরী পরিবার
                 </span>
               </div>
             </div>
@@ -694,7 +685,7 @@ export default function DashboardPage() {
                 className="w-full text-xs sm:text-sm px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:border-brand-emerald focus:ring-1 focus:ring-brand-emerald"
               />
               <p className="text-[11px] text-slate-400">
-                মুহাম্মদপুরী কমিউনিটিতে সঠিক যাচাইকরণের জন্য আপনার নিজস্ব নম্বর দিন।
+                মোহাম্মদপুরী কমিউনিটিতে সঠিক যাচাইকরণের জন্য আপনার নিজস্ব নম্বর দিন।
               </p>
             </div>
           </div>
@@ -868,7 +859,7 @@ export default function DashboardPage() {
               <p className="text-sm font-bold text-slate-900 dark:text-white">
                 {currentUser?.role === 'ADMIN' ? 'অ্যাডমিনিস্ট্রেটর' : 'সাধারণ সদস্য'}
               </p>
-              <p className="text-[11px] text-slate-400">আমরা মুহাম্মদপুরী ভেরিফাইড ইউজার</p>
+              <p className="text-[11px] text-slate-400">আমরা মোহাম্মদপুরী ভেরিফাইড ইউজার</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 space-y-1">
