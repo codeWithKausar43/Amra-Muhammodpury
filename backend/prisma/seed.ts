@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -16,8 +16,15 @@ async function main() {
       data: {
         email: 'admin@amra-muhammadpuri.org',
         name: 'System Administrator',
-        passwordHash,
-        role: Role.ADMIN,
+        role: 'ADMIN',
+        emailVerified: true,
+        accounts: {
+          create: {
+            accountId: 'admin@amra-muhammadpuri.org',
+            providerId: 'credential',
+            password: passwordHash,
+          },
+        },
       },
     });
     console.info(`✅ Seeded default admin user: ${admin.email}`);

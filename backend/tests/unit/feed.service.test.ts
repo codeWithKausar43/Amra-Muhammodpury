@@ -20,6 +20,8 @@ describe('FeedService (Unit)', () => {
         create: vi.fn(),
         delete: vi.fn(),
         count: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
+        update: vi.fn(),
       },
       comment: {
         findMany: vi.fn(),
@@ -90,7 +92,7 @@ describe('FeedService (Unit)', () => {
 
     it('deletes like when already liked', async () => {
       mockPrisma.post.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'user-2' });
-      mockPrisma.postLike.findUnique.mockResolvedValue({ id: 'like-1' });
+      mockPrisma.postLike.findUnique.mockResolvedValue({ id: 'like-1', type: 'LIKE' });
       mockPrisma.postLike.delete.mockResolvedValue({ id: 'like-1' });
       mockPrisma.postLike.count.mockResolvedValue(154);
 
