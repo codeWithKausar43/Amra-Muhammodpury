@@ -189,17 +189,17 @@ export default function MemberDashboardPage() {
         </div>
       </div>
 
-      {/* 2. Monthly Contribution & Financial Ledger */}
-      <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/5">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+      {/* 2. Monthly Contribution & Financial Status (Seamless Modern Layout) */}
+      <div className="py-2 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200/60 dark:border-white/10">
+          <div className="space-y-1">
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-brand-emerald" />
-              <span>মাসিক চাঁদা ও অনুদান লেজার ({new Date().getFullYear()})</span>
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              মোট প্রদত্ত অনুদান: <strong>৳{dashboard?.totalContributed ?? 0}</strong> • বকেয়া কিস্তি:{' '}
-              <strong className={dashboard?.pendingDueCount ? 'text-red-500' : 'text-brand-emerald'}>
+              <span>মাসিক অনুদান ({new Date().getFullYear()})</span>
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              মোট প্রদত্ত অনুদান: <strong className="text-brand-emerald font-bold">৳{dashboard?.totalContributed ?? 0}</strong> • বকেয়া কিস্তি:{' '}
+              <strong className={dashboard?.pendingDueCount ? 'text-red-500 font-bold' : 'text-brand-emerald font-bold'}>
                 {dashboard?.pendingDueCount ?? 0} টি
               </strong>
             </p>
@@ -208,128 +208,158 @@ export default function MemberDashboardPage() {
           <button
             type="button"
             onClick={() => setPayModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-brand-emerald hover:bg-emerald-800 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
+            className="px-4 py-2.5 rounded-xl bg-brand-emerald hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto active:scale-95"
           >
-            <DollarSign className="w-3.5 h-3.5 text-brand-gold" />
+            <DollarSign className="w-4 h-4 text-brand-gold" />
             <span>মাসিক কিস্তি পরিশোধ করুন</span>
           </button>
         </div>
 
-        {/* 12-Month Calendar Grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-          {(dashboard?.calendar || []).map((item) => (
-            <div
-              key={item.month}
-              className={`p-3 rounded-xl border text-center transition-all ${
-                item.isPaid
-                  ? 'border-brand-emerald/40 bg-brand-emerald/5 dark:bg-brand-emerald/10'
-                  : item.month <= new Date().getMonth() + 1
-                  ? 'border-red-300 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20'
-                  : 'border-slate-200/60 dark:border-white/5 bg-slate-50 dark:bg-white/5 opacity-70'
-              }`}
-            >
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                {MONTH_NAMES_BN[item.month - 1]}
-              </span>
-              <div className="mt-1 flex items-center justify-center gap-1 text-[11px] font-bold">
-                {item.isPaid ? (
-                  <span className="text-brand-emerald flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>৳{item.amount}</span>
-                  </span>
-                ) : item.month <= new Date().getMonth() + 1 ? (
-                  <span className="text-red-500">বকেয়া (৳{item.amount})</span>
-                ) : (
-                  <span className="text-slate-400">আসন্ন</span>
-                )}
+        {/* 12-Month Calendar Grid - Soft Fluid Chips */}
+        <div className="space-y-2.5">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+            {new Date().getFullYear()} সালের অনুদান অগ্রগতি:
+          </span>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            {(dashboard?.calendar || []).map((item) => (
+              <div
+                key={item.month}
+                className={`p-2.5 rounded-xl transition-all flex flex-col justify-between ${
+                  item.isPaid
+                    ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                    : item.month <= new Date().getMonth() + 1
+                    ? 'bg-rose-500/10 text-rose-800 dark:text-rose-300'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-400'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span>{MONTH_NAMES_BN[item.month - 1]}</span>
+                  {item.isPaid && <CheckCircle2 className="w-3.5 h-3.5 text-brand-emerald" />}
+                </div>
+                <div className="mt-1 text-[11px] font-semibold">
+                  {item.isPaid ? (
+                    <span className="text-brand-emerald font-bold">৳{item.amount}</span>
+                  ) : item.month <= new Date().getMonth() + 1 ? (
+                    <span className="text-rose-500 font-bold">বকেয়া</span>
+                  ) : (
+                    <span className="text-slate-400">আসন্ন</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Payment History Table */}
-        <div className="pt-2">
-          <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-            সর্বশেষ অনুদান রসিদসমূহ:
-          </h4>
-          <div className="divide-y divide-slate-100 dark:divide-white/5 overflow-x-auto">
-            {(dashboard?.payments || []).length === 0 ? (
-              <p className="text-xs text-slate-400 py-3 text-center">এখনও কোনো কিস্তি জমা হয়নি</p>
-            ) : (
-              (dashboard?.payments || []).map((p) => (
-                <div key={p.id} className="py-2.5 flex items-center justify-between text-xs min-w-[340px]">
-                  <div>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {MONTH_NAMES_BN[p.periodMonth - 1]} {p.periodYear} এর মাসিক অনুদান
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      পেমেন্ট: {p.paymentMethod} • TrxID: {p.trxId || 'N/A'} • {new Date(p.paidAt).toLocaleDateString('bn-BD')}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-extrabold text-brand-emerald">৳{p.amount}</span>
-                    <span className="text-[10px] text-emerald-600 dark:text-brand-mint font-semibold block">পরিশোধিত</span>
-                  </div>
-                </div>
-              ))
+        {/* Payment Receipts List - Clean Flat Divided Rows */}
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+              সর্বশেষ অনুদান রসিদসমূহ:
+            </span>
+            {(dashboard?.payments || []).length > 0 && (
+              <span className="text-[11px] text-slate-400">
+                মোট {dashboard?.payments?.length} টি রসিদ
+              </span>
             )}
+          </div>
+
+          <div className="overflow-x-auto no-scrollbar scrollbar-none pb-2">
+            <div className="min-w-[460px] divide-y divide-slate-200/60 dark:divide-white/10">
+              {(dashboard?.payments || []).length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">এখনও কোনো কিস্তি জমা হয়নি</p>
+              ) : (
+                (dashboard?.payments || []).map((p) => (
+                  <div
+                    key={p.id}
+                    className="py-3 flex items-center justify-between gap-4 hover:bg-slate-500/5 px-2 rounded-xl transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="text-base sm:text-lg font-black text-brand-emerald shrink-0 leading-none select-none">
+                        ৳
+                      </span>
+                      <div>
+                        <h5 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                          {MONTH_NAMES_BN[p.periodMonth - 1]} {p.periodYear} এর মাসিক অনুদান
+                        </h5>
+                        <p className="text-[11px] text-slate-400 whitespace-nowrap mt-0.5">
+                          পেমেন্ট: <span className="font-semibold text-slate-600 dark:text-slate-300">{p.paymentMethod}</span> • TrxID: <span className="font-mono text-slate-600 dark:text-slate-300">{p.trxId || 'N/A'}</span> • {new Date(p.paidAt).toLocaleDateString('bn-BD')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0 pl-3">
+                      <div className="text-xs sm:text-sm font-extrabold text-brand-emerald whitespace-nowrap">
+                        + ৳{p.amount}
+                      </div>
+                      <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-emerald/15 text-brand-emerald mt-0.5 whitespace-nowrap">
+                        পরিশোধিত
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Upcoming Meetings & Notices */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Upcoming Meetings */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 border border-slate-200/80 dark:border-white/10 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-brand-emerald" />
-              <span>আসন্ন সাধারণ সভা ও মিটিং</span>
-            </h4>
-          </div>
+      {/* 3. Upcoming Meetings & Notices (Seamless Layout) */}
+      <div className="pt-4 border-t border-slate-200/60 dark:border-white/10 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Upcoming Meetings */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/10">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-brand-emerald" />
+                <span>আসন্ন সাধারণ সভা ও মিটিং</span>
+              </h4>
+            </div>
 
-          <div className="space-y-2.5">
-            {(dashboard?.upcomingMeetings || []).length > 0 ? (
-              (dashboard?.upcomingMeetings || []).map((m) => (
-                <div key={m.id} className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-left">
-                  <div className="flex items-center justify-between text-[11px] text-brand-emerald font-bold mb-1">
-                    <span>{new Date(m.date).toLocaleDateString('bn-BD', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                    <span className="text-slate-500 font-normal">{m.location}</span>
+            <div className="divide-y divide-slate-200/60 dark:divide-white/10">
+              {(dashboard?.upcomingMeetings || []).length > 0 ? (
+                (dashboard?.upcomingMeetings || []).map((m) => (
+                  <div key={m.id} className="py-2.5 text-left space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-brand-emerald font-bold">
+                      <span>{new Date(m.date).toLocaleDateString('bn-BD', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-slate-500 font-normal">{m.location}</span>
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">{m.title}</h5>
+                    {m.agenda && <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">এজেন্ডা: {m.agenda}</p>}
                   </div>
-                  <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">{m.title}</h5>
-                  {m.agenda && <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">এজেন্ডা: {m.agenda}</p>}
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-400 py-4 text-center">বর্তমানে কোনো নির্ধারিত মিটিং নেই</p>
-            )}
+                ))
+              ) : (
+                <p className="text-xs text-slate-400 py-4">বর্তমানে কোনো নির্ধারিত মিটিং নেই</p>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Digital Election Quick Action (Strictly visible ONLY when Superadmin created an active election) */}
-        {activeElection && (
-          <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 space-y-3 text-left animate-in fade-in">
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-sm">
-              <Vote className="w-5 h-5" />
-              <span>সদস্য অধিকার • ডিজিটাল ভোটাধিকার</span>
+          {/* Digital Election Quick Action */}
+          {activeElection && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/10">
+                <h4 className="text-sm font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                  <Vote className="w-4 h-4" />
+                  <span>ডিজিটাল ভোটাধিকার</span>
+                </h4>
+              </div>
+              <div className="space-y-2">
+                <h5 className="text-sm font-bold text-slate-900 dark:text-white">{activeElection.title}</h5>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  সক্রিয় সদস্য হিসেবে আপনি কার্যনির্বাহী পরিষদ নির্বাচনে ভোটাধিকার প্রয়োগ করতে পারেন।
+                </p>
+                <div className="pt-1">
+                  <Link
+                    href="/organization/elections"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm transition-colors"
+                  >
+                    <span>নির্বাচনী বুথে প্রবেশ করুন</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
             </div>
-            <h4 className="text-base font-bold text-slate-900 dark:text-white">
-              {activeElection.title}
-            </h4>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              একজন সক্রিয় সদস্য হিসেবে আপনি ডিজিটাল নির্বাচনের বৈধ ভোটার। আপনি পদসমূহে প্রার্থী হতে এবং সম্পূর্ণ গোপন ব্যালটে ভোট দিতে পারবেন।
-            </p>
-            <div className="pt-2">
-              <Link
-                href="/organization/elections"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow transition-colors"
-              >
-                <span>নির্বাচনী বুথে প্রবেশ করুন</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Pay Contribution Modal */}

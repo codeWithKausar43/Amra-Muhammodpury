@@ -71,10 +71,11 @@ export function useOrgOverviewQuery() {
   });
 }
 
-export function useOrgMembershipStatusQuery() {
+export function useOrgMembershipStatusQuery(enabled = true) {
   return useQuery({
     queryKey: orgQueryKeys.membershipStatus,
     queryFn: () => organizationService.getMembershipStatus(),
+    enabled,
     staleTime: ORG_CACHE_POLICY.membershipStatus.staleTime,
     gcTime: ORG_CACHE_POLICY.membershipStatus.gcTime,
   });

@@ -11,7 +11,6 @@ import {
   Users,
   CheckCircle2,
   XCircle,
-  Clock,
   Plus,
   Minus,
   FileText,
@@ -384,82 +383,70 @@ export default function OrganizationAdminPage() {
       </div>
 
       {/* =========================================================================
-          2. Executive KPI Overview Grid (Consistent Modern Cards)
+          2. Executive Financial Overview (Target Design: Hero Net Balance + 2 Sub-Cards)
          ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: মোট নিট ফান্ড */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl sm:rounded-3xl p-5 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-3">
+      <div className="space-y-3 sm:space-y-4">
+        {/* Card 1: বর্তমান মোট ক্যাশ (Net Balance) */}
+        <div className="relative rounded-3xl bg-gradient-to-r from-[#121c2e] via-[#0d1e33] to-[#0f243b] p-5 sm:p-6 border border-cyan-500/25 shadow-lg space-y-4 overflow-hidden text-white">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              সর্বমোট নিট তহবিল
+            <span className="text-xs sm:text-sm text-slate-300 font-medium">
+              বর্তমান মোট ক্যাশ (Net Balance)
             </span>
-            <div className="w-9 h-9 rounded-2xl bg-brand-emerald/10 text-brand-emerald flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/70 text-cyan-300 text-[11px] font-bold border border-cyan-500/30">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+              <span>সেফ ফান্ড</span>
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            ৳ {toBengaliNumber(totalBalance)}
+
+          <div className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl text-cyan-400 font-bold">৳</span>
+            <span>{toBengaliNumber(totalBalance)}</span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-brand-emerald" />
-            <span>৪টি কল্যাণ তহবিলের সমষ্টিক স্থিতি</span>
-          </p>
+
+          <div className="pt-2 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>আয় +১২.৫% বৃদ্ধি</span>
+            </div>
+            <span className="text-[11px] text-slate-400 font-normal">
+              সর্বশেষ আপডেট: আজ ৩:৩০ PM
+            </span>
+          </div>
         </div>
 
-        {/* KPI 2: মোট সংগৃহীত আয় */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl sm:rounded-3xl p-5 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              মোট সংগৃহীত আয়
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4" />
+        {/* Sub-Stat Cards (মোট জমা ও মোট খরচ - 2 Column Grid) */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {/* Card 2: মোট জমা */}
+          <div className="rounded-2xl sm:rounded-3xl bg-[#0f1d2c] p-4 sm:p-5 border border-teal-500/25 space-y-2 text-white">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center">
+                <ArrowUpRight className="w-4 h-4" />
+              </div>
+              <span className="text-xs sm:text-sm text-slate-300 font-semibold">মোট জমা</span>
             </div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-black text-teal-300 tracking-tight">
+              ৳ {toBengaliNumber(totalIncome)}
+            </div>
+            <p className="text-[11px] text-teal-400 font-medium flex items-center gap-1">
+              <span>▲ ৳১৫,০০০ গত সপ্তাহ</span>
+            </p>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-teal-600 dark:text-teal-400 tracking-tight">
-            ৳ {toBengaliNumber(totalIncome)}
-          </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-teal-600" />
-            <span>সদস্য চাঁদা ও নাগরিক কল্যাণ অনুদান</span>
-          </p>
-        </div>
 
-        {/* KPI 3: মোট অনুমোদিত ব্যয় */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl sm:rounded-3xl p-5 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              মোট অনুমোদিত ব্যয়
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-              <ArrowDownRight className="w-4 h-4" />
+          {/* Card 3: মোট খরচ */}
+          <div className="rounded-2xl sm:rounded-3xl bg-[#1a1424] p-4 sm:p-5 border border-rose-500/25 space-y-2 text-white">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                <ArrowDownRight className="w-4 h-4" />
+              </div>
+              <span className="text-xs sm:text-sm text-slate-300 font-semibold">মোট খরচ</span>
             </div>
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
-            ৳ {toBengaliNumber(totalExpense)}
-          </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-            <span>অনুমোদিত সামাজিক ও দাপ্তরিক প্রকল্প</span>
-          </p>
-        </div>
-
-        {/* KPI 4: প্রাতিষ্ঠানিক সদস্যবৃন্দ */}
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl sm:rounded-3xl p-5 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              সদস্য ও আবেদন
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-brand-gold/15 text-brand-gold flex items-center justify-center">
-              <Users className="w-4 h-4" />
+            <div className="text-xl sm:text-2xl md:text-3xl font-black text-rose-300 tracking-tight">
+              ৳ {toBengaliNumber(totalExpense)}
             </div>
+            <p className="text-[11px] text-rose-400 font-medium flex items-center gap-1">
+              <span>▼ -৫% বাজেট এর মধ্যে</span>
+            </p>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {toBengaliNumber(activeMembersCount)} <span className="text-base font-bold text-slate-500">জন সক্রিয়</span>
-          </div>
-          <p className="text-[11px] text-brand-emerald font-semibold flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
-            <span>{toBengaliNumber(pendingAppsCount)} টি আবেদন পর্যালোচনার অপেক্ষায়</span>
-          </p>
         </div>
       </div>
 
@@ -478,7 +465,8 @@ export default function OrganizationAdminPage() {
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>সদস্যপদ আবেদন</span>
+            <span>সদস্য আবেদন</span>
+            <span className="text-[10px] opacity-80">({toBengaliNumber(activeMembersCount)} সক্রিয়)</span>
             {pendingAppsCount > 0 && (
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                 activeTab === 'APPLICATIONS'
