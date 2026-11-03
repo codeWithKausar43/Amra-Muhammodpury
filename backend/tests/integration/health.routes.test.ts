@@ -37,4 +37,23 @@ describe('Health Routes (Integration)', () => {
     const body = JSON.parse(response.body);
     expect(body.success).toBe(false);
   });
+
+  it('PUT /api/v1/org/admin/notices/:id requires authentication', async () => {
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/org/admin/notices/test-id',
+      payload: { title: 'Test Title' },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('DELETE /api/v1/org/admin/notices/:id requires authentication', async () => {
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/org/admin/notices/test-id',
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
 });

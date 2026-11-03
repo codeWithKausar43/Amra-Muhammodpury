@@ -27,6 +27,10 @@ import {
   Phone,
   Mail,
   Calendar,
+  Pencil,
+  BarChart3,
+  Clock,
+  Upload,
 } from 'lucide-react';
 import {
   useOrgAdminStatsQuery,
@@ -36,9 +40,15 @@ import {
   useOrgDesignationsQuery,
   useOrgElectionsQuery,
   useOrgNoticesQuery,
+  useOrgVotingConfigQuery,
+  useOrgVotingPollMonitoringQuery,
   useOrgMutations,
 } from '@/features/organization/hooks/useOrganizationQueries';
-import type { OrgApplication } from '@/features/organization/types';
+import { apiClient } from '@/lib/api/client';
+import { ApiResponse } from '@/types';
+import type { OrgApplication, OrgNotice, Election } from '@/features/organization/types';
+import { CandidateAvatar, cleanImageUrl, fileToDataUrl } from '@/features/organization/components/CandidateAvatar';
+import { FinancialAnalyticsChart } from '@/features/organization/components/FinancialAnalyticsChart';
 
 type AdminTab =
   | 'APPLICATIONS'
@@ -95,18 +105,42 @@ export default function OrganizationAdminPage() {
   const [isSubmittingTrx, setIsSubmittingTrx] = React.useState(false);
 
   // New Notice Form State
+  const [editingNotice, setEditingNotice] = React.useState<OrgNotice | null>(null);
   const [noticeTitle, setNoticeTitle] = React.useState('');
   const [noticeContent, setNoticeContent] = React.useState('');
   const [noticePriority, setNoticePriority] = React.useState<'URGENT' | 'NORMAL' | 'LOW'>('NORMAL');
   const [noticeIsPublic, setNoticeIsPublic] = React.useState(true);
   const [isSubmittingNotice, setIsSubmittingNotice] = React.useState(false);
 
-  // New Election Form State
-  const [elecTitle, setElecTitle] = React.useState('');
-  const [elecDesc, setElecDesc] = React.useState('');
-  const [selectedDesignationId, setSelectedDesignationId] = React.useState('');
-  const [elecStartVotingImmediately, setElecStartVotingImmediately] = React.useState(true);
-  const [isSubmittingElection, setIsSubmittingElection] = React.useState(false);
+  // Global Voting Config Query
+  const { data: votingConfig } = useOrgVotingConfigQuery();
+  const isVotingEnabled = votingConfig?.isVotingEnabled ?? true;
+
+  // Modals for Voting
+  const [monitoringElectionId, setMonitoringElectionId] = React.useState<string | null>(null);
+  const [scheduleModalElection, setScheduleModalElection] = React.useState<Election | null>(null);
+  const [isUpdatingSchedule, setIsUpdatingSchedule] = React.useState(false);
+
+  // New Voting Poll Form State
+  const [pollTitle, setPollTitle] = React.useState('');
+  const [pollPosition, setPollPosition] = React.useState('সভাপতি');
+  const [pollDesc, setPollDesc] = React.useState('');
+  const [pollStartDate, setPollStartDate] = React.useState(() => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
+  const [pollEndDate, setPollEndDate] = React.useState(() => {
+    const end = new Date(Date.now() + 86400000 * 2);
+    return new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
+  const [pollCandidates, setPollCandidates] = React.useState<
+    Array<{ name: string; image: string; bio: string }>
+  >([
+    { name: '', image: '', bio: '' },
+    { name: '', image: '', bio: '' },
+  ]);
+  const [uploadingCandidateIdx, setUploadingCandidateIdx] = React.useState<number | null>(null);
+  const [isSubmittingPoll, setIsSubmittingPoll] = React.useState(false);
 
   // Set default fund
   React.useEffect(() => {
@@ -115,14 +149,6 @@ export default function OrganizationAdminPage() {
       if (firstFund) setTrxFundId(firstFund.id);
     }
   }, [funds, trxFundId]);
-
-  // Set default designation
-  React.useEffect(() => {
-    if (designations.length > 0 && !selectedDesignationId) {
-      const firstDesig = designations[0];
-      if (firstDesig) setSelectedDesignationId(firstDesig.id);
-    }
-  }, [designations, selectedDesignationId]);
 
   // Financial figures
   const totalBalance =
@@ -201,7 +227,25 @@ export default function OrganizationAdminPage() {
     }
   };
 
-  const handleCreateNotice = async (e: React.FormEvent) => {
+  const handleOpenCreateNotice = () => {
+    setEditingNotice(null);
+    setNoticeTitle('');
+    setNoticeContent('');
+    setNoticePriority('NORMAL');
+    setNoticeIsPublic(true);
+    setNoticeModalOpen(true);
+  };
+
+  const handleOpenEditNotice = (n: OrgNotice) => {
+    setEditingNotice(n);
+    setNoticeTitle(n.title);
+    setNoticeContent(n.content);
+    setNoticePriority(n.priority);
+    setNoticeIsPublic(n.isPublic);
+    setNoticeModalOpen(true);
+  };
+
+  const handleSubmitNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noticeTitle.trim() || !noticeContent.trim()) {
       alert('শিরোনাম ও বিবরণ আবশ্যক।');
@@ -209,53 +253,218 @@ export default function OrganizationAdminPage() {
     }
     setIsSubmittingNotice(true);
     try {
-      await mutations.createNotice.mutateAsync({
-        title: noticeTitle.trim(),
-        content: noticeContent.trim(),
-        priority: noticePriority,
-        isPinned: false,
-        isPublic: noticeIsPublic,
-      });
+      if (editingNotice) {
+        await mutations.updateNotice.mutateAsync({
+          noticeId: editingNotice.id,
+          data: {
+            title: noticeTitle.trim(),
+            content: noticeContent.trim(),
+            priority: noticePriority,
+            isPublic: noticeIsPublic,
+          },
+        });
+      } else {
+        await mutations.createNotice.mutateAsync({
+          title: noticeTitle.trim(),
+          content: noticeContent.trim(),
+          priority: noticePriority,
+          isPinned: false,
+          isPublic: noticeIsPublic,
+        });
+      }
       setNoticeModalOpen(false);
+      setEditingNotice(null);
       setNoticeTitle('');
       setNoticeContent('');
     } catch (err: any) {
-      alert(err.message || 'বিজ্ঞপ্তি প্রকাশ করা যায়নি।');
+      alert(err.message || 'বিজ্ঞপ্তি সংরক্ষণ করা যায়নি।');
     } finally {
       setIsSubmittingNotice(false);
     }
   };
 
-  const handleCreateElection = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!elecTitle.trim() || !selectedDesignationId) {
-      alert('নির্বাচনের শিরোনাম ও পদবি নির্বাচন করুন।');
+  const handleToggleVotingConfig = async () => {
+    const nextState = !isVotingEnabled;
+    try {
+      await mutations.updateVotingConfig.mutateAsync({ isVotingEnabled: nextState });
+    } catch (err: any) {
+      alert(err.message || 'ভোট সিস্টেম কনফিগারেশন আপডেট ব্যর্থ হয়েছে');
+    }
+  };
+
+  const handleUploadCandidateImage = async (file: File, index: number) => {
+    if (!file.type.startsWith('image/')) {
+      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল (JPG, PNG, WebP) নির্বাচন করুন।');
       return;
     }
-    setIsSubmittingElection(true);
+    if (file.size > 10 * 1024 * 1024) {
+      alert('ছবির আকার সর্বোচ্চ ১০ মেগাবাইট হতে পারবে।');
+      return;
+    }
+
+    setUploadingCandidateIdx(index);
+
+    // 1. Instant local preview via optimized data URL so image is NEVER lost
     try {
-      const created = await mutations.createElection.mutateAsync({
-        title: elecTitle.trim(),
-        description: elecDesc.trim() || undefined,
-        nominationStartDate: new Date(Date.now()).toISOString(),
-        nominationEndDate: new Date(Date.now() + 86400000 * 3).toISOString(),
-        votingStartDate: new Date(Date.now() + 86400000 * 4).toISOString(),
-        votingEndDate: new Date(Date.now() + 86400000 * 6).toISOString(),
-        positions: [{ designationId: selectedDesignationId, maxWinners: 1 }],
-      });
-      if (elecStartVotingImmediately && (created as any)?.id) {
-        await mutations.updateElectionStatus.mutateAsync({
-          electionId: (created as any).id,
-          status: 'VOTING_ACTIVE',
+      const dataUrl = await fileToDataUrl(file);
+      if (dataUrl) {
+        setPollCandidates((prev) => {
+          const next = [...prev];
+          const current = next[index] ?? { name: '', image: '', bio: '' };
+          next[index] = { name: current.name, image: dataUrl, bio: current.bio };
+          return next;
         });
       }
-      setElectionModalOpen(false);
-      setElecTitle('');
-      setElecDesc('');
+    } catch {
+      // Continue to cloud upload
+    }
+
+    // 2. Upload to Cloudinary (using 'profiles' folder which is standard and supported)
+    try {
+      const sigRes = await apiClient<
+        ApiResponse<{
+          apiKey: string;
+          timestamp: number;
+          signature: string;
+          folder: string;
+          cloudName: string;
+          resourceType: string;
+        }>
+      >('/uploads/signature', {
+        method: 'POST',
+        body: JSON.stringify({
+          folder: 'profiles',
+          resourceType: 'image',
+          isRegistration: false,
+        }),
+      });
+      const signData = sigRes.data;
+      if (signData) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('api_key', signData.apiKey);
+        formData.append('timestamp', signData.timestamp.toString());
+        formData.append('signature', signData.signature);
+        formData.append('folder', signData.folder);
+
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${signData.cloudName}/${signData.resourceType}/upload`,
+          { method: 'POST', body: formData }
+        );
+        const asset = await res.json();
+        if (res.ok && asset.secure_url) {
+          // Confirm asset with backend
+          try {
+            await apiClient('/uploads/confirm', {
+              method: 'POST',
+              body: JSON.stringify({
+                publicId: asset.public_id,
+                secureUrl: asset.secure_url,
+                resourceType: 'image',
+                format: asset.format || 'jpg',
+                bytes: asset.bytes || file.size || 100,
+                width: asset.width || 800,
+                height: asset.height || 600,
+              }),
+            });
+          } catch {
+            // Confirmation non-blocking
+          }
+
+          setPollCandidates((prev) => {
+            const next = [...prev];
+            const current = next[index] ?? { name: '', image: '', bio: '' };
+            next[index] = { name: current.name, image: asset.secure_url, bio: current.bio };
+            return next;
+          });
+        }
+      }
     } catch (err: any) {
-      alert(err.message || 'নির্বাচনী তফশিল ঘোষণা ব্যর্থ হয়েছে।');
+      console.warn('Cloud upload warning (using local optimized asset):', err);
     } finally {
-      setIsSubmittingElection(false);
+      setUploadingCandidateIdx(null);
+    }
+  };
+
+  const handleCreateVotingPoll = async (isDraft: boolean) => {
+    if (!isVotingEnabled) {
+      alert('ভোটিং সিস্টেম বর্তমানে স্থগিত রয়েছে। নতুন নির্বাচন তৈরি করতে প্রথমে উপরে ভোটিং সিস্টেম সক্রিয় করুন।');
+      return;
+    }
+    if (!pollTitle.trim()) {
+      alert('ভোটের শিরোনাম আবশ্যক।');
+      return;
+    }
+    if (!pollPosition.trim()) {
+      alert('পদের নাম আবশ্যক।');
+      return;
+    }
+    const validCandidates = pollCandidates.filter((c) => c.name.trim().length > 0);
+    if (validCandidates.length < 2) {
+      alert('কমপক্ষে ২ জন প্রার্থীর নাম আবশ্যক।');
+      return;
+    }
+    if (!pollStartDate || !pollEndDate) {
+      alert('ভোটের শুরু ও সমাপ্তির সময় নির্ধারণ করুন।');
+      return;
+    }
+    if (new Date(pollEndDate) <= new Date(pollStartDate)) {
+      alert('সমাপ্তির সময় অবশ্যই শুরুর সময়ের পরবর্তী হতে হবে।');
+      return;
+    }
+
+    setIsSubmittingPoll(true);
+    try {
+      await mutations.createVotingPoll.mutateAsync({
+        title: pollTitle.trim(),
+        positionName: pollPosition.trim(),
+        description: pollDesc.trim() || undefined,
+        candidates: validCandidates.map((c) => {
+          const img = cleanImageUrl(c.image) || c.image.trim() || undefined;
+          return {
+            name: c.name.trim(),
+            photo: img,
+            image: img,
+            bio: c.bio.trim() || undefined,
+          };
+        }),
+        votingStartDate: new Date(pollStartDate).toISOString(),
+        votingEndDate: new Date(pollEndDate).toISOString(),
+        isDraft,
+      });
+
+      setElectionModalOpen(false);
+      setPollTitle('');
+      setPollPosition('সভাপতি');
+      setPollDesc('');
+      setPollCandidates([
+        { name: '', image: '', bio: '' },
+        { name: '', image: '', bio: '' },
+      ]);
+    } catch (err: any) {
+      alert(err.message || 'ভোট তৈরি করতে ব্যর্থ হয়েছে');
+    } finally {
+      setIsSubmittingPoll(false);
+    }
+  };
+
+  const handleSaveSchedule = async (data: {
+    votingStartDate: string;
+    votingEndDate: string;
+    reason?: string;
+  }) => {
+    if (!scheduleModalElection) return;
+    setIsUpdatingSchedule(true);
+    try {
+      await mutations.updateVotingSchedule.mutateAsync({
+        electionId: scheduleModalElection.id,
+        data,
+      });
+      setScheduleModalElection(null);
+    } catch (err: any) {
+      alert(err.message || 'সময়সূচি হালনাগাদ করতে ব্যর্থ হয়েছে');
+    } finally {
+      setIsUpdatingSchedule(false);
     }
   };
 
@@ -306,6 +515,17 @@ export default function OrganizationAdminPage() {
       await mutations.deleteElection.mutateAsync({ electionId });
     } catch (err: any) {
       alert(err.message || 'নির্বাচন মুছতে ব্যর্থ হয়েছে');
+    }
+  };
+
+  const handleDeleteNotice = async (noticeId: string, title: string) => {
+    if (!confirm(`আপনি কি নিশ্চিত যে "${title}" বিজ্ঞপ্তিটি মুছে ফেলতে চান?`)) {
+      return;
+    }
+    try {
+      await mutations.deleteNotice.mutateAsync({ noticeId });
+    } catch (err: any) {
+      alert(err.message || 'বিজ্ঞপ্তি মুছতে ব্যর্থ হয়েছে');
     }
   };
 
@@ -422,6 +642,12 @@ export default function OrganizationAdminPage() {
             </p>
           </div>
         </div>
+
+        {/* Card 4: লাইভ আর্থিক অ্যানালিটিক্স ও ট্রেন্ড */}
+        <FinancialAnalyticsChart
+          trends={stats?.financialTrends}
+          funds={stats?.funds?.fundList}
+        />
       </div>
 
       {/* =========================================================================
@@ -634,8 +860,7 @@ export default function OrganizationAdminPage() {
                     <tr className="border-b border-slate-200/60 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       <th className="py-2.5 px-3 min-w-[200px] whitespace-nowrap">আবেদনকারী</th>
                       <th className="py-2.5 px-3 min-w-[170px] whitespace-nowrap">যোগাযোগ তথ্য</th>
-                      <th className="py-2.5 px-3 min-w-[130px] whitespace-nowrap">অঙ্গীকার চাঁদা</th>
-                      <th className="py-2.5 px-3 min-w-[120px] whitespace-nowrap">আবেদনের তারিখ</th>
+                      <th className="py-2.5 px-3 min-w-[130px] whitespace-nowrap">অঙ্গীকার ও তারিখ</th>
                       <th className="py-2.5 px-3 text-center min-w-[100px] whitespace-nowrap">স্ট্যাটাস</th>
                       <th className="py-2.5 px-3 text-right min-w-[90px] whitespace-nowrap">কার্যক্রম</th>
                     </tr>
@@ -690,18 +915,14 @@ export default function OrganizationAdminPage() {
                           </div>
                         </td>
 
-                        {/* 3. Monthly Contribution */}
-                        <td className="py-3.5 px-3 min-w-[130px] whitespace-nowrap">
-                          <span className="font-bold font-mono text-brand-emerald dark:text-brand-mint text-xs">
+                        {/* 3. Monthly Contribution & Submission Date (Merged Column) */}
+                        <td className="py-3.5 px-3 min-w-[130px] whitespace-nowrap space-y-1">
+                          <div className="font-bold font-mono text-brand-emerald dark:text-brand-mint text-xs">
                             ৳ {toBengaliNumber(app.monthlyContribution)}
                             <span className="text-[10px] font-normal text-slate-400 ml-0.5">/মাস</span>
-                          </span>
-                        </td>
-
-                        {/* 4. Date */}
-                        <td className="py-3.5 px-3 text-slate-600 dark:text-slate-400 min-w-[120px] whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="w-3 h-3 text-slate-400" />
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                            <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                             <span>
                               {new Date(app.submittedAt || app.createdAt).toLocaleDateString('bn-BD')}
                             </span>
@@ -1161,75 +1382,117 @@ export default function OrganizationAdminPage() {
       )}
 
       {/* =========================================================================
-          8. Tab 5: Notices Management (বিজ্ঞপ্তি ব্যবস্থাপনা - Open Timeline Feed)
+          8. Tab 5: Notices Management (বিজ্ঞপ্তি ব্যবস্থাপনা - Clean Seamless Table)
          ========================================================================= */}
       {activeTab === 'NOTICES' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 pb-1">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 dark:text-white truncate">
+                <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 dark:text-white leading-snug">
                   প্রাতিষ্ঠানিক নোটিশ ও বিজ্ঞপ্তি
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-brand-emerald dark:text-brand-mint bg-brand-emerald/10 shrink-0">
-                  {toBengaliNumber(notices.length)} টি বিজ্ঞপ্তি
+                  {toBengaliNumber(notices.length)} টি
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                জরুরি নোটিশ প্রকাশ, জনগুরুত্বপূর্ণ বার্তা ও সদস্যদের জন্য নির্দেশনা
-              </p>
             </div>
 
             <button
               type="button"
-              onClick={() => setNoticeModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow-xs hover:bg-brand-emerald-hover cursor-pointer transition-all active:scale-95 shrink-0 whitespace-nowrap"
+              onClick={handleOpenCreateNotice}
+              className="inline-flex items-center px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow-xs hover:bg-brand-emerald-hover cursor-pointer transition-all active:scale-95 shrink-0 whitespace-nowrap"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>নতুন বিজ্ঞপ্তি প্রকাশ</span>
+              <span>নতুন বিজ্ঞপ্তি</span>
             </button>
           </div>
 
           {notices.length > 0 ? (
-            <div className="divide-y divide-slate-100 dark:divide-white/5">
-              {notices.map((n) => (
-                <div
-                  key={n.id}
-                  className="py-4 space-y-2 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          n.priority === 'URGENT'
-                            ? 'bg-rose-500/15 text-rose-600'
-                            : 'bg-brand-emerald/15 text-brand-emerald'
-                        }`}
-                      >
-                        {n.priority === 'URGENT' ? 'জরুরি নোটিশ' : 'সাধারণ বিজ্ঞপ্তি'}
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {n.isPublic ? '🌐 সর্বজনীন' : '🔒 সদস্যদের জন্য সংরক্ষিত'}
-                      </span>
-                    </div>
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse min-w-[650px]">
+                <thead>
+                  <tr className="border-b border-slate-200/60 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <th className="py-2.5 px-3 min-w-[240px] whitespace-nowrap">শিরোনাম ও বিবরণ</th>
+                    <th className="py-2.5 px-3 min-w-[130px] whitespace-nowrap">ধরন ও প্রাপক</th>
+                    <th className="py-2.5 px-3 min-w-[110px] whitespace-nowrap">তারিখ</th>
+                    <th className="py-2.5 px-3 text-right min-w-[90px] whitespace-nowrap">কার্যক্রম</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
+                  {notices.map((n) => (
+                    <tr
+                      key={n.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group"
+                    >
+                      {/* 1. Title & Content Preview */}
+                      <td className="py-3 px-3 min-w-[240px] max-w-[380px]">
+                        <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-brand-emerald transition-colors line-clamp-1">
+                          {n.title}
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 leading-relaxed">
+                          {n.content}
+                        </div>
+                      </td>
 
-                    <span className="text-[11px] text-slate-400">
-                      {new Date(n.publishedAt).toLocaleDateString('bn-BD', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </div>
+                      {/* 2. Priority & Audience */}
+                      <td className="py-3 px-3 min-w-[130px] whitespace-nowrap space-y-1">
+                        <div>
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                              n.priority === 'URGENT'
+                                ? 'bg-rose-500/15 text-rose-600'
+                                : 'bg-brand-emerald/15 text-brand-emerald'
+                            }`}
+                          >
+                            {n.priority === 'URGENT' ? 'জরুরি নোটিশ' : 'সাধারণ বিজ্ঞপ্তি'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {n.isPublic ? '🌐 সর্বজনীন' : '🔒 সদস্যদের জন্য'}
+                        </div>
+                      </td>
 
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    {n.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {n.content}
-                  </p>
-                </div>
-              ))}
+                      {/* 3. Published Date */}
+                      <td className="py-3 px-3 min-w-[110px] whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                          <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>
+                            {new Date(n.publishedAt).toLocaleDateString('bn-BD', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 4. Actions: Update & Delete */}
+                      <td className="py-3 px-3 text-right min-w-[90px] whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditNotice(n)}
+                            className="text-slate-400 hover:text-brand-emerald hover:scale-110 active:scale-90 transition-transform p-1.5 cursor-pointer"
+                            title="বিজ্ঞপ্তি সম্পাদন করুন"
+                            aria-label="সম্পাদন করুন"
+                          >
+                            <Pencil className="w-3.5 h-3.5 stroke-[2]" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNotice(n.id, n.title)}
+                            className="text-slate-400 hover:text-rose-500 hover:scale-110 active:scale-90 transition-transform p-1.5 cursor-pointer"
+                            title="বিজ্ঞপ্তি মুছুন"
+                            aria-label="মুছুন"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="py-12 text-center space-y-3">
@@ -1251,140 +1514,329 @@ export default function OrganizationAdminPage() {
           9. Tab 6: Elections Management (ডিজিটাল নির্বাচন পরিচালনা - Seamless Layout)
          ========================================================================= */}
       {activeTab === 'ELECTIONS' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 pb-1">
-            <div className="min-w-0">
+        <div className="space-y-5">
+          {/* Top Bar with Header and Create Election Button */}
+          <div className="flex items-start sm:items-center justify-between gap-3 pb-1">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 dark:text-white truncate">
-                  গণতান্ত্রিক ডিজিটাল নির্বাচন পরিচালনা
+                <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                  নির্বাচন পরিচালনা
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-amber-500 bg-amber-500/10 shrink-0">
                   {toBengaliNumber(elections.length)} টি নির্বাচন
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                তফশিল ঘোষণা, লাইভ ভোটগ্রহণ চালু/বন্ধ এবং ফলাফল চূড়ান্তকরণ
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                তফশিল ঘোষণা, স্বয়ংক্রিয় শিডিউলিং, লাইভ ব্যালট মনিটরিং এবং ফলাফল চূড়ান্তকরণ
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() => setElectionModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-xs cursor-pointer transition-all active:scale-95 shrink-0 whitespace-nowrap"
+              onClick={() => {
+                if (!isVotingEnabled) {
+                  alert('ভোটিং সিস্টেম বর্তমানে স্থগিত রয়েছে। নতুন নির্বাচন তৈরি করতে প্রথমে ভোটিং সিস্টেম সক্রিয় করুন।');
+                  return;
+                }
+                setElectionModalOpen(true);
+              }}
+              disabled={!isVotingEnabled}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs transition-all shrink-0 whitespace-nowrap self-start sm:self-center ${
+                isVotingEnabled
+                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer active:scale-95'
+                  : 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50 shadow-none'
+              }`}
+              title={
+                isVotingEnabled
+                  ? 'নতুন নির্বাচন ও ভোট তৈরি করুন'
+                  : 'ভোটিং সিস্টেম স্থগিত রয়েছে। নতুন নির্বাচন তৈরি করতে প্রথমে ভোটিং সক্রিয় করুন।'
+              }
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>নতুন নির্বাচনী তফশিল</span>
+              <span>নির্বাচন</span>
             </button>
           </div>
 
+          {/* Section 3: Global Voting ON/OFF Switch & Overview KPIs */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-slate-50/80 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 space-y-4">
+            <div className="pb-3 border-b border-slate-200/60 dark:border-white/5 space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                  গ্লোবাল ভোটিং সিস্টেম কন্ট্রোল
+                </h3>
+                {/* Interactive Toggle Switch Button */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isVotingEnabled}
+                  onClick={handleToggleVotingConfig}
+                  disabled={mutations.updateVotingConfig.isPending}
+                  className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer border select-none active:scale-95 shrink-0 ${
+                    isVotingEnabled
+                      ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                      : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                  }`}
+                  title={
+                    isVotingEnabled
+                      ? 'ভোটগ্রহণ স্থগিত করতে ক্লিক করুন'
+                      : 'ভোটগ্রহণ চালু করতে ক্লিক করুন'
+                  }
+                >
+                  <span
+                    className={`w-7 h-4 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+                      isVotingEnabled ? 'bg-emerald-500' : 'bg-rose-400 dark:bg-rose-500'
+                    }`}
+                  >
+                    <span
+                      className={`bg-white w-3 h-3 rounded-full shadow-xs transform transition-transform duration-200 ease-in-out ${
+                        isVotingEnabled ? 'translate-x-3' : 'translate-x-0'
+                      }`}
+                    />
+                  </span>
+                  <span className="whitespace-nowrap">{isVotingEnabled ? 'সক্রিয়' : 'স্থগিত'}</span>
+                  {mutations.updateVotingConfig.isPending && (
+                    <Loader2 className="w-3 h-3 animate-spin text-current" />
+                  )}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                সুইচ বন্ধ রাখলে সাধারণ সদস্যরা ভোটকেন্দ্রে ঢুকতে পারবেন না। কোনো ঐতিহাসিক ভোট বা ফলাফল ডিলিট হবে না।
+              </p>
+            </div>
+
+            {/* 5 KPI Stat Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
+              <div className="p-3 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/60 dark:border-white/5">
+                <span className="text-[10px] text-slate-400 block font-bold uppercase">মোট পোল</span>
+                <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                  {toBengaliNumber(elections.length)} টি
+                </span>
+              </div>
+              <div className="p-3 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/60 dark:border-white/5">
+                <span className="text-[10px] text-amber-500 block font-bold uppercase">আসন্ন নির্বাচন</span>
+                <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">
+                  {toBengaliNumber(elections.filter((e) => e.status === 'UPCOMING').length)} টি
+                </span>
+              </div>
+              <div className="p-3 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/60 dark:border-white/5">
+                <span className="text-[10px] text-emerald-500 block font-bold uppercase">লাইভ চলমান</span>
+                <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
+                  {toBengaliNumber(elections.filter((e) => e.status === 'VOTING_ACTIVE').length)} টি
+                </span>
+              </div>
+              <div className="p-3 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/60 dark:border-white/5">
+                <span className="text-[10px] text-blue-500 block font-bold uppercase">সমাপ্ত নির্বাচন</span>
+                <span className="text-base sm:text-lg font-black text-blue-600 dark:text-blue-400">
+                  {toBengaliNumber(
+                    elections.filter(
+                      (e) =>
+                        e.status === 'COMPLETED' ||
+                        e.status === 'FINALIZED' ||
+                        e.status === 'VOTING_CLOSED'
+                    ).length
+                  )} টি
+                </span>
+              </div>
+              <div className="col-span-2 sm:col-span-1 p-3 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/60 dark:border-white/5">
+                <span className="text-[10px] text-purple-500 block font-bold uppercase">মোট সংগৃহীত ভোট</span>
+                <span className="text-base sm:text-lg font-black text-purple-600 dark:text-purple-400">
+                  {toBengaliNumber(
+                    elections.reduce((sum, e) => sum + (e.votesCastCount || 0), 0)
+                  )} টি
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Elections List */}
           {elections.length > 0 ? (
             <div className="divide-y divide-slate-100 dark:divide-white/5">
-              {elections.map((elec) => (
-                <div
-                  key={elec.id}
-                  className="py-4 space-y-3 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            elec.status === 'VOTING_ACTIVE'
-                              ? 'bg-amber-500 text-slate-950 animate-pulse'
+              {elections.map((elec) => {
+                const isUpcoming = elec.status === 'UPCOMING';
+                const isLive = elec.status === 'VOTING_ACTIVE';
+                const isCompleted =
+                  elec.status === 'COMPLETED' ||
+                  elec.status === 'FINALIZED' ||
+                  elec.status === 'VOTING_CLOSED';
+
+                return (
+                  <div
+                    key={elec.id}
+                    className="py-4 space-y-3.5 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] px-2 sm:px-3 rounded-2xl transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        {/* Status Pills */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              isLive
+                                ? 'bg-amber-500 text-slate-950 animate-pulse'
+                                : isUpcoming
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                : elec.status === 'FINALIZED'
+                                ? 'bg-brand-emerald/15 text-brand-emerald'
+                                : isCompleted
+                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                                : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {isLive
+                              ? '● লাইভ ভোটগ্রহণ চলছে'
+                              : isUpcoming
+                              ? 'আসন্ন নির্বাচন'
                               : elec.status === 'FINALIZED'
-                              ? 'bg-brand-emerald/15 text-brand-emerald'
-                              : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          {elec.status === 'VOTING_ACTIVE'
-                            ? '● লাইভ ভোটগ্রহণ চলছে'
-                            : elec.status === 'VOTING_CLOSED'
-                            ? 'ভোটগ্রহণ সমাপ্ত'
-                            : elec.status === 'FINALIZED'
-                            ? 'ফলাফল চূড়ান্ত'
-                            : elec.status}
-                        </span>
-                        <span className="text-xs text-slate-400">
-                          মোট পদ: {toBengaliNumber(elec.positions?.length || 1)} টি
-                        </span>
+                              ? 'ফলাফল চূড়ান্ত'
+                              : isCompleted
+                              ? 'ভোটগ্রহণ সমাপ্ত'
+                              : 'খসড়া তফশিল'}
+                          </span>
+
+                          <span className="text-[11px] text-slate-400">
+                            পদ: {elec.positions?.[0]?.designation?.title || 'সাধারণ পদ'}
+                          </span>
+
+                          {elec.votesCastCount !== undefined && (
+                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                              • সংগৃহীত ভোট: {toBengaliNumber(elec.votesCastCount)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Title & Desc */}
+                        <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                          {elec.title}
+                        </h3>
+                        {elec.description && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                            {elec.description}
+                          </p>
+                        )}
+
+                        {/* Schedule times */}
+                        <div className="flex items-center gap-3 text-[11px] text-slate-400 pt-0.5 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>
+                              শুরু:{' '}
+                              {new Date(elec.votingStartDate).toLocaleString('bn-BD', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                          <span>—</span>
+                          <div className="flex items-center gap-1">
+                            <span>
+                              সমাপ্ত:{' '}
+                              {new Date(elec.votingEndDate).toLocaleString('bn-BD', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Candidates mini list */}
+                        {elec.positions?.[0]?.nominations && elec.positions[0].nominations.length > 0 && (
+                          <div className="flex items-center gap-2 pt-1 flex-wrap">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">প্রার্থী:</span>
+                            {elec.positions[0].nominations.map((cand) => (
+                              <div
+                                key={cand.id}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-[11px]"
+                              >
+                                <CandidateAvatar
+                                  src={cand.candidatePhoto}
+                                  name={cand.candidateName}
+                                  className="w-4 h-4 rounded-full"
+                                  textClassName="text-[8px] font-bold text-amber-600"
+                                />
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                  {cand.candidateName}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                        {elec.title}
-                      </h3>
-                      {elec.description && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {elec.description}
-                        </p>
-                      )}
-                    </div>
 
-                    {/* Election Controls (Pure Icons / Clean Compact Buttons) */}
-                    <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
-                      {elec.status !== 'VOTING_ACTIVE' && elec.status !== 'FINALIZED' && (
+                      {/* Election Controls (Actions: Monitor, Schedule, Status, Delete) */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-2 sm:pt-0 shrink-0">
+                        {/* Live Monitoring Button */}
                         <button
                           type="button"
-                          onClick={() => handleStartVoting(elec.id, elec.title)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                          onClick={() => setMonitoringElectionId(elec.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                          title="লাইভ ফলাফল ও ভোটার উপস্থিতি পর্যবেক্ষণ"
                         >
-                          <Play className="w-3 h-3 fill-current" />
-                          <span>ভোটগ্রহণ শুরু</span>
+                          <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
+                          <span>মনিটরিং</span>
                         </button>
-                      )}
 
-                      {elec.status === 'VOTING_ACTIVE' && (
+                        {/* Schedule update button */}
                         <button
                           type="button"
-                          onClick={() => handleCloseVoting(elec.id, elec.title)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                          onClick={() => setScheduleModalElection(elec)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                          title="ভোটের সময়সূচি পরিবর্তন"
                         >
-                          <Square className="w-3 h-3 fill-current" />
-                          <span>ভোটগ্রহণ সমাপ্ত</span>
+                          <Clock className="w-3.5 h-3.5 text-blue-500" />
+                          <span>সময় পরিবর্তন</span>
                         </button>
-                      )}
 
-                      {elec.status === 'VOTING_CLOSED' && (
+                        {/* Manual status triggers */}
+                        {!isLive && !isCompleted && elec.status !== 'FINALIZED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartVoting(elec.id, elec.title)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                          >
+                            <Play className="w-3 h-3 fill-current" />
+                            <span>ভোট শুরু</span>
+                          </button>
+                        )}
+
+                        {isLive && (
+                          <button
+                            type="button"
+                            onClick={() => handleCloseVoting(elec.id, elec.title)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                          >
+                            <Square className="w-3 h-3 fill-current" />
+                            <span>ভোট সমাপ্ত</span>
+                          </button>
+                        )}
+
+                        {elec.status === 'VOTING_CLOSED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleFinalizeElection(elec.id, elec.title)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-emerald hover:bg-brand-emerald-hover text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>ফলাফল চূড়ান্ত</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
-                          onClick={() => handleFinalizeElection(elec.id, elec.title)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-emerald hover:bg-brand-emerald-hover text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                          onClick={() => handleDeleteElection(elec.id, elec.title)}
+                          className="text-slate-400 hover:text-rose-500 hover:scale-110 active:scale-90 transition-transform p-1.5 cursor-pointer"
+                          title="নির্বাচন মুছুন"
+                          aria-label="মুছুন"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>ফলাফল চূড়ান্ত করুন</span>
+                          <Trash2 className="w-4 h-4 stroke-[2]" />
                         </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteElection(elec.id, elec.title)}
-                        className="text-slate-400 hover:text-rose-500 hover:scale-110 active:scale-90 transition-transform p-1.5 cursor-pointer"
-                        title="নির্বাচন মুছুন"
-                        aria-label="মুছুন"
-                      >
-                        <Trash2 className="w-4 h-4 stroke-[2]" />
-                      </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Positions details */}
-                  {elec.positions && elec.positions.length > 0 && (
-                    <div className="pt-2 flex flex-wrap gap-2 text-xs">
-                      {elec.positions.map((pos) => (
-                        <div
-                          key={pos.id}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-[11px]"
-                        >
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {pos.designation?.title || 'পদবি'}
-                          </span>
-                          <span className="text-slate-400">
-                            (বিজয়ী: {toBengaliNumber(pos.maxWinners)})
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="py-12 text-center space-y-3">
@@ -1394,8 +1846,8 @@ export default function OrganizationAdminPage() {
               <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">
                 কোনো সক্রিয় নির্বাচন নেই
               </h3>
-              <p className="text-xs text-slate-500">
-                কার্যনির্বাহী পরিষদের গণতান্ত্রিক নির্বাচন সম্পন্ন করতে নতুন তফশিল ঘোষণা করুন।
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                কার্যনির্বাহী পরিষদের গণতান্ত্রিক নির্বাচন সম্পন্ন করতে উপরের &ldquo;+ নির্বাচন&rdquo; বোতামে ক্লিক করুন।
               </p>
             </div>
           )}
@@ -1619,7 +2071,7 @@ export default function OrganizationAdminPage() {
       )}
 
       {/* =========================================================================
-          MODAL 3: নতুন নোটিশ প্রকাশ (Notice Modal)
+          MODAL 3: নতুন নোটিশ প্রকাশ ও সম্পাদনা (Notice Modal)
          ========================================================================= */}
       {noticeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
@@ -1627,18 +2079,21 @@ export default function OrganizationAdminPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <FileText className="w-4 h-4 text-brand-emerald" />
-                <span>নতুন প্রাতিষ্ঠানিক বিজ্ঞপ্তি</span>
+                <span>{editingNotice ? 'বিজ্ঞপ্তি সম্পাদনা' : 'নতুন প্রাতিষ্ঠানিক বিজ্ঞপ্তি'}</span>
               </h3>
               <button
                 type="button"
-                onClick={() => setNoticeModalOpen(false)}
+                onClick={() => {
+                  setNoticeModalOpen(false);
+                  setEditingNotice(null);
+                }}
                 className="text-slate-400 hover:text-slate-600"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateNotice} className="space-y-4">
+            <form onSubmit={handleSubmitNotice} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   বিজ্ঞপ্তির শিরোনাম
@@ -1699,7 +2154,10 @@ export default function OrganizationAdminPage() {
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setNoticeModalOpen(false)}
+                  onClick={() => {
+                    setNoticeModalOpen(false);
+                    setEditingNotice(null);
+                  }}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700"
                 >
                   বাতিল
@@ -1710,7 +2168,7 @@ export default function OrganizationAdminPage() {
                   className="px-5 py-2 rounded-xl bg-brand-emerald hover:bg-brand-emerald-hover text-white text-xs font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {isSubmittingNotice && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>বিজ্ঞপ্তি প্রকাশ</span>
+                  <span>{editingNotice ? 'হালনাগাদ করুন' : 'বিজ্ঞপ্তি প্রকাশ'}</span>
                 </button>
               </div>
             </form>
@@ -1719,102 +2177,646 @@ export default function OrganizationAdminPage() {
       )}
 
       {/* =========================================================================
-          MODAL 4: নতুন নির্বাচনী তফশিল ঘোষণা (Election Modal)
+          MODAL 4: নতুন নির্বাচন ও ভোট তৈরি (Create Voting Poll Modal)
          ========================================================================= */}
       {electionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-brand-charcoal rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-white/10 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Vote className="w-4 h-4 text-amber-500" />
-                <span>নতুন নির্বাচনী তফশিল ঘোষণা</span>
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="bg-white dark:bg-brand-charcoal rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-white/10 my-auto overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Vote className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    নতুন ডিজিটাল নির্বাচন ও ভোট তৈরি
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    পদ, প্রার্থী ও সময়সূচি নির্ধারণ করে খসড়া বা প্রকাশ করুন
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setElectionModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateElection} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  নির্বাচনের শিরোনাম
-                </label>
-                <input
-                  type="text"
-                  placeholder="যেমন: কার্যনির্বাহী পরিষদ নির্বাচন ২০২৬"
-                  value={elecTitle}
-                  onChange={(e) => setElecTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald"
-                  required
-                />
+            {/* Scrollable Form Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-left flex-1">
+              {/* 1. Basic Poll Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    নির্বাচনের শিরোনাম *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="যেমন: সভাপতি নির্বাচন ২০২৬"
+                    value={pollTitle}
+                    onChange={(e) => setPollTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    নির্বাচনী পদের নাম *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="যেমন: সভাপতি / সাধারণ সম্পাদক"
+                    value={pollPosition}
+                    onChange={(e) => setPollPosition(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    সংক্ষিপ্ত বিবরণ বা নিয়মাবলী (ঐচ্ছিক)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="ভোটের উদ্দেশ্য বা সাধারণ নির্দেশিকা..."
+                    value={pollDesc}
+                    onChange={(e) => setPollDesc(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500 resize-none"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  নির্বাচনী পদের পদবি
-                </label>
-                <select
-                  value={selectedDesignationId}
-                  onChange={(e) => setSelectedDesignationId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald"
-                  required
-                >
-                  {designations.map((d) => (
-                    <option key={d.id} value={d.id} className="dark:bg-slate-900">
-                      {d.title} ({d.code})
-                    </option>
+              {/* 2. Automatic Schedule (Start & End Time) */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <span>স্বয়ংক্রিয় সময়সূচি (Asia/Dhaka)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      ভোট শুরুর তারিখ ও সময় *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={pollStartDate}
+                      onChange={(e) => setPollStartDate(e.target.value)}
+                      required
+                      className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-brand-charcoal text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      ভোট সমাপ্তির তারিখ ও সময় *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={pollEndDate}
+                      onChange={(e) => setPollEndDate(e.target.value)}
+                      required
+                      className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-brand-charcoal text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  শুরুর সময়ে স্বয়ংক্রিয়ভাবে লাইভ হবে এবং সমাপ্তির সময়ে স্বয়ংক্রিয়ভাবে ব্যালট বন্ধ হয়ে ফলাফল নির্ধারিত হবে।
+                </p>
+              </div>
+
+              {/* 3. Candidates Management */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    প্রার্থী তালিকা ({toBengaliNumber(pollCandidates.length)} জন) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPollCandidates((prev) => [...prev, { name: '', image: '', bio: '' }])
+                    }
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ প্রার্থী যোগ করুন</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {pollCandidates.map((cand, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-2.5 relative group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                          প্রার্থী #{toBengaliNumber(idx + 1)}
+                        </span>
+                        {pollCandidates.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPollCandidates((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                            className="text-slate-400 hover:text-rose-500 transition-colors p-1"
+                            title="প্রার্থী অপসারণ করুন"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                          <input
+                            type="text"
+                            placeholder="প্রার্থীর পূর্ণ নাম *"
+                            value={cand.name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPollCandidates((prev) => {
+                                const next = [...prev];
+                                const current = next[idx] ?? { name: '', image: '', bio: '' };
+                                next[idx] = { name: val, image: current.image, bio: current.bio };
+                                return next;
+                              });
+                            }}
+                            className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-brand-charcoal text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+                            required
+                          />
+                        </div>
+
+                        {/* Image Upload or URL */}
+                        <div className="flex items-center gap-2">
+                          <label
+                            htmlFor={`cand-file-${idx}`}
+                            className="cursor-pointer shrink-0"
+                            title="ডিভাইস থেকে ছবি আপলোড করতে ক্লিক করুন"
+                          >
+                            <CandidateAvatar
+                              src={cand.image}
+                              name={cand.name || 'প্রার্থী'}
+                              className="w-8 h-8 rounded-lg ring-1 ring-slate-200 dark:ring-white/10 hover:opacity-80 transition-opacity"
+                              textClassName="text-xs font-bold text-slate-500"
+                            />
+                          </label>
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="text"
+                              placeholder="ছবির লিংক (URL) অথবা ফাইল দিন"
+                              value={cand.image}
+                              onChange={(e) => {
+                                const rawVal = e.target.value;
+                                const val = cleanImageUrl(rawVal) || rawVal;
+                                setPollCandidates((prev) => {
+                                  const next = [...prev];
+                                  const current = next[idx] ?? { name: '', image: '', bio: '' };
+                                  next[idx] = { name: current.name, image: val, bio: current.bio };
+                                  return next;
+                                });
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-brand-charcoal text-slate-900 dark:text-white text-[11px] border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+                            />
+                          </div>
+                          <label
+                            htmlFor={`cand-file-${idx}`}
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-[11px] font-bold cursor-pointer shrink-0 flex items-center gap-1.5 transition-colors select-none active:scale-95"
+                            title="ডিভাইস থেকে ছবি আপলোড করুন"
+                          >
+                            {uploadingCandidateIdx === idx ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                            ) : (
+                              <Upload className="w-3.5 h-3.5" />
+                            )}
+                            <span className="hidden sm:inline">ছবি আপলোড</span>
+                          </label>
+                          <input
+                            id={`cand-file-${idx}`}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingCandidateIdx !== null}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadCandidateImage(file, idx);
+                              e.target.value = '';
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-1 sm:col-span-2">
+                          <input
+                            type="text"
+                            placeholder="প্রার্থীর বিবরণ বা প্রতিশ্রুতি (যেমন: মোহাম্মদপুর উন্নয়ন কর্মী)"
+                            value={cand.bio}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPollCandidates((prev) => {
+                                const next = [...prev];
+                                const current = next[idx] ?? { name: '', image: '', bio: '' };
+                                next[idx] = { name: current.name, image: current.image, bio: val };
+                                return next;
+                              });
+                            }}
+                            className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-brand-charcoal text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  সংক্ষিপ্ত বিবরণ / নিয়মাবলী (ঐচ্ছিক)
-                </label>
-                <textarea
-                  placeholder="ভোটগ্রহণের নিয়মাবলী বা প্রাসঙ্গিক তথ্য..."
-                  value={elecDesc}
-                  onChange={(e) => setElecDesc(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald resize-none"
-                />
-              </div>
+            {/* Footer Actions: Draft vs Publish */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 shrink-0 bg-slate-50/50 dark:bg-white/[0.01]">
+              <button
+                type="button"
+                onClick={() => setElectionModalOpen(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700"
+              >
+                বাতিল
+              </button>
 
-              <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300 pt-1">
-                <input
-                  type="checkbox"
-                  checked={elecStartVotingImmediately}
-                  onChange={(e) => setElecStartVotingImmediately(e.target.checked)}
-                  className="w-4 h-4 rounded text-brand-emerald focus:ring-brand-emerald"
-                />
-                <span>তফশিল ঘোষণার সাথে সাথে লাইভ ভোটগ্রহণ চালু করুন</span>
-              </label>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setElectionModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700"
+                  disabled={isSubmittingPoll}
+                  onClick={() => handleCreateVotingPoll(true)}
+                  className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  বাতিল
+                  খসড়া সংরক্ষণ (Draft)
                 </button>
+
                 <button
-                  type="submit"
-                  disabled={isSubmittingElection}
+                  type="button"
+                  disabled={isSubmittingPoll}
+                  onClick={() => handleCreateVotingPoll(false)}
                   className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  {isSubmittingElection && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>তফশিল প্রকাশ করুন</span>
+                  {isSubmittingPoll && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>নির্বাচন প্রকাশ করুন</span>
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
+
+      {/* =========================================================================
+          MODAL 5: লাইভ মনিটরিং (Monitoring Modal)
+         ========================================================================= */}
+      {monitoringElectionId && (
+        <ElectionMonitoringModal
+          electionId={monitoringElectionId}
+          onClose={() => setMonitoringElectionId(null)}
+        />
+      )}
+
+      {/* =========================================================================
+          MODAL 6: সময় পরিবর্তন (Schedule Modal)
+         ========================================================================= */}
+      {scheduleModalElection && (
+        <ElectionScheduleModal
+          election={scheduleModalElection}
+          onClose={() => setScheduleModalElection(null)}
+          onSave={handleSaveSchedule}
+          isSaving={isUpdatingSchedule}
+        />
+      )}
+    </div>
+  );
+}
+
+{/* =========================================================================
+    Helper Sub-component: Election Monitoring Modal
+   ========================================================================= */}
+function ElectionMonitoringModal({
+  electionId,
+  onClose,
+}: {
+  electionId: string;
+  onClose: () => void;
+}) {
+  const { data: monitoring, isLoading } = useOrgVotingPollMonitoringQuery(
+    electionId,
+    Boolean(electionId)
+  );
+
+  const monitoringAny = (monitoring || {}) as any;
+  const candidates: any[] = Array.isArray(monitoringAny.candidates)
+    ? monitoringAny.candidates
+    : Array.isArray(monitoringAny.candidateResults)
+    ? monitoringAny.candidateResults
+    : [];
+  const voters: any[] = Array.isArray(monitoringAny.voters)
+    ? monitoringAny.voters
+    : Array.isArray(monitoringAny.votedMembers)
+    ? monitoringAny.votedMembers
+    : [];
+  const totalVotersCount = monitoringAny.totalVotersCount ?? monitoringAny.stats?.totalEligibleVoters ?? 0;
+  const votesCastCount = monitoringAny.votesCastCount ?? monitoringAny.stats?.totalVotesSubmitted ?? 0;
+  const turnoutPercentage = monitoringAny.turnoutPercentage ?? monitoringAny.stats?.participationPercentage ?? 0;
+  const notVotedCount = monitoringAny.notVotedCount ?? monitoringAny.stats?.remainingVoters ?? 0;
+  const modalTitle = monitoringAny.title || monitoringAny.election?.title || 'নির্বাচন মনিটরিং';
+  const positionTitle = monitoringAny.positionName || monitoringAny.election?.positions?.[0]?.designation?.name || 'পদ';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white dark:bg-brand-charcoal rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden text-left">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                লাইভ নির্বাচনী ফলাফল ও ভোটার উপস্থিতি
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                {modalTitle} ({positionTitle})
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+          {isLoading || !monitoring ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+              <span className="text-xs">ডাটা লোড হচ্ছে...</span>
+            </div>
+          ) : (
+            <>
+              {/* Summary Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">মোট যোগ্য ভোটার</span>
+                  <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                    {toBengaliNumber(totalVotersCount)} জন
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-bold uppercase">ভোট কাস্ট হয়েছে</span>
+                  <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
+                    {toBengaliNumber(votesCastCount)} টি
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 block font-bold uppercase">ভোটার টার্নআউট</span>
+                  <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">
+                    {toBengaliNumber(turnoutPercentage)}%
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">বাকি ভোটার</span>
+                  <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                    {toBengaliNumber(notVotedCount)} জন
+                  </span>
+                </div>
+              </div>
+
+              {/* Candidate Votes Breakdown */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    প্রার্থীভিত্তিক প্রাপ্ত ভোট ও পরিসংখ্যান
+                  </h4>
+                  <span className="text-[10px] text-amber-500 font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span>রিয়েল-টাইম সিঙ্ক</span>
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {candidates.map((cand: any) => (
+                    <div
+                      key={cand.id}
+                      className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CandidateAvatar
+                            src={cand.candidatePhoto}
+                            name={cand.candidateName}
+                            className="w-9 h-9 rounded-xl"
+                            textClassName="text-xs font-bold text-amber-600"
+                          />
+                          <div className="min-w-0">
+                            <h5 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                              {cand.candidateName}
+                            </h5>
+                            <span className="text-[11px] text-slate-400">
+                              {toBengaliNumber(cand.voteCount ?? cand.votesCount ?? 0)} ভোট
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400">
+                            {toBengaliNumber(cand.votePercentage ?? 0)}%
+                          </span>
+                        </div>
+                      </div>
+                      {/* Progress Bar */}
+                      <div className="w-full h-2 rounded-full bg-slate-200/80 dark:bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all duration-500"
+                          style={{ width: `${cand.votePercentage ?? 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Voter Participation List (Secret Ballot Preserved) */}
+              <div className="space-y-2.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    অংশগ্রহণকারী ভোটার তালিকা ({toBengaliNumber(voters.length)} জন)
+                  </h4>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md font-semibold">
+                    গোপন ব্যালট সুরক্ষিত
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  সংবিধান অনুযায়ী কোন সদস্য কোন প্রার্থীকে ভোট দিয়েছেন তা ক্রিপ্টোগ্রাফিকভাবে সুরক্ষিত ও গোপন। এখানে কেবল ভোটাধিকার প্রয়োগের উপস্থিতি প্রদর্শিত হচ্ছে।
+                </p>
+
+                {voters.length > 0 ? (
+                  <div className="max-h-44 overflow-y-auto rounded-2xl border border-slate-200/60 dark:border-white/5 divide-y divide-slate-100 dark:divide-white/5">
+                    {voters.map((v: any, idx: number) => (
+                      <div key={idx} className="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-[10px] font-bold">
+                            ✓
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 dark:text-white block">{v.name}</span>
+                            {v.memberNumber && (
+                              <span className="text-[10px] text-slate-400">আইডি: {v.memberNumber}</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(v.votedAt || v.participatedAt || Date.now()).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl">
+                    এখনও কোনো ভোট জমা পড়েনি
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+{/* =========================================================================
+    Helper Sub-component: Election Schedule Modal
+   ========================================================================= */}
+function ElectionScheduleModal({
+  election,
+  onClose,
+  onSave,
+  isSaving,
+}: {
+  election: Election;
+  onClose: () => void;
+  onSave: (data: { votingStartDate: string; votingEndDate: string; reason?: string }) => Promise<void>;
+  isSaving: boolean;
+}) {
+  const [startDate, setStartDate] = React.useState(() => {
+    try {
+      const d = new Date(election.votingStartDate);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    } catch {
+      return '';
+    }
+  });
+  const [endDate, setEndDate] = React.useState(() => {
+    try {
+      const d = new Date(election.votingEndDate);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    } catch {
+      return '';
+    }
+  });
+  const [reason, setReason] = React.useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!startDate || !endDate) {
+      alert('শুরু ও সমাপ্তির সময় নির্ধারণ করুন');
+      return;
+    }
+    if (new Date(endDate) <= new Date(startDate)) {
+      alert('সমাপ্তির সময় অবশ্যই শুরুর সময়ের পরবর্তী হতে হবে');
+      return;
+    }
+    onSave({
+      votingStartDate: new Date(startDate).toISOString(),
+      votingEndDate: new Date(endDate).toISOString(),
+      reason: reason.trim() || undefined,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white dark:bg-brand-charcoal rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-white/10 space-y-4 text-left">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-500" />
+            <span>ভোটের সময়সূচি পরিবর্তন</span>
+          </h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              ভোট শুরুর তারিখ ও সময়
+            </label>
+            <input
+              type="datetime-local"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+              className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              ভোট সমাপ্তির তারিখ ও সময়
+            </label>
+            <input
+              type="datetime-local"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              required
+              className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              পরিবর্তনের কারণ (ঐচ্ছিক অডিট রেকর্ড)
+            </label>
+            <textarea
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="যেমন: ভোটারদের অংশগ্রহণের সুবিধার্থে সময় বৃদ্ধি"
+              className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-xs border border-slate-200 dark:border-white/10 outline-none focus:border-amber-500 resize-none"
+            />
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
+            সময়সূচি হালনাগাদ করলে বিদ্যমান প্রদত্ত কোনো ভোট মুছে যাবে না এবং সাধারণ সদস্যদের কাউন্টডাউন টাইমার স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700"
+            >
+              বাতিল
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>সময়সূচি হালনাগাদ করুন</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

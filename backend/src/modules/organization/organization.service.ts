@@ -6,9 +6,89 @@ import {
   ConflictError,
 } from '../../errors/app-error.js';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+
+function cleanImageUrl(url?: string | null): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  try {
+    if (trimmed.includes('google.') && trimmed.includes('/imgres')) {
+      const parsed = new URL(trimmed);
+      const directImg = parsed.searchParams.get('imgurl');
+      if (directImg) {
+        return decodeURIComponent(directImg);
+      }
+    }
+    if (trimmed.includes('unsplash.com')) {
+      const parsed = new URL(trimmed);
+      if (parsed.searchParams.get('fit') === 'crop' && !parsed.searchParams.has('crop')) {
+        parsed.searchParams.set('crop', 'faces');
+        return parsed.toString();
+      }
+    }
+  } catch {
+    // Return original if parsing fails
+  }
+  return trimmed;
+}
 
 export class OrganizationService {
   constructor(private readonly prisma: PrismaClient) {}
+
+  // --------------------------------------------------------------------------
+  // Global Voting System Setting
+  // --------------------------------------------------------------------------
+  private votingConfigPath = path.resolve(process.cwd(), 'data', 'voting-config.json');
+  private inMemoryVotingConfig = {
+    isVotingEnabled: true,
+    updatedAt: new Date().toISOString(),
+  };
+
+  public async getVotingConfig(): Promise<{ isVotingEnabled: boolean; updatedAt: string }> {
+    try {
+      if (fs.existsSync(this.votingConfigPath)) {
+        const raw = fs.readFileSync(this.votingConfigPath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.isVotingEnabled === 'boolean') {
+          this.inMemoryVotingConfig = parsed;
+        }
+      }
+    } catch {
+      // Fallback to in-memory
+    }
+    return this.inMemoryVotingConfig;
+  }
+
+  public async updateVotingConfig(
+    userId: string,
+    isVotingEnabled: boolean,
+  ): Promise<{ isVotingEnabled: boolean; updatedAt: string }> {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    this.inMemoryVotingConfig = {
+      isVotingEnabled,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      const dir = path.dirname(this.votingConfigPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(
+        this.votingConfigPath,
+        JSON.stringify(this.inMemoryVotingConfig, null, 2),
+        'utf-8',
+      );
+    } catch {
+      // Ignore filesystem write error
+    }
+
+    return this.inMemoryVotingConfig;
+  }
 
   // --------------------------------------------------------------------------
   // Helper: Verify User Officer Role
@@ -531,6 +611,7 @@ export class OrganizationService {
     const totalContributions = contributionsAgg._sum.amount ? Number(contributionsAgg._sum.amount) : 0;
     const totalIncome = incomeAgg._sum.amount ? Number(incomeAgg._sum.amount) : 0;
     const totalExpense = expenseAgg._sum.amount ? Number(expenseAgg._sum.amount) : 0;
+    const financialTrends = await this.calculateFinancialTrends();
 
     return {
       memberCounts: {
@@ -554,6 +635,7 @@ export class OrganizationService {
         totalExpense,
         totalContributions,
       },
+      financialTrends,
       elections: {
         activeElections: activeElectionsCount,
       },
@@ -566,6 +648,225 @@ export class OrganizationService {
       },
       recentTransactions,
       recentPayments,
+    };
+  }
+
+  public async calculateFinancialTrends(userId?: string) {
+    if (userId) {
+      const role = await this.getOfficerRole(userId);
+      this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+    }
+    const [allTransactions, funds] = await Promise.all([
+      this.prisma.fundTransaction.findMany({
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.orgFund.findMany({
+        orderBy: { balance: 'desc' },
+      }),
+    ]);
+
+    const now = new Date();
+    const bengaliWeekdays = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহ', 'শুক্র', 'শনি'];
+    const bengaliMonths = [
+      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
+    ];
+    const bengaliShortMonths = [
+      'জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+      'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে',
+    ];
+    const toBengaliDigits = (num: number | string): string => {
+      const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+      return String(num).replace(/[0-9]/g, (d) => bnDigits[+d] || d);
+    };
+
+    // 1. Weekly: 7 days ending with today ('আজ')
+    const weeklyPoints = [];
+    let weeklyTotalIncome = 0;
+    let weeklyTotalExpense = 0;
+
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
+      const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 23, 59, 59, 999);
+
+      const dayTxs = allTransactions.filter((tx) => {
+        const txDate = new Date(tx.createdAt);
+        return txDate >= dayStart && txDate <= dayEnd;
+      });
+
+      let income = 0;
+      let expense = 0;
+      for (const tx of dayTxs) {
+        if (tx.type === 'INCOME' || tx.type === 'CONTRIBUTION') {
+          income += Number(tx.amount);
+        } else if (tx.type === 'EXPENSE') {
+          expense += Number(tx.amount);
+        }
+      }
+
+      weeklyTotalIncome += income;
+      weeklyTotalExpense += expense;
+
+      const isToday = i === 0;
+      const label = isToday ? 'আজ' : bengaliWeekdays[dayStart.getDay()];
+      const fullDate = `${toBengaliDigits(dayStart.getDate())} ${bengaliMonths[dayStart.getMonth()]}${isToday ? ' (আজ)' : ''}`;
+
+      weeklyPoints.push({
+        label,
+        fullDate,
+        dateStr: dayStart.toISOString().split('T')[0],
+        income,
+        expense,
+        net: income - expense,
+        isToday,
+      });
+    }
+
+    // 2. Monthly: 4 weekly segments of current month
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const monthlySlices = [
+      { label: '১ম সপ্তাহ', startDay: 1, endDay: 7 },
+      { label: '২য় সপ্তাহ', startDay: 8, endDay: 14 },
+      { label: '৩য় সপ্তাহ', startDay: 15, endDay: 21 },
+      { label: '৪র্থ সপ্তাহ', startDay: 22, endDay: daysInMonth },
+    ];
+
+    const monthlyPoints = [];
+    let monthlyTotalIncome = 0;
+    let monthlyTotalExpense = 0;
+
+    for (const slice of monthlySlices) {
+      const sliceStart = new Date(year, month, slice.startDay, 0, 0, 0, 0);
+      const sliceEnd = new Date(year, month, slice.endDay, 23, 59, 59, 999);
+
+      const sliceTxs = allTransactions.filter((tx) => {
+        const txDate = new Date(tx.createdAt);
+        return txDate >= sliceStart && txDate <= sliceEnd;
+      });
+
+      let income = 0;
+      let expense = 0;
+      for (const tx of sliceTxs) {
+        if (tx.type === 'INCOME' || tx.type === 'CONTRIBUTION') {
+          income += Number(tx.amount);
+        } else if (tx.type === 'EXPENSE') {
+          expense += Number(tx.amount);
+        }
+      }
+
+      monthlyTotalIncome += income;
+      monthlyTotalExpense += expense;
+
+      monthlyPoints.push({
+        label: slice.label,
+        fullDate: `${toBengaliDigits(slice.startDay)}-${toBengaliDigits(slice.endDay)} ${bengaliMonths[month]}`,
+        income,
+        expense,
+        net: income - expense,
+        isCurrent: now.getDate() >= slice.startDay && now.getDate() <= slice.endDay,
+      });
+    }
+
+    // 3. Yearly: 12 months of current year
+    const yearlyPoints = [];
+    let yearlyTotalIncome = 0;
+    let yearlyTotalExpense = 0;
+
+    for (let m = 0; m < 12; m++) {
+      const mStart = new Date(year, m, 1, 0, 0, 0, 0);
+      const mEnd = new Date(year, m + 1, 0, 23, 59, 59, 999);
+
+      const mTxs = allTransactions.filter((tx) => {
+        const txDate = new Date(tx.createdAt);
+        return txDate >= mStart && txDate <= mEnd;
+      });
+
+      let income = 0;
+      let expense = 0;
+      for (const tx of mTxs) {
+        if (tx.type === 'INCOME' || tx.type === 'CONTRIBUTION') {
+          income += Number(tx.amount);
+        } else if (tx.type === 'EXPENSE') {
+          expense += Number(tx.amount);
+        }
+      }
+
+      yearlyTotalIncome += income;
+      yearlyTotalExpense += expense;
+
+      yearlyPoints.push({
+        label: bengaliShortMonths[m],
+        fullDate: `${bengaliMonths[m]} ${toBengaliDigits(year)}`,
+        income,
+        expense,
+        net: income - expense,
+        isCurrent: m === now.getMonth(),
+      });
+    }
+
+    // 4. Welfare Fund Allocation Ratio
+    const totalBalance = funds.reduce((sum, f) => sum + Math.max(0, Number(f.balance)), 0);
+
+    const shortNameMap: Record<string, string> = {
+      MEDICAL: 'চিকিৎসা',
+      EDUCATION: 'শিক্ষা',
+      EMERGENCY: 'ত্রাণ',
+      GENERAL: 'সাধারণ',
+    };
+
+    const colorPalette = ['#10B981', '#06B6D4', '#F59E0B', '#8B5CF6', '#EC4899', '#3B82F6'];
+
+    const fundAllocations = funds.map((f, idx) => {
+      const bal = Math.max(0, Number(f.balance));
+      const percentage = totalBalance > 0 ? Number(((bal / totalBalance) * 100).toFixed(1)) : 0;
+      return {
+        id: f.id,
+        name: f.name,
+        code: f.code,
+        shortName: shortNameMap[f.code] || f.name.split(' ')[0] || f.code,
+        balance: bal,
+        percentage,
+        color: colorPalette[idx % colorPalette.length],
+      };
+    });
+
+    return {
+      weekly: {
+        subtitle: '৭ দিনের জমা বনাম খরচ লেনদেন চিত্র',
+        points: weeklyPoints,
+        totalIncome: weeklyTotalIncome,
+        totalExpense: weeklyTotalExpense,
+        netSurplus: weeklyTotalIncome - weeklyTotalExpense,
+      },
+      monthly: {
+        subtitle: 'মাসভিত্তিক জমা বনাম খরচ লেনদেন চিত্র',
+        points: monthlyPoints,
+        totalIncome: monthlyTotalIncome,
+        totalExpense: monthlyTotalExpense,
+        netSurplus: monthlyTotalIncome - monthlyTotalExpense,
+      },
+      yearly: {
+        subtitle: '১২ মাসের আয়-ব্যয় লেনদেন ট্রেন্ড',
+        points: yearlyPoints,
+        totalIncome: yearlyTotalIncome,
+        totalExpense: yearlyTotalExpense,
+        netSurplus: yearlyTotalIncome - yearlyTotalExpense,
+      },
+      fundAllocation: {
+        fundCount: funds.length,
+        isAudited: true,
+        totalBalance,
+        funds: fundAllocations,
+      },
     };
   }
 
@@ -811,6 +1112,59 @@ export class OrganizationService {
     });
   }
 
+  public async updateNotice(
+    userId: string,
+    noticeId: string,
+    data: {
+      title?: string;
+      content?: string;
+      priority?: 'URGENT' | 'NORMAL' | 'LOW';
+      isPinned?: boolean;
+      isPublic?: boolean;
+      expiresAt?: string | null;
+    },
+  ) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN', 'MODERATOR']);
+
+    const notice = await this.prisma.orgNotice.findUnique({
+      where: { id: noticeId },
+    });
+    if (!notice) {
+      throw new NotFoundError('বিজ্ঞপ্তি পাওয়া যায়নি');
+    }
+
+    return this.prisma.orgNotice.update({
+      where: { id: noticeId },
+      data: {
+        ...(data.title !== undefined ? { title: data.title.trim() } : {}),
+        ...(data.content !== undefined ? { content: data.content.trim() } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+        ...(data.isPinned !== undefined ? { isPinned: data.isPinned } : {}),
+        ...(data.isPublic !== undefined ? { isPublic: data.isPublic } : {}),
+        ...(data.expiresAt !== undefined
+          ? { expiresAt: data.expiresAt ? new Date(data.expiresAt) : null }
+          : {}),
+      },
+    });
+  }
+
+  public async deleteNotice(userId: string, noticeId: string) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN', 'MODERATOR']);
+
+    const notice = await this.prisma.orgNotice.findUnique({
+      where: { id: noticeId },
+    });
+    if (!notice) {
+      throw new NotFoundError('বিজ্ঞপ্তি পাওয়া যায়নি');
+    }
+
+    return this.prisma.orgNotice.delete({
+      where: { id: noticeId },
+    });
+  }
+
   public async getProjects() {
     return this.prisma.orgProject.findMany({
       orderBy: { createdAt: 'desc' },
@@ -876,8 +1230,30 @@ export class OrganizationService {
   // --------------------------------------------------------------------------
   // 10. DIGITAL ELECTION & SECURE SECRET VOTING
   // --------------------------------------------------------------------------
+  public evaluateElectionSchedule(election: {
+    status: string;
+    votingStartDate: Date;
+    votingEndDate: Date;
+  }): string {
+    if (['DRAFT', 'CANCELLED', 'FINALIZED'].includes(election.status)) {
+      return election.status;
+    }
+
+    const now = new Date();
+    const start = new Date(election.votingStartDate);
+    const end = new Date(election.votingEndDate);
+
+    if (now < start) {
+      return 'UPCOMING';
+    } else if (now >= start && now <= end) {
+      return 'VOTING_ACTIVE';
+    } else {
+      return 'COMPLETED';
+    }
+  }
+
   public async getElections() {
-    return this.prisma.election.findMany({
+    const elections = await this.prisma.election.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         positions: {
@@ -888,6 +1264,30 @@ export class OrganizationService {
         },
       },
     });
+
+    // Auto-sync status based on real server time
+    const updated = await Promise.all(
+      elections.map(async (el) => {
+        const calculatedStatus = this.evaluateElectionSchedule(el);
+        if (
+          el.status !== calculatedStatus &&
+          !['DRAFT', 'CANCELLED', 'FINALIZED'].includes(el.status)
+        ) {
+          try {
+            await this.prisma.election.update({
+              where: { id: el.id },
+              data: { status: calculatedStatus },
+            });
+            el.status = calculatedStatus;
+          } catch {
+            // Ignore DB sync error during read
+          }
+        }
+        return el;
+      }),
+    );
+
+    return updated;
   }
 
   public async getElectionDetail(electionId: string, currentUserId?: string) {
@@ -906,6 +1306,14 @@ export class OrganizationService {
                 experience: true,
                 manifesto: true,
                 userId: true,
+                status: true,
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                  },
+                },
               },
             },
           },
@@ -918,11 +1326,32 @@ export class OrganizationService {
 
     if (!election) throw new NotFoundError('নির্বাচন পাওয়া যায়নি');
 
+    // Auto-sync status based on time
+    const calculatedStatus = this.evaluateElectionSchedule(election);
+    if (
+      election.status !== calculatedStatus &&
+      !['DRAFT', 'CANCELLED', 'FINALIZED'].includes(election.status)
+    ) {
+      try {
+        await this.prisma.election.update({
+          where: { id: electionId },
+          data: { status: calculatedStatus },
+        });
+        election.status = calculatedStatus;
+      } catch {
+        // Ignore
+      }
+    }
+
     let hasVoted = false;
     let userVoterToken: string | null = null;
     let isEligible = false;
+    let isOfficer = false;
 
     if (currentUserId) {
+      const role = await this.getOfficerRole(currentUserId);
+      isOfficer = Boolean(role && ['PRESIDENT', 'ADMIN', 'MODERATOR'].includes(role));
+
       const membership = await this.prisma.orgMembership.findUnique({
         where: { userId: currentUserId },
       });
@@ -943,11 +1372,382 @@ export class OrganizationService {
       }
     }
 
+    // Dynamic Announcements
+    const posName = election.positions?.[0]?.designation?.name || 'কার্যনির্বাহী';
+    const announcements = {
+      start: `আসসালামু আলাইকুম!\n\nআমাদের সংগঠনের ${posName} পদে ভোটগ্রহণ কার্যক্রম শুরু হয়েছে।\n\nআপনার পছন্দের প্রার্থীকে ভোট দিয়ে নির্বাচনী কার্যক্রমে অংশগ্রহণ করুন।\n\nআপনার মূল্যবান ভোট আমাদের সংগঠনের ভবিষ্যৎ নির্ধারণে গুরুত্বপূর্ণ ভূমিকা রাখবে।\n\nধন্যবাদ।`,
+      end: `আসসালামু আলাইকুম।\n\n${posName} পদের ভোটগ্রহণ সফলভাবে সম্পন্ন হয়েছে।\n\nভোট প্রদানের মাধ্যমে অংশগ্রহণ করার জন্য সকল সদস্যকে আন্তরিক ধন্যবাদ।\n\nচূড়ান্ত ফলাফল এখন প্রকাশিত হয়েছে।`,
+    };
+
+    // Sanitize candidate photos on positions
+    if (election.positions) {
+      for (const pos of election.positions) {
+        if (pos.nominations) {
+          for (const nom of pos.nominations) {
+            nom.candidatePhoto =
+              cleanImageUrl(nom.candidatePhoto) ||
+              nom.candidatePhoto ||
+              (nom as any).user?.image ||
+              null;
+          }
+        }
+      }
+    }
+
+    // Global Config
+    const votingConfig = await this.getVotingConfig();
+
+    // STRICT RESULT VISIBILITY RULE:
+    // If voting is LIVE or UPCOMING, ordinary members MUST NOT see candidate-wise results.
+    let dynamicResults: any[] = [];
+    const isCompleted = ['COMPLETED', 'FINALIZED'].includes(election.status);
+
+    if (isCompleted || isOfficer) {
+      // Calculate or retrieve results
+      const totalVotes = await this.prisma.secretBallot.count({ where: { electionId } });
+      const pos = election.positions[0];
+      if (pos && pos.nominations) {
+        for (const nom of pos.nominations) {
+          const voteCount = await this.prisma.secretBallot.count({
+            where: { electionId, candidateNominationId: nom.id },
+          });
+          const pct = totalVotes > 0 ? Number(((voteCount / totalVotes) * 100).toFixed(1)) : 0;
+          dynamicResults.push({
+            id: nom.id,
+            candidateName: nom.candidateName,
+            candidatePhoto: cleanImageUrl(nom.candidatePhoto) || nom.candidatePhoto,
+            votesCount: voteCount,
+            votePercentage: pct,
+          });
+        }
+        dynamicResults.sort((a, b) => b.votesCount - a.votesCount);
+        if (dynamicResults.length > 0 && dynamicResults[0].votesCount > 0) {
+          dynamicResults[0].isWinner = true;
+        }
+      }
+    }
+
+    // Strip results for non-officers if not completed
+    const finalResults = isCompleted ? dynamicResults : isOfficer ? dynamicResults : [];
+
     return {
-      election,
+      ...election,
+      election: {
+        ...election,
+        results: finalResults,
+      },
       hasVoted,
       userVoterToken,
       isEligible,
+      isVotingEnabled: votingConfig.isVotingEnabled,
+      announcements,
+      results: finalResults,
+    };
+  }
+
+  public async createVotingPoll(
+    userId: string,
+    data: {
+      title: string;
+      positionName: string;
+      description?: string;
+      votingStartDate: string;
+      votingEndDate: string;
+      isPublished?: boolean;
+      candidates: Array<{ name: string; photo?: string; image?: string; bio?: string; userId?: string }>;
+    },
+  ) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const start = new Date(data.votingStartDate);
+    const end = new Date(data.votingEndDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new BadRequestError('ভোট শুরুর ও শেষের সঠিক তারিখ ও সময় প্রদান করুন');
+    }
+
+    if (end <= start) {
+      throw new BadRequestError('ভোট শেষের সময় অবশ্যই শুরুর সময়ের পরবর্তী হতে হবে');
+    }
+
+    if (!data.candidates || data.candidates.length < 2) {
+      throw new BadRequestError('ভোট তৈরি করতে কমপক্ষে ২ জন প্রার্থী আবশ্যক');
+    }
+
+    // 1. Ensure Designation exists
+    let designation = await this.prisma.orgDesignation.findFirst({
+      where: { name: data.positionName.trim() },
+    });
+    if (!designation) {
+      const code = `POS_${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      designation = await this.prisma.orgDesignation.create({
+        data: {
+          name: data.positionName.trim(),
+          code,
+          rank: 10,
+        },
+      });
+    }
+
+    // 2. Initial status based on publish flag & schedule
+    const now = new Date();
+    let initialStatus = 'DRAFT';
+    if (data.isPublished !== false) {
+      initialStatus = now < start ? 'UPCOMING' : 'VOTING_ACTIVE';
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Create election
+      const election = await tx.election.create({
+        data: {
+          title: data.title.trim(),
+          description: data.description?.trim(),
+          votingStartDate: start,
+          votingEndDate: end,
+          nominationStartDate: start,
+          nominationEndDate: start,
+          status: initialStatus,
+          positions: {
+            create: {
+              designationId: designation.id,
+              maxWinners: 1,
+            },
+          },
+        },
+        include: {
+          positions: true,
+        },
+      });
+
+      const pos = election.positions?.[0];
+      if (!pos) throw new BadRequestError('পদের তথ্য তৈরি করা যায়নি');
+      const positionId = pos.id;
+
+      // Create Candidates (ElectionNomination)
+      for (const cand of data.candidates) {
+        let candUserId = cand.userId;
+        if (!candUserId) {
+          // Check if user with candidate name already exists
+          const rawPhoto = cand.photo || cand.image;
+        const cleanedPhoto = cleanImageUrl(rawPhoto) || rawPhoto || null;
+          const existingUser = await tx.user.findFirst({
+            where: { name: cand.name.trim() },
+          });
+          if (existingUser) {
+            candUserId = existingUser.id;
+          } else {
+            const newUser = await tx.user.create({
+              data: {
+                name: cand.name.trim(),
+                email: `cand-${crypto.randomBytes(4).toString('hex')}@amra-muhammadpuri.org`,
+                image: cleanedPhoto,
+                role: 'USER',
+              },
+            });
+            candUserId = newUser.id;
+          }
+        }
+
+        const rawPhoto = cand.photo || cand.image;
+        const cleanedPhoto = cleanImageUrl(rawPhoto) || rawPhoto || null;
+        await tx.electionNomination.create({
+          data: {
+            electionId: election.id,
+            positionId,
+            userId: candUserId,
+            candidateName: cand.name.trim(),
+            candidatePhoto: cleanedPhoto,
+            experience: 'মনোনীত প্রার্থী',
+            manifesto: cand.bio?.trim() || 'সংগঠনের সার্বিক উন্নয়নে কাজ করার অঙ্গীকার।',
+            status: 'APPROVED',
+          },
+        });
+      }
+
+      return election;
+    });
+  }
+
+  public async updateVotingSchedule(
+    userId: string,
+    electionId: string,
+    data: { votingStartDate: string; votingEndDate: string },
+  ) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const start = new Date(data.votingStartDate);
+    const end = new Date(data.votingEndDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new BadRequestError('ভোটের সঠিক তারিখ ও সময় দিন');
+    }
+    if (end <= start) {
+      throw new BadRequestError('ভোট শেষের সময় অবশ্যই শুরুর সময়ের পরবর্তী হতে হবে');
+    }
+
+    const election = await this.prisma.election.findUnique({
+      where: { id: electionId },
+    });
+    if (!election) throw new NotFoundError('ভোট পাওয়া যায়নি');
+
+    const calculatedStatus = this.evaluateElectionSchedule({
+      status: election.status,
+      votingStartDate: start,
+      votingEndDate: end,
+    });
+
+    return this.prisma.election.update({
+      where: { id: electionId },
+      data: {
+        votingStartDate: start,
+        votingEndDate: end,
+        status: calculatedStatus,
+      },
+    });
+  }
+
+  public async getVotingPollMonitoring(userId: string, electionId: string) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN', 'MODERATOR']);
+
+    const election = await this.prisma.election.findUnique({
+      where: { id: electionId },
+      include: {
+        positions: {
+          include: {
+            designation: true,
+            nominations: { where: { status: 'APPROVED' } },
+          },
+        },
+      },
+    });
+
+    if (!election) throw new NotFoundError('ভোট পাওয়া যায়নি');
+
+    // Auto-update status if needed
+    const calculatedStatus = this.evaluateElectionSchedule(election);
+    if (
+      election.status !== calculatedStatus &&
+      !['DRAFT', 'CANCELLED', 'FINALIZED'].includes(election.status)
+    ) {
+      await this.prisma.election.update({
+        where: { id: electionId },
+        data: { status: calculatedStatus },
+      });
+      election.status = calculatedStatus;
+    }
+
+    const totalEligible = await this.prisma.orgMembership.count({
+      where: { status: 'ACTIVE' },
+    });
+    const totalVotesSubmitted = await this.prisma.voterParticipation.count({
+      where: { electionId },
+    });
+
+    // Candidate-wise results (Superadmin can monitor candidate counts & percentages)
+    const position = election.positions[0];
+    const candidateResults = [];
+    if (position && position.nominations) {
+      for (const nom of position.nominations) {
+        const count = await this.prisma.secretBallot.count({
+          where: { electionId, candidateNominationId: nom.id },
+        });
+        const pct = totalVotesSubmitted > 0 ? ((count / totalVotesSubmitted) * 100).toFixed(1) : '0';
+        candidateResults.push({
+          id: nom.id,
+          candidateName: nom.candidateName,
+          candidatePhoto: cleanImageUrl(nom.candidatePhoto) || nom.candidatePhoto,
+          manifesto: nom.manifesto,
+          votesCount: count,
+          votePercentage: Number(pct),
+        });
+      }
+    }
+
+    // Sort descending by vote count
+    candidateResults.sort((a, b) => b.votesCount - a.votesCount);
+
+    // Voter Participation List: Who has voted and who has not voted
+    // (NO candidate choice is linked!)
+    const participations = await this.prisma.voterParticipation.findMany({
+      where: { electionId },
+      include: {
+        user: { select: { id: true, name: true, phone: true, image: true } },
+      },
+      orderBy: { participatedAt: 'desc' },
+    });
+
+    const activeMembers = await this.prisma.orgMembership.findMany({
+      where: { status: 'ACTIVE' },
+      include: {
+        user: { select: { id: true, name: true, phone: true, image: true } },
+      },
+    });
+
+    const votedUserIds = new Set(participations.map((p) => p.userId));
+    const nonVotedMembers = activeMembers
+      .filter((m) => !votedUserIds.has(m.userId))
+      .map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        phone: m.user.phone,
+        memberId: m.memberNumber,
+      }));
+
+    const votedMembers = participations.map((p) => ({
+      id: p.user.id,
+      name: p.user.name,
+      phone: p.user.phone,
+      image: p.user.image,
+      receiptToken: p.receiptToken,
+      participatedAt: p.participatedAt,
+    }));
+
+    const turnoutPct = totalEligible > 0 ? ((totalVotesSubmitted / totalEligible) * 100).toFixed(1) : '0';
+
+    const formattedCandidates = candidateResults.map((c) => ({
+      id: c.id,
+      candidateName: c.candidateName,
+      candidatePhoto: c.candidatePhoto,
+      manifesto: c.manifesto,
+      voteCount: c.votesCount,
+      votesCount: c.votesCount,
+      votePercentage: c.votePercentage,
+    }));
+
+    const formattedVoters = votedMembers.map((v) => ({
+      userId: v.id,
+      name: v.name,
+      phone: v.phone,
+      image: v.image,
+      memberNumber: null,
+      votedAt: v.participatedAt,
+      participatedAt: v.participatedAt,
+    }));
+
+    return {
+      electionId: election.id,
+      title: election.title,
+      status: election.status,
+      positionName: position?.designation?.name || 'কার্যনির্বাহী',
+      totalVotersCount: totalEligible,
+      votesCastCount: totalVotesSubmitted,
+      turnoutPercentage: Number(turnoutPct),
+      notVotedCount: Math.max(0, totalEligible - totalVotesSubmitted),
+      candidates: formattedCandidates,
+      voters: formattedVoters,
+      election,
+      stats: {
+        totalEligibleVoters: totalEligible,
+        totalVotesSubmitted,
+        remainingVoters: Math.max(0, totalEligible - totalVotesSubmitted),
+        participationPercentage: Number(turnoutPct),
+      },
+      candidateResults: formattedCandidates,
+      votedMembers: formattedVoters,
+      nonVotedMembers,
     };
   }
 
@@ -1030,7 +1830,7 @@ export class OrganizationService {
         positionId: data.positionId,
         userId,
         candidateName: data.candidateName.trim(),
-        candidatePhoto: data.candidatePhoto,
+        candidatePhoto: cleanImageUrl(data.candidatePhoto) || data.candidatePhoto,
         experience: data.experience?.trim(),
         manifesto: data.manifesto.trim(),
         status: 'PENDING',
@@ -1064,6 +1864,12 @@ export class OrganizationService {
     electionId: string,
     ballots: Array<{ positionId: string; candidateNominationId: string }>,
   ) {
+    // 0. Check Global Voting ON/OFF
+    const config = await this.getVotingConfig();
+    if (!config.isVotingEnabled) {
+      throw new BadRequestError('সংগঠনের ভোটগ্রহণ কার্যক্রম বর্তমানে সাময়িকভাবে বন্ধ রাখা হয়েছে।');
+    }
+
     const membership = await this.prisma.orgMembership.findUnique({
       where: { userId },
     });
@@ -1075,8 +1881,29 @@ export class OrganizationService {
     const election = await this.prisma.election.findUnique({ where: { id: electionId } });
     if (!election) throw new NotFoundError('নির্বাচন পাওয়া যায়নি');
 
-    if (election.status !== 'VOTING_ACTIVE') {
-      throw new BadRequestError('ভোটগ্রহণ বর্তমানে সক্রিয় নেই');
+    // Time schedule and status validation
+    const calculatedStatus = this.evaluateElectionSchedule(election);
+    if (calculatedStatus !== 'VOTING_ACTIVE') {
+      if (calculatedStatus === 'UPCOMING') {
+        throw new BadRequestError('ভোটগ্রহণ এখনো শুরু হয়নি। নির্ধারিত শুরুর সময়ে ভোট দিন।');
+      } else {
+        throw new BadRequestError('ভোটগ্রহণ বর্তমানে সক্রিয় নেই বা সময়সীমা সমাপ্ত হয়েছে।');
+      }
+    }
+
+    if (
+      election.status !== calculatedStatus &&
+      !['DRAFT', 'CANCELLED', 'FINALIZED'].includes(election.status)
+    ) {
+      try {
+        await this.prisma.election.update({
+          where: { id: electionId },
+          data: { status: calculatedStatus },
+        });
+        election.status = calculatedStatus;
+      } catch {
+        // Ignore
+      }
     }
 
     // 1. Check if voter has already participated

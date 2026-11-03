@@ -21,6 +21,7 @@ export interface OrgMembership {
   id: string;
   userId: string;
   memberId: string;
+  memberNumber?: string | null;
   orgRole: string; // 'PRESIDENT' | 'VICE_PRESIDENT' | 'GENERAL_SECRETARY' | 'TREASURER' | 'MODERATOR' | 'MEMBER'
   status: 'PENDING' | 'APPROVED_PAYMENT_PENDING' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
   joinedAt: string;
@@ -112,6 +113,47 @@ export interface OrgMemberDashboardData {
   activeElectionsCount: number;
 }
 
+export interface FinancialTrendPoint {
+  label: string;
+  fullDate: string;
+  dateStr?: string;
+  income: number;
+  expense: number;
+  net: number;
+  isToday?: boolean;
+  isCurrent?: boolean;
+}
+
+export interface FinancialTrendPeriodData {
+  subtitle: string;
+  points: FinancialTrendPoint[];
+  totalIncome: number;
+  totalExpense: number;
+  netSurplus: number;
+}
+
+export interface FundAllocationItem {
+  id: string;
+  name: string;
+  code: string;
+  shortName: string;
+  balance: number;
+  percentage: number;
+  color: string;
+}
+
+export interface FinancialTrends {
+  weekly: FinancialTrendPeriodData;
+  monthly: FinancialTrendPeriodData;
+  yearly: FinancialTrendPeriodData;
+  fundAllocation: {
+    fundCount: number;
+    isAudited: boolean;
+    totalBalance: number;
+    funds: FundAllocationItem[];
+  };
+}
+
 export interface OrgAdminStats {
   memberCounts: {
     total: number;
@@ -134,6 +176,7 @@ export interface OrgAdminStats {
     totalExpense: number;
     totalContributions: number;
   };
+  financialTrends?: FinancialTrends;
   elections: {
     activeElections: number;
   };
@@ -280,11 +323,13 @@ export interface Election {
   description: string | null;
   status:
     | 'DRAFT'
+    | 'UPCOMING'
     | 'NOMINATION_OPEN'
     | 'CANDIDATE_REVIEW'
     | 'CANDIDATES_PUBLISHED'
     | 'VOTING_ACTIVE'
     | 'VOTING_CLOSED'
+    | 'COMPLETED'
     | 'RESULTS_REVIEW'
     | 'FINALIZED';
   nominationStartDate: string;
@@ -295,8 +340,68 @@ export interface Election {
   positions: ElectionPosition[];
   results?: ElectionResult[];
   hasVoted?: boolean;
+  userVoterToken?: string | null;
+  isEligible?: boolean;
   totalVotersCount?: number;
   votesCastCount?: number;
+  isVotingEnabled?: boolean;
+  announcement?: string | null;
+  announcements?: { start: string; end: string };
+  isLive?: boolean;
+  isUpcoming?: boolean;
+  isCompleted?: boolean;
+}
+
+export interface VotingConfig {
+  isVotingEnabled: boolean;
+  updatedAt: string;
+  updatedBy?: string | null;
+}
+
+export interface CreateCandidateInput {
+  name: string;
+  image?: string | null;
+  bio?: string | null;
+}
+
+export interface CreateVotingPollInput {
+  title: string;
+  positionName: string;
+  description?: string;
+  candidates: CreateCandidateInput[];
+  votingStartDate: string;
+  votingEndDate: string;
+  isDraft?: boolean;
+}
+
+export interface UpdateVotingScheduleInput {
+  votingStartDate: string;
+  votingEndDate: string;
+  reason?: string;
+}
+
+export interface VotingPollMonitoring {
+  electionId: string;
+  title: string;
+  status: string;
+  positionName: string;
+  totalVotersCount: number;
+  votesCastCount: number;
+  turnoutPercentage: number;
+  candidates: Array<{
+    id: string;
+    candidateName: string;
+    candidatePhoto: string | null;
+    voteCount: number;
+    votePercentage: number;
+  }>;
+  voters: Array<{
+    userId: string;
+    name: string;
+    memberNumber: string | null;
+    votedAt: string;
+  }>;
+  notVotedCount: number;
 }
 
 export interface ElectionPosition {
@@ -305,9 +410,11 @@ export interface ElectionPosition {
   maxWinners: number;
   designation: {
     id: string;
-    title: string;
+    title?: string;
+    name?: string;
     code: string;
-    level: number;
+    level?: number;
+    rank?: number;
   };
   nominations: ElectionNomination[];
 }
@@ -315,13 +422,14 @@ export interface ElectionPosition {
 export interface ElectionNomination {
   id: string;
   userId: string;
-  electionPositionId: string;
+  electionPositionId?: string;
+  positionId?: string;
   candidateName: string;
   candidatePhoto: string | null;
   experience: string | null;
   manifesto: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  reviewNotes: string | null;
+  status?: string;
+  reviewNotes?: string | null;
   user?: {
     id: string;
     name: string;
@@ -331,16 +439,21 @@ export interface ElectionNomination {
 
 export interface ElectionResult {
   id: string;
-  positionId: string;
-  candidateNominationId: string;
-  voteCount: number;
+  positionId?: string;
+  candidateNominationId?: string;
+  voteCount?: number;
+  votesCount?: number;
+  votePercentage?: number;
   isWinner: boolean;
-  position: {
+  candidateName?: string;
+  candidatePhoto?: string | null;
+  position?: {
     designation: {
-      title: string;
+      title?: string;
+      name?: string;
     };
   };
-  candidate: {
+  candidate?: {
     candidateName: string;
     candidatePhoto: string | null;
   };

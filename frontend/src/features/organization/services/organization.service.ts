@@ -7,6 +7,7 @@ import {
   OrgMembership,
   OrgMemberDashboardData,
   OrgAdminStats,
+  FinancialTrends,
   OrgFund,
   OrgTransaction,
   OrgCommittee,
@@ -18,6 +19,10 @@ import {
   Election,
   ElectionNomination,
   ContributionPayment,
+  VotingConfig,
+  CreateVotingPollInput,
+  UpdateVotingScheduleInput,
+  VotingPollMonitoring,
 } from '../types';
 
 export const organizationService = {
@@ -123,8 +128,15 @@ export const organizationService = {
   },
 
   async getElectionDetail(id: string): Promise<Election> {
-    const res = await apiClient<ApiResponse<Election>>(`/org/elections/${id}`);
-    return res.data!;
+    const res = await apiClient<ApiResponse<any>>(`/org/elections/${id}`);
+    const data = res.data;
+    if (data && typeof data === 'object' && data.election) {
+      return {
+        ...data.election,
+        ...data,
+      };
+    }
+    return data!;
   },
 
   async submitNomination(
@@ -172,6 +184,11 @@ export const organizationService = {
   // Officer / Admin
   async getAdminStats(): Promise<OrgAdminStats> {
     const res = await apiClient<ApiResponse<OrgAdminStats>>('/org/admin/stats');
+    return res.data!;
+  },
+
+  async getFinancialTrends(): Promise<FinancialTrends> {
+    const res = await apiClient<ApiResponse<FinancialTrends>>('/org/admin/financial/trends');
     return res.data!;
   },
 
@@ -278,6 +295,30 @@ export const organizationService = {
     return res.data!;
   },
 
+  async updateNotice(
+    noticeId: string,
+    data: Partial<{
+      title: string;
+      content: string;
+      priority: 'URGENT' | 'NORMAL' | 'LOW';
+      isPinned: boolean;
+      isPublic: boolean;
+      expiresAt?: string | null;
+    }>
+  ): Promise<OrgNotice> {
+    const res = await apiClient<ApiResponse<OrgNotice>>(`/org/admin/notices/${noticeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return res.data!;
+  },
+
+  async deleteNotice(noticeId: string): Promise<void> {
+    await apiClient<ApiResponse<null>>(`/org/admin/notices/${noticeId}`, {
+      method: 'DELETE',
+    });
+  },
+
   async createProject(data: {
     title: string;
     description: string;
@@ -361,5 +402,47 @@ export const organizationService = {
     await apiClient<ApiResponse<null>>(`/org/admin/elections/${electionId}`, {
       method: 'DELETE',
     });
+  },
+
+  async getVotingConfig(): Promise<VotingConfig> {
+    const res = await apiClient<ApiResponse<VotingConfig>>('/org/voting/config');
+    return res.data!;
+  },
+
+  async updateVotingConfig(isVotingEnabled: boolean): Promise<VotingConfig> {
+    const res = await apiClient<ApiResponse<VotingConfig>>('/org/admin/voting/config', {
+      method: 'PUT',
+      body: JSON.stringify({ isVotingEnabled }),
+    });
+    return res.data!;
+  },
+
+  async createVotingPoll(data: CreateVotingPollInput): Promise<Election> {
+    const res = await apiClient<ApiResponse<Election>>('/org/admin/voting/polls', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data!;
+  },
+
+  async updateVotingSchedule(
+    electionId: string,
+    data: UpdateVotingScheduleInput
+  ): Promise<Election> {
+    const res = await apiClient<ApiResponse<Election>>(
+      `/org/admin/elections/${electionId}/schedule`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data!;
+  },
+
+  async getVotingPollMonitoring(electionId: string): Promise<VotingPollMonitoring> {
+    const res = await apiClient<ApiResponse<VotingPollMonitoring>>(
+      `/org/admin/elections/${electionId}/monitoring`
+    );
+    return res.data!;
   },
 };

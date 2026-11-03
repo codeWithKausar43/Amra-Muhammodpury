@@ -17,10 +17,12 @@ export const orgQueryKeys = {
   funds: ['org', 'funds'] as const,
   meetings: ['org', 'meetings'] as const,
   documents: ['org', 'documents'] as const,
+  votingConfig: ['org', 'voting', 'config'] as const,
   elections: {
     all: ['org', 'elections'] as const,
     detail: (id: string) => ['org', 'elections', id] as const,
     turnout: (id: string) => ['org', 'elections', id, 'turnout'] as const,
+    monitoring: (id: string) => ['org', 'elections', id, 'monitoring'] as const,
   },
   admin: {
     stats: ['org', 'admin', 'stats'] as const,
@@ -117,6 +119,24 @@ export function useOrgTurnoutQuery(electionId: string, enabled = true) {
     enabled: Boolean(electionId) && enabled,
     refetchInterval: 10000, // Poll turnout every 10 seconds during voting
     staleTime: ORG_CACHE_POLICY.turnout.staleTime,
+  });
+}
+
+export function useOrgVotingConfigQuery() {
+  return useQuery({
+    queryKey: orgQueryKeys.votingConfig,
+    queryFn: () => organizationService.getVotingConfig(),
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useOrgVotingPollMonitoringQuery(electionId: string, enabled = true) {
+  return useQuery({
+    queryKey: orgQueryKeys.elections.monitoring(electionId),
+    queryFn: () => organizationService.getVotingPollMonitoring(electionId),
+    enabled: Boolean(electionId) && enabled,
+    refetchInterval: 5000,
+    staleTime: 5000,
   });
 }
 
@@ -309,6 +329,23 @@ export function useOrgMutations() {
     },
   });
 
+  const updateNotice = useMutation({
+    mutationFn: (vars: { noticeId: string; data: any }) =>
+      organizationService.updateNotice(vars.noticeId, vars.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.notices });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+    },
+  });
+
+  const deleteNotice = useMutation({
+    mutationFn: (vars: { noticeId: string }) => organizationService.deleteNotice(vars.noticeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.notices });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+    },
+  });
+
   const createProject = useMutation({
     mutationFn: organizationService.createProject,
     onSuccess: () => {
@@ -384,6 +421,47 @@ export function useOrgMutations() {
     },
   });
 
+  const updateVotingConfig = useMutation({
+    mutationFn: (vars: { isVotingEnabled: boolean }) =>
+      organizationService.updateVotingConfig(vars.isVotingEnabled),
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: orgQueryKeys.votingConfig });
+      const prev = queryClient.getQueryData(orgQueryKeys.votingConfig);
+      queryClient.setQueryData(orgQueryKeys.votingConfig, (old: any) => ({
+        ...old,
+        isVotingEnabled: vars.isVotingEnabled,
+        updatedAt: new Date().toISOString(),
+      }));
+      return { prev };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.prev) {
+        queryClient.setQueryData(orgQueryKeys.votingConfig, context.prev);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.votingConfig });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.all });
+    },
+  });
+
+  const createVotingPoll = useMutation({
+    mutationFn: organizationService.createVotingPoll,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.all });
+    },
+  });
+
+  const updateVotingSchedule = useMutation({
+    mutationFn: (vars: { electionId: string; data: any }) =>
+      organizationService.updateVotingSchedule(vars.electionId, vars.data),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.all });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.detail(vars.electionId) });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.elections.monitoring(vars.electionId) });
+    },
+  });
+
   return {
     applyMembership,
     submitInitialPayment,
@@ -395,9 +473,14 @@ export function useOrgMutations() {
     assignCommitteeMember,
     createMeeting,
     createNotice,
+    updateNotice,
+    deleteNotice,
     createProject,
     createDocument,
     createElection,
+    createVotingPoll,
+    updateVotingSchedule,
+    updateVotingConfig,
     submitNomination,
     reviewNomination,
     castVote,

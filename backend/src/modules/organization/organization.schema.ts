@@ -99,6 +99,15 @@ export const CreateNoticeSchema = z.object({
   expiresAt: z.string().optional(),
 });
 
+export const UpdateNoticeSchema = z.object({
+  title: z.string().min(2, 'বিজ্ঞপ্তির শিরোনাম আবশ্যক').optional(),
+  content: z.string().min(5, 'বিজ্ঞপ্তির বিবরণ আবশ্যক').optional(),
+  priority: z.enum(['URGENT', 'NORMAL', 'LOW']).optional(),
+  isPinned: z.boolean().optional(),
+  isPublic: z.boolean().optional(),
+  expiresAt: z.string().nullable().optional(),
+});
+
 export const CreateProjectSchema = z.object({
   title: z.string().min(2, 'প্রকল্পের নাম আবশ্যক'),
   description: z.string().min(5, 'প্রকল্পের বিবরণ আবশ্যক'),
@@ -163,13 +172,44 @@ export const CastVoteSchema = z.object({
 export const UpdateElectionStatusSchema = z.object({
   status: z.enum([
     'DRAFT',
+    'UPCOMING',
     'NOMINATION_OPEN',
     'NOMINATION_CLOSED',
     'VOTING_ACTIVE',
     'VOTING_CLOSED',
     'RESULTS_REVIEW',
     'COMPLETED',
+    'FINALIZED',
     'CANCELLED',
   ]),
+});
+
+export const CreateVotingPollSchema = z.object({
+  title: z.string().min(3, 'ভোটের শিরোনাম আবশ্যক'),
+  positionName: z.string().min(2, 'পদের নাম আবশ্যক'),
+  description: z.string().optional(),
+  votingStartDate: z.string(),
+  votingEndDate: z.string(),
+  isPublished: z.boolean().default(true),
+  candidates: z
+    .array(
+      z.object({
+        name: z.string().min(2, 'প্রার্থীর নাম আবশ্যক'),
+        photo: z.string().optional(),
+        image: z.string().optional(),
+        bio: z.string().optional(),
+        userId: z.string().optional(),
+      }),
+    )
+    .min(2, 'কমপক্ষে ২ জন প্রার্থী যোগ করুন'),
+});
+
+export const UpdateVotingScheduleSchema = z.object({
+  votingStartDate: z.string(),
+  votingEndDate: z.string(),
+});
+
+export const UpdateVotingConfigSchema = z.object({
+  isVotingEnabled: z.boolean(),
 });
 

@@ -11,9 +11,13 @@ import {
   AssignCommitteeMemberSchema,
   CreateMeetingSchema,
   CreateNoticeSchema,
+  UpdateNoticeSchema,
   CreateProjectSchema,
   CreateDocumentSchema,
   CreateElectionSchema,
+  CreateVotingPollSchema,
+  UpdateVotingScheduleSchema,
+  UpdateVotingConfigSchema,
   SubmitNominationSchema,
   ReviewNominationSchema,
   CastVoteSchema,
@@ -146,8 +150,14 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // ==========================================================================
-  // Digital Election Endpoints
+  // Digital Election & Voting Endpoints
   // ==========================================================================
+
+  // Global Voting Config
+  fastify.get('/voting/config', async (_request, reply) => {
+    const config = await service.getVotingConfig();
+    return reply.send(successResponse(config, 'ভোট সেটিংস লোড হয়েছে'));
+  });
 
   // List elections
   fastify.get('/elections', async (_request, reply) => {
@@ -207,6 +217,13 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const session = await fastify.authenticate(request, reply);
     const stats = await service.getAdminStats(session.user.id);
     return reply.send(successResponse(stats, 'প্রশাসনিক পরিসংখ্যান তথ্য'));
+  });
+
+  // Admin financial trends
+  fastify.get('/admin/financial/trends', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const trends = await service.calculateFinancialTrends(session.user.id);
+    return reply.send(successResponse(trends, 'আর্থিক অ্যানালিটিক্স ও ট্রেন্ড তথ্য'));
   });
 
   // Admin applications list
@@ -281,6 +298,23 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(successResponse(notice, 'বিজ্ঞপ্তি সফলভাবে প্রকাশিত হয়েছে'));
   });
 
+  // Update Notice
+  fastify.put('/admin/notices/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = UpdateNoticeSchema.parse(request.body);
+    const updated = await service.updateNotice(session.user.id, id, validatedData);
+    return reply.send(successResponse(updated, 'বিজ্ঞপ্তি সফলভাবে হালনাগাদ করা হয়েছে'));
+  });
+
+  // Delete Notice
+  fastify.delete('/admin/notices/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    await service.deleteNotice(session.user.id, id);
+    return reply.send(successResponse(null, 'বিজ্ঞপ্তি সফলভাবে মুছে ফেলা হয়েছে'));
+  });
+
   // Create Project
   fastify.post('/admin/projects', async (request, reply) => {
     const session = await fastify.authenticate(request, reply);
@@ -332,6 +366,39 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(
       successResponse(election, 'নির্বাচনী ফলাফল চূড়ান্ত হয়েছে এবং দায়িত্বপ্রাপ্ত কর্মকর্তাদের পদবি বরাদ্দ করা হয়েছে'),
     );
+  });
+
+  // Update Global Voting Config (ON/OFF)
+  fastify.put('/admin/voting/config', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = UpdateVotingConfigSchema.parse(request.body);
+    const updated = await service.updateVotingConfig(session.user.id, validatedData.isVotingEnabled);
+    return reply.send(successResponse(updated, 'ভোট সিস্টেম কনফিগারেশন সফলভাবে আপডেট হয়েছে'));
+  });
+
+  // Create Simple Voting Poll
+  fastify.post('/admin/voting/polls', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = CreateVotingPollSchema.parse(request.body);
+    const poll = await service.createVotingPoll(session.user.id, validatedData);
+    return reply.status(201).send(successResponse(poll, 'ভোট সফলভাবে তৈরি ও প্রকাশিত হয়েছে'));
+  });
+
+  // Update Voting Schedule
+  fastify.put('/admin/elections/:id/schedule', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = UpdateVotingScheduleSchema.parse(request.body);
+    const updated = await service.updateVotingSchedule(session.user.id, id, validatedData);
+    return reply.send(successResponse(updated, 'ভোটের সময়সূচি সফলভাবে পরিবর্তন করা হয়েছে'));
+  });
+
+  // Superadmin Poll Monitoring (Live Turnout & Candidate Votes)
+  fastify.get('/admin/elections/:id/monitoring', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const monitoring = await service.getVotingPollMonitoring(session.user.id, id);
+    return reply.send(successResponse(monitoring, 'ভোট মনিটরিং ডাটা সফলভাবে পাওয়া গেছে'));
   });
 
   // Update election status
