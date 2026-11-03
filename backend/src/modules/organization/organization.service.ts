@@ -8,6 +8,7 @@ import {
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { NotificationService } from '../notifications/notification.service.js';
 
 function cleanImageUrl(url?: string | null): string | null {
   if (!url || typeof url !== 'string') return null;
@@ -50,7 +51,11 @@ const MONTH_NAMES_BN = [
 ];
 
 export class OrganizationService {
-  constructor(private readonly prisma: PrismaClient) {}
+  private notificationService: NotificationService;
+
+  constructor(private readonly prisma: PrismaClient) {
+    this.notificationService = new NotificationService(prisma);
+  }
 
   // --------------------------------------------------------------------------
   // Global Voting System Setting
@@ -532,48 +537,125 @@ export class OrganizationService {
             trxId: data.trxId?.trim() || null,
             senderNumber: data.senderNumber?.trim() || null,
             receiptNumber,
-            status: 'VERIFIED',
+            status: 'PENDING',
             notes: data.notes || null,
           },
         });
         createdPayments.push(payment);
       }
 
-      await tx.orgMembership.update({
-        where: { userId },
-        data: { lastPaymentDate: new Date() },
-      });
+      // Trigger push notification to officers and admins (excluding paying user)
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }).then((user) => {
+        const monthNames = targetMonths.map((m) => MONTH_NAMES_BN[m - 1] || `${m} তম`).join(', ');
+        this.notificationService.sendPushToOfficers({
+          title: 'নতুন মাসিক চাঁদা জমা 🔔',
+          body: `${user?.name || 'একজন সদস্য'} ${monthNames} (${data.periodYear}) এর ৳${data.amount} চাঁদা জমা দিয়েছেন। যাচাই ও অনুমোদন প্রয়োজন।`,
+          url: '/organization/admin',
+          sound: '/sounds/notification.wav',
+        }, userId).catch(() => {});
 
-      const generalFund = await tx.orgFund.findUnique({ where: { code: 'GENERAL' } });
-      if (generalFund) {
-        await tx.orgFund.update({
-          where: { id: generalFund.id },
-          data: { balance: { increment: data.amount } },
-        });
-
-        const monthLabels = targetMonths
-          .map((m) => MONTH_NAMES_BN[m - 1] || `${m} তম`)
-          .join(', ');
-
-        await tx.fundTransaction.create({
-          data: {
-            fundId: generalFund.id,
-            type: 'CONTRIBUTION',
-            amount: data.amount,
-            title: `মাসিক চাঁদা পরিশোধ (${monthLabels} ${data.periodYear})`,
-            description: `রশিদ নম্বরসমূহ: ${receiptNumbers.join(', ')}`,
-            category: 'সদস্য চাঁদা',
-            referenceId: createdPayments[0]?.id,
-            performedBy: userId,
-          },
-        });
-      }
+        // Inform member that payment info was received and is PENDING admin verification
+        this.notificationService.sendPushToUser(userId, {
+          title: 'চাঁদা জমা গৃহীত হয়েছে ⏳',
+          body: `আপনার ${monthNames} (${data.periodYear}) এর ৳${data.amount} চাঁদা জমার তথ্য পাওয়া গেছে। এটি অ্যাডমিনের যাচাই ও অনুমোদনের অপেক্ষায় রয়েছে।`,
+          url: '/organization/member',
+        }).catch(() => {});
+      }).catch(() => {});
 
       return {
         ...createdPayments[0],
         count: createdPayments.length,
         payments: createdPayments,
       };
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Review Member Contribution Payment (Admin / Officer Approval)
+  // --------------------------------------------------------------------------
+  public async reviewContributionPayment(
+    reviewerId: string,
+    paymentId: string,
+    status: 'VERIFIED' | 'REJECTED',
+    notes?: string,
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+
+    const payment = await this.prisma.contributionPayment.findUnique({
+      where: { id: paymentId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    if (!payment) {
+      throw new NotFoundError('পেমেন্ট রেকর্ড পাওয়া যায়নি');
+    }
+
+    if (payment.status !== 'PENDING') {
+      throw new BadRequestError(`এই পেমেন্টটি ইতিমধ্যে ${payment.status === 'VERIFIED' ? 'অনুমোদিত' : 'বাতিলকৃত'}`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedPayment = await tx.contributionPayment.update({
+        where: { id: paymentId },
+        data: {
+          status,
+          verifiedBy: reviewerId,
+          notes: notes ? (payment.notes ? `${payment.notes} | ${notes}` : notes) : payment.notes,
+        },
+      });
+
+      if (status === 'VERIFIED') {
+        // Update member's last payment date
+        await tx.orgMembership.updateMany({
+          where: { userId: payment.userId },
+          data: { lastPaymentDate: new Date() },
+        });
+
+        // Credit general fund
+        const generalFund = await tx.orgFund.findUnique({ where: { code: 'GENERAL' } });
+        if (generalFund) {
+          await tx.orgFund.update({
+            where: { id: generalFund.id },
+            data: { balance: { increment: payment.amount } },
+          });
+
+          const monthLabel = MONTH_NAMES_BN[payment.periodMonth - 1] || `${payment.periodMonth} তম`;
+
+          await tx.fundTransaction.create({
+            data: {
+              fundId: generalFund.id,
+              type: 'CONTRIBUTION',
+              amount: payment.amount,
+              title: `মাসিক চাঁদা অনুমোদন (${monthLabel} ${payment.periodYear}) - ${payment.user?.name || 'সদস্য'}`,
+              description: `রশিদ: ${payment.receiptNumber}${payment.trxId ? `, TrxID: ${payment.trxId}` : ''}`,
+              category: 'সদস্য চাঁদা',
+              referenceId: payment.id,
+              performedBy: reviewerId,
+            },
+          });
+        }
+      }
+
+      // Trigger push notification with sound to the member's phone
+      const monthLabel = MONTH_NAMES_BN[payment.periodMonth - 1] || `${payment.periodMonth} তম`;
+      if (status === 'VERIFIED') {
+        this.notificationService.sendPushToUser(payment.userId, {
+          title: 'মাসিক চাঁদা অনুমোদিত! ✅',
+          body: `আপনার ${monthLabel} ${payment.periodYear} এর ৳${payment.amount} মাসিক চাঁদা সফলভাবে অনুমোদিত হয়েছে। ধন্যবাদ!`,
+          url: '/organization/member',
+          sound: '/sounds/notification.wav',
+        }).catch(() => {});
+      } else {
+        this.notificationService.sendPushToUser(payment.userId, {
+          title: 'মাসিক চাঁদা আবেদন বাতিল ⚠️',
+          body: `আপনার ${monthLabel} ${payment.periodYear} এর চাঁদা আবেদনটি বাতিল করা হয়েছে${notes ? `: ${notes}` : ''}।`,
+          url: '/organization/member',
+          sound: '/sounds/notification.wav',
+        }).catch(() => {});
+      }
+
+      return updatedPayment;
     });
   }
 
@@ -596,14 +678,17 @@ export class OrganizationService {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
 
-    const [allPayments, recentPayments, notices, meetings, upcomingElections] = await Promise.all([
+    const [allVerifiedPayments, pendingPayments, recentPayments, notices, meetings, upcomingElections] = await Promise.all([
       this.prisma.contributionPayment.findMany({
         where: { userId, status: 'VERIFIED' },
       }),
       this.prisma.contributionPayment.findMany({
+        where: { userId, status: 'PENDING' },
+      }),
+      this.prisma.contributionPayment.findMany({
         where: { userId },
         orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }, { paidAt: 'desc' }],
-        take: 12,
+        take: 100,
       }),
       this.prisma.orgNotice.findMany({
         orderBy: [{ isPinned: 'desc' }, { publishedAt: 'desc' }],
@@ -625,28 +710,35 @@ export class OrganizationService {
       }),
     ]);
 
-    // Calculate total contributed by member
-    const totalContributed = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    // Calculate total contributed by member (only verified amounts)
+    const totalContributed = allVerifiedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
     // Filter payments for current year
-    const paymentsThisYear = allPayments.filter((p) => p.periodYear === currentYear);
+    const paymentsThisYear = allVerifiedPayments.filter((p) => p.periodYear === currentYear);
     const paidMonthSet = new Set(paymentsThisYear.map((p) => p.periodMonth));
     const paidMonthsThisYear = Array.from(paidMonthSet);
+
+    const pendingThisYear = pendingPayments.filter((p) => p.periodYear === currentYear);
 
     // Build 12-month calendar for current year
     const calendar = Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
-      const payment = paymentsThisYear.find((p) => p.periodMonth === month);
+      const verifiedPayment = paymentsThisYear.find((p) => p.periodMonth === month);
+      const pendingPayment = pendingThisYear.find((p) => p.periodMonth === month);
+      const isPaid = Boolean(verifiedPayment);
+      const isPending = Boolean(pendingPayment);
       return {
         month,
         year: currentYear,
-        isPaid: Boolean(payment),
-        amount: payment?.amount || membership.monthlyContribution,
-        paidAt: payment?.paidAt ? payment.paidAt.toISOString() : undefined,
+        isPaid,
+        isPending,
+        status: isPaid ? 'VERIFIED' : isPending ? 'PENDING' : 'DUE',
+        amount: verifiedPayment?.amount || pendingPayment?.amount || membership.monthlyContribution,
+        paidAt: (verifiedPayment || pendingPayment)?.paidAt ? (verifiedPayment || pendingPayment)!.paidAt.toISOString() : undefined,
       };
     });
 
-    // Calculate pending dues up to the current month in current year
+    // Calculate pending dues up to the current month in current year (ONLY verified payments count as cleared)
     const joinedYear = membership.joinedAt ? new Date(membership.joinedAt).getFullYear() : currentYear;
     const joinedMonth = membership.joinedAt ? new Date(membership.joinedAt).getMonth() + 1 : 1;
     const startMonth = currentYear === joinedYear ? joinedMonth : 1;
@@ -673,6 +765,7 @@ export class OrganizationService {
       agreement,
       totalContributed,
       pendingDueCount,
+      pendingReviewCount: pendingThisYear.length,
       calendar,
       currentYear,
       paidMonthsThisYear,
@@ -718,12 +811,12 @@ export class OrganizationService {
       }),
       this.prisma.contributionPayment.findMany({
         orderBy: { paidAt: 'desc' },
-        take: 8,
-        include: { user: { select: { id: true, name: true, email: true, image: true } } },
+        take: 50,
+        include: { user: { select: { id: true, name: true, email: true, image: true, phone: true } } },
       }),
       this.prisma.orgFund.findMany({ orderBy: { balance: 'desc' } }),
       this.prisma.contributionPayment.aggregate({
-        where: { status: 'PAID' },
+        where: { status: 'VERIFIED' },
         _sum: { amount: true },
       }),
       this.prisma.fundTransaction.aggregate({
@@ -2220,5 +2313,911 @@ export class OrganizationService {
       return tx.election.delete({ where: { id: electionId } });
     });
   }
-}
 
+  // =========================================================================
+  // Organization Member Management Dashboard (Admin)
+  // =========================================================================
+
+  public async getAdminMembers(
+    reviewerId: string,
+    query: {
+      search?: string;
+      status?: string;
+      designationId?: string;
+      committeeId?: string;
+      paymentStatus?: string;
+      year?: number;
+      month?: number;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+
+    const now = new Date();
+    const targetYear = query.year || now.getFullYear();
+    const targetMonth = query.month || now.getMonth() + 1;
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.min(100, Math.max(1, query.limit || 20));
+    const skip = (page - 1) * limit;
+
+    // 1. Compute Top-Level Summary Counts (Always accurate from DB)
+    const [
+      totalRegistered,
+      totalActive,
+      pendingApps,
+      approvedPaymentPending,
+      suspendedCount,
+      archivedCount,
+    ] = await Promise.all([
+      this.prisma.orgMembership.count(),
+      this.prisma.orgMembership.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.orgApplication.count({ where: { status: 'PENDING' } }),
+      this.prisma.orgMembership.count({ where: { status: 'APPROVED_PAYMENT_PENDING' } }),
+      this.prisma.orgMembership.count({ where: { status: 'SUSPENDED' } }),
+      this.prisma.orgMembership.count({ where: { status: 'ARCHIVED' } }),
+    ]);
+
+    // Active members payment status for current/target month
+    const activeMembers = await this.prisma.orgMembership.findMany({
+      where: { status: 'ACTIVE' },
+      select: { userId: true, joinedAt: true, createdAt: true },
+    });
+    const activeUserIds = activeMembers.map((m) => m.userId);
+
+    const verifiedPaymentsTargetMonth = await this.prisma.contributionPayment.findMany({
+      where: {
+        userId: { in: activeUserIds },
+        periodYear: targetYear,
+        periodMonth: targetMonth,
+        status: 'VERIFIED',
+      },
+      select: { userId: true },
+    });
+    const paidUserIdSet = new Set(verifiedPaymentsTargetMonth.map((p) => p.userId));
+    const paidThisMonthCount = paidUserIdSet.size;
+    const unpaidThisMonthCount = Math.max(0, activeUserIds.length - paidThisMonthCount);
+
+    // Overdue count: active members who have not paid past due months
+    let overdueCount = 0;
+    const allVerifiedPayments = await this.prisma.contributionPayment.findMany({
+      where: {
+        userId: { in: activeUserIds },
+        status: 'VERIFIED',
+      },
+      select: { userId: true, periodYear: true, periodMonth: true },
+    });
+    const memberVerifiedMap = new Map<string, Set<string>>();
+    for (const p of allVerifiedPayments) {
+      if (!memberVerifiedMap.has(p.userId)) memberVerifiedMap.set(p.userId, new Set());
+      memberVerifiedMap.get(p.userId)!.add(`${p.periodYear}-${p.periodMonth}`);
+    }
+
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    for (const m of activeMembers) {
+      const jDate = m.joinedAt ? new Date(m.joinedAt) : new Date(m.createdAt);
+      const jYear = jDate.getFullYear();
+      const jMonth = jDate.getMonth() + 1;
+      const vSet = memberVerifiedMap.get(m.userId) || new Set();
+
+      let hasOverdue = false;
+      const startM = targetYear === jYear ? jMonth : 1;
+      const checkEndM = targetYear === currentYear ? currentMonth : 12;
+
+      for (let monthIdx = startM; monthIdx <= checkEndM; monthIdx++) {
+        if (!vSet.has(`${targetYear}-${monthIdx}`)) {
+          hasOverdue = true;
+          break;
+        }
+      }
+      if (hasOverdue) overdueCount++;
+    }
+
+    // 2. Build Prisma Filter Condition for Member Query
+    const whereCondition: any = {};
+
+    if (query.status && query.status !== 'ALL') {
+      whereCondition.status = query.status;
+    }
+
+    if (query.designationId) {
+      whereCondition.OR = [
+        { designationId: query.designationId },
+        { user: { committeeAssignments: { some: { designationId: query.designationId } } } },
+      ];
+    }
+
+    if (query.committeeId) {
+      whereCondition.user = {
+        ...(whereCondition.user || {}),
+        committeeAssignments: {
+          some: { committeeId: query.committeeId },
+        },
+      };
+    }
+
+    if (query.search && query.search.trim()) {
+      const q = query.search.trim();
+      whereCondition.OR = [
+        { memberNumber: { contains: q, mode: 'insensitive' } },
+        { profession: { contains: q, mode: 'insensitive' } },
+        { user: { name: { contains: q, mode: 'insensitive' } } },
+        { user: { phone: { contains: q, mode: 'insensitive' } } },
+        { user: { email: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    // Payment status filter (PAID, UNPAID, PENDING, OVERDUE)
+    if (query.paymentStatus && query.paymentStatus !== 'ALL') {
+      if (query.paymentStatus === 'PAID') {
+        whereCondition.userId = { in: Array.from(paidUserIdSet) };
+      } else if (query.paymentStatus === 'UNPAID') {
+        whereCondition.userId = { notIn: Array.from(paidUserIdSet) };
+      } else if (query.paymentStatus === 'PENDING') {
+        const pendingPayments = await this.prisma.contributionPayment.findMany({
+          where: {
+            periodYear: targetYear,
+            periodMonth: targetMonth,
+            status: 'PENDING',
+          },
+          select: { userId: true },
+        });
+        whereCondition.userId = { in: pendingPayments.map((p) => p.userId) };
+      }
+    }
+
+    const [totalMatching, memberships] = await Promise.all([
+      this.prisma.orgMembership.count({ where: whereCondition }),
+      this.prisma.orgMembership.findMany({
+        where: whereCondition,
+        skip,
+        take: limit,
+        orderBy: [{ joinedAt: 'desc' }, { createdAt: 'desc' }],
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              phone: true,
+              email: true,
+              role: true,
+              committeeAssignments: {
+                where: { isCurrent: true },
+                include: {
+                  committee: { select: { id: true, name: true } },
+                  designation: { select: { id: true, name: true, code: true, rank: true } },
+                },
+              },
+            },
+          },
+          designation: { select: { id: true, name: true, code: true, rank: true } },
+        },
+      }),
+    ]);
+
+    // Attach target month payment info for each returned member
+    const memberUserIds = memberships.map((m) => m.userId);
+    const targetPayments = await this.prisma.contributionPayment.findMany({
+      where: {
+        userId: { in: memberUserIds },
+        periodYear: targetYear,
+        periodMonth: targetMonth,
+      },
+      select: {
+        userId: true,
+        amount: true,
+        status: true,
+        paidAt: true,
+        paymentMethod: true,
+        receiptNumber: true,
+      },
+    });
+    const paymentMap = new Map<string, any>();
+    for (const p of targetPayments) {
+      paymentMap.set(p.userId, p);
+    }
+
+    const members = memberships.map((m) => {
+      const payment = paymentMap.get(m.userId);
+      let monthStatus = 'UNPAID';
+      if (payment) {
+        if (payment.status === 'VERIFIED') monthStatus = 'PAID';
+        else if (payment.status === 'PENDING') monthStatus = 'PENDING';
+        else if (payment.status === 'REJECTED') monthStatus = 'REJECTED';
+      } else if (targetYear < currentYear || (targetYear === currentYear && targetMonth < currentMonth)) {
+        monthStatus = 'OVERDUE';
+      }
+
+      // Check if reminder was sent recently (cooldown: 1 hour)
+      const lastReminder = m.lastReminderSentAt;
+      const canSendReminder = !lastReminder || (Date.now() - new Date(lastReminder).getTime() > 60 * 60 * 1000);
+
+      return {
+        id: m.id,
+        userId: m.userId,
+        name: m.user?.name || 'অজ্ঞাত সদস্য',
+        image: m.user?.image || null,
+        phone: m.user?.phone || null,
+        email: m.user?.email || null,
+        systemRole: m.user?.role || 'USER',
+        memberNumber: m.memberNumber || 'AMP-NEW',
+        status: m.status,
+        profession: m.profession || null,
+        monthlyContribution: m.monthlyContribution,
+        orgRole: m.orgRole,
+        joinedAt: m.joinedAt,
+        lastPaymentDate: m.lastPaymentDate,
+        lastReminderSentAt: m.lastReminderSentAt,
+        canSendReminder,
+        user: {
+          id: m.user?.id || m.userId,
+          name: m.user?.name || 'অজ্ঞাত',
+          phone: m.user?.phone || null,
+          image: m.user?.image || null,
+          profession: m.profession || null,
+          email: m.user?.email || null,
+        },
+        designationId: m.designationId,
+        designation: m.designation || null,
+        primaryDesignation: m.designation || null,
+        committees: m.user?.committeeAssignments || [],
+        targetMonthPayment: payment || null,
+        paymentStatus: monthStatus,
+        currentMonthStatus: monthStatus,
+      };
+    });
+
+    const [allDesignations, allCommittees] = await Promise.all([
+      this.prisma.orgDesignation.findMany({ where: { isActive: true }, orderBy: { rank: 'asc' } }),
+      this.prisma.orgCommittee.findMany({ where: { isActive: true } }),
+    ]);
+
+    return {
+      members,
+      pagination: {
+        page,
+        limit,
+        total: totalMatching,
+        totalPages: Math.ceil(totalMatching / limit) || 1,
+      },
+      summary: {
+        totalRegistered,
+        totalActive,
+        pendingApps,
+        approvedPaymentPending,
+        suspendedCount,
+        archivedCount,
+        paidThisMonth: paidThisMonthCount,
+        unpaidThisMonth: unpaidThisMonthCount,
+        overdueCount,
+      },
+      summaryCounts: {
+        totalRegistered,
+        totalActive,
+        pendingApplications: pendingApps,
+        approvedPaymentPending,
+        suspended: suspendedCount,
+        archived: archivedCount,
+        paidThisMonth: paidThisMonthCount,
+        unpaidThisMonth: unpaidThisMonthCount,
+        overdueMembers: overdueCount,
+      },
+      designations: allDesignations,
+      committees: allCommittees,
+      targetPeriod: {
+        year: targetYear,
+        month: targetMonth,
+        monthName: MONTH_NAMES_BN[targetMonth - 1] || `${targetMonth} তম`,
+      },
+    };
+  }
+
+  public async getAdminMemberDetails(reviewerId: string, memberId: string) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+
+    const membership = await this.prisma.orgMembership.findUnique({
+      where: { id: memberId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            image: true,
+            role: true,
+            createdAt: true,
+          },
+        },
+        designation: true,
+      },
+    });
+
+    if (!membership) {
+      throw new NotFoundError('সদস্য রেকর্ড খুঁজে পাওয়া যায়নি');
+    }
+
+    const [payments, committeeHistory, reminderHistory] = await Promise.all([
+      this.prisma.contributionPayment.findMany({
+        where: { userId: membership.userId },
+        orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }, { paidAt: 'desc' }],
+        take: 100,
+      }),
+      this.prisma.orgCommitteeMember.findMany({
+        where: { userId: membership.userId },
+        orderBy: [{ isCurrent: 'desc' }, { assignedAt: 'desc' }],
+        include: {
+          committee: { select: { id: true, name: true } },
+          designation: { select: { id: true, name: true, code: true, rank: true } },
+        },
+      }),
+      this.prisma.contributionReminder.findMany({
+        where: { userId: membership.userId },
+        orderBy: { sentAt: 'desc' },
+        take: 30,
+      }),
+    ]);
+
+    const totalVerifiedContributions = payments
+      .filter((p) => p.status === 'VERIFIED')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    return {
+      membership,
+      user: membership.user,
+      totalVerifiedContributions,
+      payments,
+      recentPayments: payments,
+      committeeHistory,
+      committees: committeeHistory,
+      reminderHistory,
+      reminders: reminderHistory,
+    };
+  }
+
+  public async updateMemberStatus(
+    reviewerId: string,
+    memberId: string,
+    status: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED' | 'APPROVED_PAYMENT_PENDING',
+    notes?: string,
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const membership = await this.prisma.orgMembership.findUnique({
+      where: { id: memberId },
+      include: { user: { select: { name: true } } },
+    });
+
+    if (!membership) {
+      throw new NotFoundError('সদস্য রেকর্ড খুঁজে পাওয়া যায়নি');
+    }
+
+    const updated = await this.prisma.orgMembership.update({
+      where: { id: memberId },
+      data: {
+        status,
+        notes: notes
+          ? membership.notes
+            ? `${membership.notes}\n[${new Date().toISOString()}] ${notes}`
+            : notes
+          : membership.notes,
+      },
+    });
+
+    return updated;
+  }
+
+  public async assignMemberDesignation(
+    reviewerId: string,
+    memberId: string,
+    data: {
+      designationId?: string | null;
+      committeeId?: string;
+      customTitle?: string;
+      startDate?: string;
+      endDate?: string;
+      notes?: string;
+    },
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const membership = await this.prisma.orgMembership.findUnique({
+      where: { id: memberId },
+      select: { id: true, userId: true },
+    });
+
+    if (!membership) {
+      throw new NotFoundError('সদস্য রেকর্ড খুঁজে পাওয়া যায়নি');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Update primary designation in OrgMembership
+      const updatedMembership = await tx.orgMembership.update({
+        where: { id: memberId },
+        data: {
+          designationId: data.designationId !== undefined ? data.designationId : undefined,
+        },
+        include: { designation: true },
+      });
+
+      // 2. If committeeId is specified, assign / update committee position history
+      if (data.committeeId && data.designationId) {
+        await tx.orgCommitteeMember.create({
+          data: {
+            committeeId: data.committeeId,
+            userId: membership.userId,
+            designationId: data.designationId,
+            customTitle: data.customTitle || null,
+            startDate: data.startDate ? new Date(data.startDate) : new Date(),
+            endDate: data.endDate ? new Date(data.endDate) : null,
+            isCurrent: true,
+            notes: data.notes || null,
+          },
+        });
+      }
+
+      return updatedMembership;
+    });
+  }
+
+  // =========================================================================
+  // Monthly Contribution Tracking & Reminders (Admin)
+  // =========================================================================
+
+  public async getContributionTracking(
+    reviewerId: string,
+    year?: number,
+    month?: number,
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+
+    const now = new Date();
+    const targetYear = year || now.getFullYear();
+    const targetMonth = month || now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    // 1. Fetch active members
+    const activeMembers = await this.prisma.orgMembership.findMany({
+      where: { status: 'ACTIVE' },
+      include: {
+        user: { select: { id: true, name: true, phone: true, image: true, email: true } },
+        designation: { select: { name: true } },
+      },
+      orderBy: [{ joinedAt: 'asc' }],
+    });
+
+    // 2. Fetch all payments for this target period
+    const paymentsThisPeriod = await this.prisma.contributionPayment.findMany({
+      where: {
+        periodYear: targetYear,
+        periodMonth: targetMonth,
+      },
+      include: {
+        user: { select: { id: true, name: true, phone: true, image: true } },
+      },
+      orderBy: { paidAt: 'desc' },
+    });
+
+    const verifiedPaymentMap = new Map<string, any>();
+    const pendingPaymentMap = new Map<string, any>();
+
+    for (const p of paymentsThisPeriod) {
+      if (p.status === 'VERIFIED') {
+        verifiedPaymentMap.set(p.userId, p);
+      } else if (p.status === 'PENDING') {
+        pendingPaymentMap.set(p.userId, p);
+      }
+    }
+
+    const paidMembers: any[] = [];
+    const unpaidMembers: any[] = [];
+    const pendingMembers: any[] = [];
+    const overdueMembers: any[] = [];
+
+    const isMonthOverdue =
+      targetYear < currentYear || (targetYear === currentYear && targetMonth <= currentMonth);
+
+    for (const member of activeMembers) {
+      const verified = verifiedPaymentMap.get(member.userId);
+      const pending = pendingPaymentMap.get(member.userId);
+
+      const lastReminder = member.lastReminderSentAt;
+      const canSendReminder =
+        !lastReminder || Date.now() - new Date(lastReminder).getTime() > 60 * 60 * 1000;
+
+      const memberItem = {
+        memberId: member.id,
+        userId: member.userId,
+        name: member.user?.name || 'সদস্য',
+        phone: member.user?.phone || '—',
+        image: member.user?.image || null,
+        memberNumber: member.memberNumber || 'AMP-MEMBER',
+        agreedAmount: member.monthlyContribution,
+        designation: member.designation?.name || member.orgRole,
+        lastReminderSentAt: member.lastReminderSentAt,
+        canSendReminder,
+      };
+
+      if (verified) {
+        paidMembers.push({
+          ...memberItem,
+          paymentId: verified.id,
+          paidAmount: verified.amount,
+          paidAt: verified.paidAt,
+          paymentMethod: verified.paymentMethod,
+          trxId: verified.trxId,
+          receiptNumber: verified.receiptNumber,
+          status: 'VERIFIED',
+        });
+      } else if (pending) {
+        pendingMembers.push({
+          ...memberItem,
+          paymentId: pending.id,
+          submittedAmount: pending.amount,
+          submittedAt: pending.paidAt,
+          paymentMethod: pending.paymentMethod,
+          trxId: pending.trxId,
+          senderNumber: pending.senderNumber,
+          receiptNumber: pending.receiptNumber,
+          status: 'PENDING',
+        });
+      } else {
+        unpaidMembers.push({
+          ...memberItem,
+          dueMonth: targetMonth,
+          dueYear: targetYear,
+          status: isMonthOverdue ? 'OVERDUE' : 'UPCOMING',
+        });
+
+        if (isMonthOverdue) {
+          overdueMembers.push({
+            ...memberItem,
+            dueMonth: targetMonth,
+            dueYear: targetYear,
+            status: 'OVERDUE',
+          });
+        }
+      }
+    }
+
+    return {
+      period: {
+        year: targetYear,
+        month: targetMonth,
+        monthName: MONTH_NAMES_BN[targetMonth - 1] || `${targetMonth} তম`,
+        totalActiveMembers: activeMembers.length,
+      },
+      targetPeriod: {
+        year: targetYear,
+        month: targetMonth,
+        monthName: MONTH_NAMES_BN[targetMonth - 1] || `${targetMonth} তম`,
+      },
+      counts: {
+        paid: paidMembers.length,
+        unpaid: unpaidMembers.length,
+        pending: pendingMembers.length,
+        overdue: overdueMembers.length,
+      },
+      categoryCounts: {
+        totalActive: activeMembers.length,
+        paid: paidMembers.length,
+        unpaid: unpaidMembers.length,
+        pendingVerification: pendingMembers.length,
+        overdue: overdueMembers.length,
+      },
+      paid: paidMembers,
+      unpaid: unpaidMembers,
+      pending: pendingMembers,
+      overdue: overdueMembers,
+      paidMembers,
+      unpaidMembers,
+      pendingMembers,
+      overdueMembers,
+    };
+  }
+
+  public async sendManualContributionReminder(
+    reviewerId: string,
+    data: {
+      userId?: string;
+      memberId?: string;
+      periodYear?: number;
+      year?: number;
+      periodMonth?: number;
+      month?: number;
+      channel?: string;
+      customNote?: string;
+    },
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+
+    const targetUserId = data.userId;
+    const targetMemberId = data.memberId;
+    const periodYear = Number(data.periodYear || data.year || new Date().getFullYear());
+    const periodMonth = Number(data.periodMonth || data.month || new Date().getMonth() + 1);
+
+    if (!targetUserId && !targetMemberId) {
+      throw new BadRequestError('সদস্য বা ইউজার আইডি প্রদান আবশ্যক');
+    }
+
+    const membership = await this.prisma.orgMembership.findFirst({
+      where: targetMemberId ? { id: targetMemberId } : { userId: targetUserId },
+      include: { user: { select: { id: true, name: true, phone: true } } },
+    });
+
+    if (!membership || membership.status !== 'ACTIVE') {
+      throw new BadRequestError('কেবলমাত্র সক্রিয় সদস্যকে চাঁদার তাগিদ পাঠানো সম্ভব');
+    }
+
+    const actualUserId = membership.userId;
+
+    // Check if already paid
+    const existingVerified = await this.prisma.contributionPayment.findFirst({
+      where: {
+        userId: actualUserId,
+        periodYear,
+        periodMonth,
+        status: 'VERIFIED',
+      },
+    });
+
+    if (existingVerified) {
+      throw new BadRequestError('এই সদস্য ইতিমধ্যে এই মাসের চাঁদা সফলভাবে পরিশোধ করেছেন');
+    }
+
+    // Check cooldown (1 hour)
+    if (membership.lastReminderSentAt) {
+      const diffMs = Date.now() - new Date(membership.lastReminderSentAt).getTime();
+      if (diffMs < 60 * 60 * 1000) {
+        const remainingMinutes = Math.ceil((60 * 60 * 1000 - diffMs) / 60000);
+        throw new BadRequestError(`এই সদস্যকে সম্প্রতি তাগিদ পাঠানো হয়েছে। অনুগ্রহ করে আরও ${remainingMinutes} মিনিট পর চেষ্টা করুন।`);
+      }
+    }
+
+    const monthName = MONTH_NAMES_BN[periodMonth - 1] || `${periodMonth} তম`;
+    const title = 'মাসিক চাঁদার তাগিদ 🔔';
+    const noteText = data.customNote ? `\n\nবিশেষ দ্রষ্টব্য: ${data.customNote}` : '';
+    const content = `প্রিয় ${membership.user.name}, আপনার ${monthName} (${periodYear}) মাসের সংগঠনের নির্ধারিত চাঁদা ৳${membership.monthlyContribution} এখনো পরিশোধ করা হয়নি। অনুগ্রহ করে সময়মতো চাঁদা পরিশোধ করুন।${noteText}`;
+
+    const now = new Date();
+    const slot = `MANUAL_${periodYear}_${periodMonth}_${now.getTime()}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. In-app notification
+      await tx.notification.create({
+        data: {
+          recipientId: actualUserId,
+          type: 'CONTRIBUTION_REMINDER',
+          title,
+          content,
+          entityType: 'ORG_CONTRIBUTION',
+          entityId: membership.id,
+          isRead: false,
+        },
+      });
+
+      // 2. Reminder record
+      await tx.contributionReminder.create({
+        data: {
+          userId: actualUserId,
+          periodYear,
+          periodMonth,
+          slot,
+          channel: data.channel || 'IN_APP',
+          sentAt: now,
+        },
+      });
+
+      // 3. Update member timestamp
+      await tx.orgMembership.update({
+        where: { id: membership.id },
+        data: { lastReminderSentAt: now },
+      });
+    });
+
+    // 4. Trigger WebPush with sound
+    this.notificationService.sendPushToUser(actualUserId, {
+      title,
+      body: content,
+      url: '/organization/member',
+      sound: '/sounds/notification.wav',
+    }).catch(() => {});
+
+    return {
+      success: true,
+      memberName: membership.user.name,
+      message: `${membership.user.name}-কে সফলভাবে চাঁদা পরিশোধের তাগিদ পাঠানো হয়েছে`,
+      sentAt: now,
+    };
+  }
+
+  public async sendBulkContributionReminders(
+    reviewerId: string,
+    data: {
+      userIds?: string[];
+      memberIds?: string[];
+      periodYear?: number;
+      year?: number;
+      periodMonth?: number;
+      month?: number;
+      filter?: 'ALL_UNPAID' | 'ONLY_OVERDUE';
+      customNote?: string;
+    },
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+
+    const periodYear = Number(data.periodYear || data.year || new Date().getFullYear());
+    const periodMonth = Number(data.periodMonth || data.month || new Date().getMonth() + 1);
+
+    let targetUserIds = data.userIds || [];
+
+    if (targetUserIds.length === 0) {
+      if (data.memberIds && data.memberIds.length > 0) {
+        const members = await this.prisma.orgMembership.findMany({
+          where: { id: { in: data.memberIds } },
+          select: { userId: true },
+        });
+        targetUserIds = members.map((m) => m.userId);
+      } else {
+        // Find all active members
+        const activeMembers = await this.prisma.orgMembership.findMany({
+          where: { status: 'ACTIVE' },
+          select: { userId: true, joinedAt: true },
+        });
+
+        const activeIds = activeMembers.map((m) => m.userId);
+        const verifiedPaid = await this.prisma.contributionPayment.findMany({
+          where: {
+            userId: { in: activeIds },
+            periodYear,
+            periodMonth,
+            status: 'VERIFIED',
+          },
+          select: { userId: true },
+        });
+
+        const paidSet = new Set(verifiedPaid.map((p) => p.userId));
+        targetUserIds = activeIds.filter((id) => !paidSet.has(id));
+      }
+    }
+
+    let sentCount = 0;
+    let skippedAlreadyPaid = 0;
+    let skippedCooldown = 0;
+
+    for (const uId of targetUserIds) {
+      try {
+        await this.sendManualContributionReminder(reviewerId, {
+          userId: uId,
+          periodYear,
+          periodMonth,
+          customNote: data.customNote,
+        });
+        sentCount++;
+      } catch (err: any) {
+        if (err?.message?.includes('ইতিমধ্যে এই মাসের চাঁদা')) {
+          skippedAlreadyPaid++;
+        } else if (err?.message?.includes('সম্প্রতি তাগিদ পাঠানো হয়েছে')) {
+          skippedCooldown++;
+        }
+      }
+    }
+
+    return {
+      targetedMembersCount: targetUserIds.length,
+      remindersSent: sentCount,
+      skippedCooldownCount: skippedCooldown,
+      totalRequested: targetUserIds.length,
+      sentCount,
+      skippedAlreadyPaid,
+      skippedCooldown,
+      message: `মোট ${sentCount} জন সদস্যকে সফলভাবে তাগিদ পাঠানো হয়েছে।` +
+        (skippedAlreadyPaid > 0 ? ` (${skippedAlreadyPaid} জন ইতিমধ্যে পরিশোধিত)` : '') +
+        (skippedCooldown > 0 ? ` (${skippedCooldown} জন কুলডাউন অবস্থায় আছে)` : ''),
+    };
+  }
+
+  // =========================================================================
+  // Dynamic Designation Management (Admin)
+  // =========================================================================
+
+  public async getAdminDesignations(reviewerId: string) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN', 'MODERATOR']);
+
+    const designations = await this.prisma.orgDesignation.findMany({
+      orderBy: [{ rank: 'asc' }, { name: 'asc' }],
+      include: {
+        _count: {
+          select: {
+            committeeMembers: true,
+            memberships: true,
+          },
+        },
+      },
+    });
+
+    return designations.map((d) => ({
+      id: d.id,
+      name: d.name,
+      code: d.code,
+      rank: d.rank,
+      description: d.description,
+      isActive: d.isActive,
+      activeMembersCount: d._count.memberships + d._count.committeeMembers,
+      memberCount: d._count.memberships + d._count.committeeMembers,
+    }));
+  }
+
+  public async createDesignation(
+    reviewerId: string,
+    data: {
+      name: string;
+      code: string;
+      rank?: number;
+      description?: string;
+    },
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const existing = await this.prisma.orgDesignation.findUnique({
+      where: { code: data.code.toUpperCase() },
+    });
+    if (existing) {
+      throw new ConflictError('এই কোডের একটি পদবি ইতিমধ্যে বিদ্যমান রয়েছে');
+    }
+
+    return this.prisma.orgDesignation.create({
+      data: {
+        name: data.name.trim(),
+        code: data.code.toUpperCase().trim(),
+        rank: data.rank ?? 10,
+        description: data.description?.trim() || null,
+        isActive: true,
+      },
+    });
+  }
+
+  public async updateDesignation(
+    reviewerId: string,
+    designationId: string,
+    data: {
+      name?: string;
+      rank?: number;
+      description?: string;
+      isActive?: boolean;
+    },
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+
+    const existing = await this.prisma.orgDesignation.findUnique({
+      where: { id: designationId },
+    });
+    if (!existing) {
+      throw new NotFoundError('পদবি খুঁজে পাওয়া যায়নি');
+    }
+
+    return this.prisma.orgDesignation.update({
+      where: { id: designationId },
+      data: {
+        name: data.name !== undefined ? data.name.trim() : undefined,
+        rank: data.rank !== undefined ? data.rank : undefined,
+        description: data.description !== undefined ? (data.description ? data.description.trim() : null) : undefined,
+        isActive: data.isActive !== undefined ? data.isActive : undefined,
+      },
+    });
+  }
+
+}

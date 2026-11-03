@@ -52,6 +52,8 @@ model User {
   meetingAttendances     OrgMeetingAttendance[]
   electionNominations    ElectionNomination[]
   voterParticipations    VoterParticipation[]
+  pushSubscriptions      PushSubscription[]
+  contributionReminders  ContributionReminder[]
 
 
   @@map("user")
@@ -315,21 +317,53 @@ model SavedPost {
 }
 
 model Notification {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   recipientId String
-  recipient   User     @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient   User      @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
   actorId     String?
-  type        String   // "FRIEND_REQUEST" | "FRIEND_ACCEPT" | "POST_LIKE" | "POST_COMMENT" | "COMMENT_REPLY" | "POST_SHARE" | "GROUP_INVITE" | "GROUP_JOIN_REQUEST" | "GROUP_APPROVED"
+  type        String    // "FRIEND_REQUEST" | "FRIEND_ACCEPT" | "POST_LIKE" | "POST_COMMENT" | "COMMENT_REPLY" | "POST_SHARE" | "GROUP_INVITE" | "GROUP_JOIN_REQUEST" | "GROUP_APPROVED" | "CONTRIBUTION_REMINDER"
   title       String
   content     String
-  entityId    String?  // postId, groupId, userId
-  entityType  String?  // "post" | "group" | "user"
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  entityId    String?   // postId, groupId, userId
+  entityType  String?   // "post" | "group" | "user" | "contribution_reminder"
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
 
   @@index([recipientId, isRead])
   @@index([createdAt])
+  @@index([type, isRead, readAt])
   @@map("notification")
+}
+
+model ContributionReminder {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  periodYear  Int
+  periodMonth Int
+  slot        String   // e.g. "ADVANCE_2026_11_28", "OVERDUE_2026_12_01_SLOT1", "MANUAL_2026_11_..."
+  channel     String   @default("IN_APP") // IN_APP, PUSH
+  sentAt      DateTime @default(now())
+
+  @@unique([userId, periodYear, periodMonth, slot])
+  @@index([userId, periodYear, periodMonth])
+  @@index([sentAt])
+  @@map("contribution_reminder")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("push_subscription")
 }
 
 model Conversation {
@@ -400,22 +434,26 @@ model Report {
 // ==========================================
 
 model OrgMembership {
-  id                  String    @id @default(uuid())
-  userId              String    @unique
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status              String    @default("PENDING") // PENDING, APPROVED_PAYMENT_PENDING, ACTIVE, REJECTED, SUSPENDED, ARCHIVED
-  memberNumber        String?   @unique // e.g. AMP-2026-0001
+  id                  String          @id @default(uuid())
+  userId              String          @unique
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designationId       String?
+  designation         OrgDesignation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  status              String          @default("PENDING") // PENDING, APPROVED_PAYMENT_PENDING, ACTIVE, REJECTED, SUSPENDED, ARCHIVED
+  memberNumber        String?         @unique // e.g. AMP-2026-0001
   profession          String?
-  monthlyContribution Float     @default(50.0)
-  orgRole             String    @default("MEMBER") // PRESIDENT, TREASURER, MODERATOR, MEMBER
+  monthlyContribution Float           @default(50.0)
+  orgRole             String          @default("MEMBER") // PRESIDENT, TREASURER, MODERATOR, MEMBER
   joinedAt            DateTime?
   lastPaymentDate     DateTime?
-  notes               String?   @db.Text
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  lastReminderSentAt  DateTime?
+  notes               String?         @db.Text
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   @@index([status])
   @@index([orgRole])
+  @@index([designationId])
   @@map("org_membership")
 }
 
@@ -495,7 +533,7 @@ model ContributionPayment {
   trxId         String?
   senderNumber  String?
   receiptNumber String   @unique // REC-2026-0001
-  status        String   @default("VERIFIED") // PENDING, VERIFIED, REJECTED
+  status        String   @default("PENDING") // PENDING, VERIFIED, REJECTED
   verifiedBy    String?
   notes         String?
   paidAt        DateTime @default(now())
@@ -544,8 +582,13 @@ model OrgDesignation {
   name              String               // সভাপতি, সাধারণ সম্পাদক, কোষাধ্যক্ষ...
   code              String               @unique // PRESIDENT, GENERAL_SECRETARY, VICE_PRESIDENT, TREASURER...
   rank              Int                  @default(10)
+  description       String?
+  isActive          Boolean              @default(true)
   committeeMembers  OrgCommitteeMember[]
+  memberships       OrgMembership[]
   electionPositions ElectionPosition[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @default(now()) @updatedAt
 
   @@map("org_designation")
 }
@@ -559,10 +602,15 @@ model OrgCommitteeMember {
   designationId String
   designation   OrgDesignation @relation(fields: [designationId], references: [id], onDelete: Restrict)
   customTitle   String?
+  startDate     DateTime?      @default(now())
+  endDate       DateTime?
+  isCurrent     Boolean        @default(true)
+  notes         String?
   assignedAt    DateTime       @default(now())
 
   @@index([committeeId])
   @@index([userId])
+  @@index([designationId])
   @@map("org_committee_member")
 }
 

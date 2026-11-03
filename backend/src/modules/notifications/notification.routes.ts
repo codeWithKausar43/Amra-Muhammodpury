@@ -5,6 +5,37 @@ import { successResponse } from '../../utils/api-response.js';
 export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new NotificationService(fastify.prisma);
 
+  // Get VAPID public key for browser push subscription
+  fastify.get('/notifications/vapid-public-key', async () => {
+    return successResponse({ publicKey: service.getVapidPublicKey() });
+  });
+
+  // Save Web Push subscription for authenticated user
+  fastify.post('/notifications/push-subscribe', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const body = request.body as {
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+    };
+    const result = await service.subscribePush(session.user.id, body);
+    return reply.send(successResponse(result, 'পুশ নোটিফিকেশন সফলভাবে নিবন্ধিত হয়েছে'));
+  });
+
+  // Send a test push notification to user's phone with sweet sound & vibration
+  fastify.post('/notifications/test-push', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const result = await service.sendPushToUser(session.user.id, {
+      title: 'আমরা মোহাম্মদপুরী 🔔',
+      body: '🎵 মিষ্টি নোটিফিকেশন সাউন্ড ও পুশ অ্যালার্ট সফলভাবে কাজ করছে!',
+      url: '/organization/member',
+      sound: '/sounds/notification.wav',
+      tag: 'test-sound-push',
+    });
+    return reply.send(
+      successResponse(result, 'টেস্ট নোটিফিকেশন সফলভাবে আপনার ডিভাইসে পাঠানো হয়েছে!'),
+    );
+  });
+
   fastify.get('/notifications', async (request, reply) => {
     const session = await fastify.authenticate(request, reply);
     const result = await service.getNotifications(session.user.id);
@@ -24,4 +55,3 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(result, result.message));
   });
 };
-

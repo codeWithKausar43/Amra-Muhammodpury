@@ -49,9 +49,16 @@ import { ApiResponse } from '@/types';
 import type { OrgApplication, OrgNotice, Election } from '@/features/organization/types';
 import { CandidateAvatar, cleanImageUrl, fileToDataUrl } from '@/features/organization/components/CandidateAvatar';
 import { FinancialAnalyticsChart } from '@/features/organization/components/FinancialAnalyticsChart';
+import { notificationAudio } from '@/lib/audio/notificationSound';
+import { CreditCard } from 'lucide-react';
+import { OrganizationMemberManagement } from '@/features/organization/components/OrganizationMemberManagement';
+import { MonthlyContributionTracking } from '@/features/organization/components/MonthlyContributionTracking';
+import { DesignationManagementSection } from '@/features/organization/components/DesignationManagementSection';
 
 type AdminTab =
+  | 'MEMBERS'
   | 'APPLICATIONS'
+  | 'CONTRIBUTIONS'
   | 'FUNDS'
   | 'TRANSACTIONS'
   | 'COMMITTEES'
@@ -66,7 +73,8 @@ function toBengaliNumber(num: number | string): string {
 }
 
 export default function OrganizationAdminPage() {
-  const [activeTab, setActiveTab] = React.useState<AdminTab>('APPLICATIONS');
+  const [activeTab, setActiveTab] = React.useState<AdminTab>('MEMBERS');
+  const [committeeSubView, setCommitteeSubView] = React.useState<'COMMITTEES' | 'DESIGNATIONS'>('COMMITTEES');
 
   // Application Filters & Search
   const [appFilter, setAppFilter] = React.useState<
@@ -159,8 +167,6 @@ export default function OrganizationAdminPage() {
     stats?.financialSummary?.totalContributions ||
     0;
   const totalExpense = stats?.financialSummary?.totalExpense || 0;
-  const pendingAppsCount = stats?.memberCounts?.pendingApplications ?? 0;
-  const activeMembersCount = stats?.memberCounts?.active ?? 0;
 
   // Filtered applications based on search
   const filteredApplications = React.useMemo(() => {
@@ -552,7 +558,7 @@ export default function OrganizationAdminPage() {
           </div>
 
           {/* Action Buttons - Perfectly Aligned Side-by-Side in 1 Row */}
-          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 flex-wrap">
             <button
               type="button"
               onClick={() => {
@@ -657,6 +663,19 @@ export default function OrganizationAdminPage() {
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none">
           <button
             type="button"
+            onClick={() => setActiveTab('MEMBERS')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'MEMBERS'
+                ? 'bg-brand-emerald text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>সদস্য ব্যবস্থাপনা</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('APPLICATIONS')}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'APPLICATIONS'
@@ -664,18 +683,21 @@ export default function OrganizationAdminPage() {
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
+            <FileText className="w-3.5 h-3.5" />
             <span>সদস্য আবেদন</span>
-            <span className="text-[10px] opacity-80">({toBengaliNumber(activeMembersCount)} সক্রিয়)</span>
-            {pendingAppsCount > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                activeTab === 'APPLICATIONS'
-                  ? 'bg-white text-brand-emerald'
-                  : 'bg-brand-emerald/15 text-brand-emerald'
-              }`}>
-                {toBengaliNumber(pendingAppsCount)}
-              </span>
-            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('CONTRIBUTIONS')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'CONTRIBUTIONS'
+                ? 'bg-brand-emerald text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>চাঁদা ট্র্যাকিং ও তাগিদ</span>
           </button>
 
           <button
@@ -702,7 +724,7 @@ export default function OrganizationAdminPage() {
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>লেনদেন ও চাঁদা লেজার</span>
+            <span>লেনদেন ও চাঁদা</span>
           </button>
 
           <button
@@ -749,6 +771,16 @@ export default function OrganizationAdminPage() {
       </div>
 
       {/* =========================================================================
+          Tab: Organization Member Management Dashboard (Admin)
+         ========================================================================= */}
+      {activeTab === 'MEMBERS' && <OrganizationMemberManagement />}
+
+      {/* =========================================================================
+          Tab: Monthly Contribution Tracking Dashboard (Admin)
+         ========================================================================= */}
+      {activeTab === 'CONTRIBUTIONS' && <MonthlyContributionTracking />}
+
+      {/* =========================================================================
           4. Tab 1: Member Applications Review (সদস্যপদ আবেদন - Seamless Clean Open Layout)
          ========================================================================= */}
       {activeTab === 'APPLICATIONS' && (
@@ -792,7 +824,7 @@ export default function OrganizationAdminPage() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  অপেক্ষমাণ {pendingAppsCount > 0 && `(${toBengaliNumber(pendingAppsCount)})`}
+                  অপেক্ষমাণ
                 </button>
                 <button
                   type="button"
@@ -1247,53 +1279,142 @@ export default function OrganizationAdminPage() {
             </div>
           )}
 
-          {/* Subview 2: Member Payments (Date Under Name, No Huge Gap, No Scrolling) */}
+          {/* Subview 2: Member Payments (Structured 3-Column Grid with Consistent Gaps) */}
           {trxView === 'PAYMENTS' && (
-            <div className="w-full">
+            <div className="w-full overflow-x-auto pb-2 -mx-1 px-1">
               {stats?.recentPayments && stats.recentPayments.length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-white/5">
-                  {stats.recentPayments.map((p) => (
-                    <div
-                      key={p.id}
-                      className="py-3 px-1 sm:px-2 flex items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors group"
-                    >
-                      {/* Left: Avatar + Member Name + Period/Date directly underneath */}
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className="w-9 h-9 rounded-full bg-brand-emerald/10 text-brand-emerald flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden relative ring-1 ring-brand-emerald/20">
-                          {p.user?.image ? (
-                            <Image
-                              src={p.user.image}
-                              alt={p.user.name || 'User'}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            p.user?.name?.charAt(0) || 'স'
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate group-hover:text-brand-emerald transition-colors">
-                            {p.user?.name || 'সদস্য'}
-                          </h4>
-                          {/* Date / Period directly under the name */}
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            মাসিক কিস্তি • {toBengaliNumber(p.periodMonth)}/{toBengaliNumber(p.periodYear)}
-                          </p>
-                        </div>
-                      </div>
+                <div className="divide-y divide-slate-100 dark:divide-white/5 min-w-[560px]">
+                  {stats.recentPayments.map((p) => {
+                    const isPending = p.status === 'PENDING';
+                    const isRejected = p.status === 'REJECTED';
 
-                      {/* Right: Paid Amount + Status Badge */}
-                      <div className="text-right shrink-0">
-                        <div className="font-mono font-bold text-xs sm:text-sm text-brand-emerald dark:text-brand-mint">
-                          + ৳ {toBengaliNumber(p.amount)}
+                    return (
+                      <div
+                        key={p.id}
+                        className="py-3 px-2 sm:px-3 grid grid-cols-[minmax(180px,1.4fr)_minmax(150px,1.1fr)_minmax(140px,auto)] items-center gap-4 sm:gap-6 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors group"
+                      >
+                        {/* Column 1: Avatar + Member Name & Monthly Period */}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-brand-emerald/10 text-brand-emerald flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden relative ring-1 ring-brand-emerald/20">
+                            {p.user?.image ? (
+                              <Image
+                                src={p.user.image}
+                                alt={p.user.name || 'User'}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              p.user?.name?.charAt(0) || 'স'
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate group-hover:text-brand-emerald transition-colors">
+                              {p.user?.name || 'সদস্য'}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                              মাসিক কিস্তি • {toBengaliNumber(p.periodMonth)}/{toBengaliNumber(p.periodYear)}
+                            </p>
+                          </div>
                         </div>
-                        <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-emerald/15 text-brand-emerald">
-                          <span className="w-1.5 h-1.5 rounded-full bg-brand-emerald" />
-                          পরিশোধিত
-                        </span>
+
+                        {/* Column 2: Phone Number & Method / Trx ID */}
+                        <div className="min-w-0">
+                          <div className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-mono truncate">
+                            {p.user?.phone ? p.user.phone : '—'}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            {p.paymentMethod && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                                {p.paymentMethod}
+                              </span>
+                            )}
+                            {p.trxId && (
+                              <span className="text-[10px] text-slate-400 font-mono truncate max-w-[120px]" title={p.trxId}>
+                                Trx: {p.trxId}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Column 3: Amount & Status Badge / Action Buttons */}
+                        <div className="flex flex-col items-end text-right justify-center shrink-0">
+                          <div
+                            className={`font-mono font-bold text-xs sm:text-sm ${
+                              isPending
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : isRejected
+                                ? 'text-rose-600 dark:text-rose-400 line-through'
+                                : 'text-brand-emerald dark:text-brand-mint'
+                            }`}
+                          >
+                            + ৳ {toBengaliNumber(p.amount)}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-0.5 justify-end">
+                            {isPending ? (
+                              <>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  অপেক্ষমাণ
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={mutations.reviewPayment.isPending}
+                                  onClick={async () => {
+                                    try {
+                                      await mutations.reviewPayment.mutateAsync({
+                                        id: p.id,
+                                        status: 'VERIFIED',
+                                      });
+                                      notificationAudio.play(1.0);
+                                    } catch (err: any) {
+                                      alert(err?.message || 'অনুমোদন ব্যর্থ হয়েছে');
+                                    }
+                                  }}
+                                  className="w-7 h-7 rounded-lg bg-brand-emerald text-white hover:bg-emerald-600 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 shadow-2xs active:scale-95 shrink-0"
+                                  title="চাঁদা অনুমোদন করুন"
+                                  aria-label="অনুমোদন করুন"
+                                >
+                                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={mutations.reviewPayment.isPending}
+                                  onClick={async () => {
+                                    if (!confirm('আপনি কি নিশ্চিত যে এই পেমেন্টটি বাতিল করতে চান?')) return;
+                                    try {
+                                      await mutations.reviewPayment.mutateAsync({
+                                        id: p.id,
+                                        status: 'REJECTED',
+                                      });
+                                      notificationAudio.play(1.0);
+                                    } catch (err: any) {
+                                      alert(err?.message || 'বাতিলকরণ ব্যর্থ হয়েছে');
+                                    }
+                                  }}
+                                  className="w-7 h-7 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-800 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
+                                  title="পেমেন্ট বাতিল করুন"
+                                  aria-label="বাতিল করুন"
+                                >
+                                  <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                                </button>
+                              </>
+                            ) : isRejected ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap">
+                                <X className="w-2.5 h-2.5" />
+                                বাতিলকৃত
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-emerald/15 text-brand-emerald whitespace-nowrap">
+                                <span className="w-1.5 h-1.5 rounded-full bg-brand-emerald" />
+                                পরিশোধিত
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="py-12 text-center space-y-3">
@@ -1327,7 +1448,34 @@ export default function OrganizationAdminPage() {
                 সংগঠনের আনুষ্ঠানিক পদবি, দায়িত্ব ও কার্যনির্বাহী কমিটির তালিকা
               </p>
             </div>
+
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setCommitteeSubView('COMMITTEES')}
+                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                  committeeSubView === 'COMMITTEES'
+                    ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                কমিটি পরিষদ
+              </button>
+              <button
+                type="button"
+                onClick={() => setCommitteeSubView('DESIGNATIONS')}
+                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                  committeeSubView === 'DESIGNATIONS'
+                    ? 'bg-brand-emerald text-white shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                পদবি ডিরেক্টরি
+              </button>
+            </div>
           </div>
+
+          {committeeSubView === 'DESIGNATIONS' && <DesignationManagementSection />}
 
           {/* Designations Grid (Clean Flat Badges) */}
           <div className="space-y-2.5">

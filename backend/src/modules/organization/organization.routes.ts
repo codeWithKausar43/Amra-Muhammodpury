@@ -1,10 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import { OrganizationService } from './organization.service.js';
+import { NotificationService } from '../notifications/notification.service.js';
+import { ContributionSchedulerService } from './contribution-scheduler.service.js';
 import {
   ApplyMembershipSchema,
   InitialPaymentSchema,
   PayContributionSchema,
   ReviewApplicationSchema,
+  ReviewPaymentSchema,
   CreateFundSchema,
   FundTransactionSchema,
   CreateCommitteeSchema,
@@ -21,11 +24,26 @@ import {
   SubmitNominationSchema,
   ReviewNominationSchema,
   CastVoteSchema,
+  AdminMembersQuerySchema,
+  UpdateMemberStatusSchema,
+  AssignMemberDesignationSchema,
+  ContributionTrackingQuerySchema,
+  SendContributionReminderSchema,
+  BulkContributionReminderSchema,
+  CreateDesignationSchema,
+  UpdateDesignationSchema,
 } from './organization.schema.js';
 import { successResponse } from '../../utils/api-response.js';
 
 export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new OrganizationService(fastify.prisma);
+  const notificationService = new NotificationService(fastify.prisma);
+  const scheduler = new ContributionSchedulerService(fastify.prisma, notificationService);
+  scheduler.start();
+
+  fastify.addHook('onClose', async () => {
+    scheduler.stop();
+  });
 
   // ==========================================================================
   // Public & General Endpoints
@@ -113,7 +131,7 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const validatedData = PayContributionSchema.parse(request.body);
     const payment = await service.payMonthlyContribution(session.user.id, validatedData);
     return reply.send(
-      successResponse(payment, 'মাসিক অনুদান সফলভাবে পরিশোধ ও সংরক্ষিত হয়েছে। ধন্যবাদ!'),
+      successResponse(payment, 'মাসিক অনুদানের তথ্য সফলভাবে জমা দেওয়া হয়েছে। অ্যাডমিন যাচাইয়ের পর এটি অনুমোদিত হবে।'),
     );
   });
 
@@ -247,6 +265,27 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     );
     return reply.send(
       successResponse(result, `আবেদন সফলভাবে ${validatedData.status === 'APPROVED' ? 'অনুমোদিত' : 'প্রত্যাখ্যাত'} হয়েছে`),
+    );
+  });
+
+  // Review member contribution payment
+  fastify.post('/admin/payments/:id/review', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = ReviewPaymentSchema.parse(request.body);
+    const result = await service.reviewContributionPayment(
+      session.user.id,
+      id,
+      validatedData.status,
+      validatedData.notes,
+    );
+    return reply.send(
+      successResponse(
+        result,
+        validatedData.status === 'VERIFIED'
+          ? 'সদস্যের চাঁদা সফলভাবে অনুমোদন ও তহবিল হালনাগাদ করা হয়েছে!'
+          : 'সদস্যের চাঁদা বাতিল করা হয়েছে।',
+      ),
     );
   });
 
@@ -417,5 +456,91 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     await service.deleteElection(session.user.id, id);
     return reply.send(successResponse(null, 'নির্বাচন সফলভাবে মুছে ফেলা হয়েছে'));
   });
-};
 
+  // ==========================================================================
+  // Organization Member Management, Tracking, Reminders & Designation Routes
+  // ==========================================================================
+
+  // Admin Member Directory & Filter
+  fastify.get('/admin/members', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedQuery = AdminMembersQuerySchema.parse(request.query);
+    const result = await service.getAdminMembers(session.user.id, validatedQuery);
+    return reply.send(successResponse(result, 'সদস্য তালিকা সফলভাবে লোড হয়েছে'));
+  });
+
+  // Admin Member Details
+  fastify.get('/admin/members/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const member = await service.getAdminMemberDetails(session.user.id, id);
+    return reply.send(successResponse(member, 'সদস্যের বিস্তারিত বিবরণ লোড হয়েছে'));
+  });
+
+  // Admin Update Member Status
+  fastify.patch('/admin/members/:id/status', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = UpdateMemberStatusSchema.parse(request.body);
+    const updated = await service.updateMemberStatus(session.user.id, id, validatedData.status, validatedData.notes);
+    return reply.send(successResponse(updated, 'সদস্যের স্ট্যাটাস সফলভাবে আপডেট হয়েছে'));
+  });
+
+  // Admin Assign Member Designation
+  fastify.patch('/admin/members/:id/designation', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = AssignMemberDesignationSchema.parse(request.body);
+    const updated = await service.assignMemberDesignation(session.user.id, id, validatedData);
+    return reply.send(successResponse(updated, 'সদস্যের পদবি সফলভাবে নির্ধারিত হয়েছে'));
+  });
+
+  // Admin Contribution Tracking (Paid, Unpaid, Pending, Overdue)
+  fastify.get('/admin/contributions/tracking', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedQuery = ContributionTrackingQuerySchema.parse(request.query);
+    const result = await service.getContributionTracking(session.user.id, validatedQuery.year, validatedQuery.month);
+    return reply.send(successResponse(result, 'মাসিক চাঁদা ট্র্যাকিং তথ্য লোড হয়েছে'));
+  });
+
+  // Admin Send Manual Reminder to Individual
+  fastify.post('/admin/contributions/remind', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = SendContributionReminderSchema.parse(request.body);
+    const result = await service.sendManualContributionReminder(session.user.id, validatedData);
+    return reply.send(successResponse(result, 'চাঁদা পরিশোধের তাগিদ পাঠানো হয়েছে'));
+  });
+
+  // Admin Send Bulk Reminders
+  fastify.post('/admin/contributions/bulk-remind', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = BulkContributionReminderSchema.parse(request.body);
+    const result = await service.sendBulkContributionReminders(session.user.id, validatedData);
+    return reply.send(successResponse(result, 'একসাথে সকল বকেয়া তাগিদ পাঠানো সম্পন্ন হয়েছে'));
+  });
+
+  // Admin Designations List
+  fastify.get('/admin/designations', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const result = await service.getAdminDesignations(session.user.id);
+    return reply.send(successResponse(result, 'পদবি তালিকা লোড হয়েছে'));
+  });
+
+  // Admin Create Designation
+  fastify.post('/admin/designations', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = CreateDesignationSchema.parse(request.body);
+    const result = await service.createDesignation(session.user.id, validatedData);
+    return reply.status(201).send(successResponse(result, 'নতুন পদবি সফলভাবে তৈরি হয়েছে'));
+  });
+
+  // Admin Update Designation
+  fastify.put('/admin/designations/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = UpdateDesignationSchema.parse(request.body);
+    const result = await service.updateDesignation(session.user.id, id, validatedData);
+    return reply.send(successResponse(result, 'পদবি সফলভাবে আপডেট করা হয়েছে'));
+  });
+
+};

@@ -206,7 +206,7 @@ function downloadReceiptCanvas(receipt: ContributionPayment, membership: any) {
   renderRow('সদস্যের নাম:', memberName, 'অনুদানের খাত:', purpose);
   renderRow('সদস্য আইডি:', memberId, 'পেমেন্ট মাধ্যম:', receipt.paymentMethod || 'BKASH');
   renderRow('পদবী ও দায়িত্ব:', designation, 'ট্রানজেকশন ID:', receipt.trxId || 'TRX-AUTO');
-  renderRow('পরিশোধের তারিখ:', issueDateStr, 'অনুমোদনের স্ট্যাটাস:', 'সফল ও সংরক্ষিত (VERIFIED)');
+  renderRow('পরিশোধের তারিখ:', issueDateStr, 'অনুমোদনের স্ট্যাটাস:', receipt.status === 'PENDING' ? 'যাচাই প্রক্রিয়াধীন (PENDING)' : receipt.status === 'REJECTED' ? 'বাতিলকৃত (REJECTED)' : 'অনুমোদিত ও সংরক্ষিত (VERIFIED)');
 
   // Amount Highlight Box
   currentY += 15;
@@ -340,6 +340,72 @@ export default function MemberDashboardPage() {
   const [payError, setPayError] = React.useState<string | null>(null);
   const [paySuccessMsg, setPaySuccessMsg] = React.useState<string | null>(null);
 
+  // Dynamic 12-month calendar state based on selected payYear
+  const yearCalendar = React.useMemo(() => {
+    const now = new Date();
+    const curY = now.getFullYear();
+    const curM = now.getMonth() + 1;
+
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      // Check if verified paid for this specific payYear
+      const isPaid =
+        payments.some(
+          (p) =>
+            p.periodYear === payYear &&
+            p.periodMonth === m &&
+            p.status === 'VERIFIED',
+        ) ||
+        (payYear === currentYear && Boolean(calendar.find((c) => c.month === m)?.isPaid));
+
+      // Check if pending approval for this specific payYear
+      const isPending =
+        payments.some(
+          (p) =>
+            p.periodYear === payYear &&
+            p.periodMonth === m &&
+            p.status === 'PENDING',
+        ) ||
+        (payYear === currentYear && Boolean(calendar.find((c) => c.month === m)?.isPending));
+
+      // Calculate overdue / due status based on year & current month
+      let isDue = false;
+      if (!isPaid && !isPending) {
+        if (payYear < curY) {
+          isDue = true; // All past unpaid months in previous years are due
+        } else if (payYear === curY) {
+          isDue = m <= curM; // Unpaid months up to current month this year are due
+        } else {
+          isDue = false; // Future years are not overdue
+        }
+      }
+
+      return {
+        month: m,
+        year: payYear,
+        isPaid,
+        isPending,
+        isDue,
+      };
+    });
+  }, [payYear, payments, calendar, currentYear]);
+
+  // Unpaid months of the currently selected payYear (excluding paid and pending)
+  const unpaidMonthsForYear = React.useMemo(() => {
+    return yearCalendar.filter((c) => !c.isPaid && !c.isPending).map((c) => c.month);
+  }, [yearCalendar]);
+
+  // Due months of the currently selected payYear
+  const dueMonthsForYear = React.useMemo(() => {
+    return yearCalendar.filter((c) => c.isDue).map((c) => c.month);
+  }, [yearCalendar]);
+
+  const handleYearChange = (newYear: number) => {
+    setPayYear(newYear);
+    setSelectedMonths([]);
+    setPayError(null);
+  };
+
   // Download / View Receipt Modal State
   const [selectedReceipt, setSelectedReceipt] = React.useState<ContributionPayment | null>(null);
 
@@ -385,10 +451,10 @@ export default function MemberDashboardPage() {
     [dueMonths, unpaidMonths],
   );
 
-  // Handle month click with strict due-first sequential constraint
+  // Handle month click with strict due-first sequential constraint for the selected payYear
   const handleMonthToggle = (monthNum: number) => {
-    if (!unpaidMonths.includes(monthNum)) return;
-    const targetIdx = unpaidMonths.indexOf(monthNum);
+    if (!unpaidMonthsForYear.includes(monthNum)) return;
+    const targetIdx = unpaidMonthsForYear.indexOf(monthNum);
     if (targetIdx === -1) return;
 
     // If clicking the current highest selected month and more than 1 month is selected, unselect it
@@ -400,14 +466,8 @@ export default function MemberDashboardPage() {
     } else {
       // Select all consecutive unpaid months from 0 up to targetIdx
       // Guarantees all earlier unpaid months (including dues) are selected first!
-      setSelectedMonths(unpaidMonths.slice(0, targetIdx + 1));
+      setSelectedMonths(unpaidMonthsForYear.slice(0, targetIdx + 1));
     }
-  };
-
-  const selectPresetCount = (count: number) => {
-    if (unpaidMonths.length === 0) return;
-    const sliceCount = Math.min(count, unpaidMonths.length);
-    setSelectedMonths(unpaidMonths.slice(0, sliceCount));
   };
 
   const totalPayableAmount = selectedMonths.length * agreedAmount;
@@ -429,7 +489,7 @@ export default function MemberDashboardPage() {
         paymentMethod: payMethod,
         trxId: payTrxId.trim() || undefined,
       });
-      setPaySuccessMsg('মাসিক অনুদান সফলভাবে পরিশোধিত হয়েছে!');
+      setPaySuccessMsg('মাসিক অনুদানের তথ্য জমা দেওয়া হয়েছে! অ্যাডমিন যাচাইয়ের পর এটি অনুমোদিত হবে।');
       setTimeout(() => {
         setPayModalOpen(false);
         setPaySuccessMsg(null);
@@ -605,25 +665,17 @@ export default function MemberDashboardPage() {
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block whitespace-nowrap">
               বকেয়া কিস্তি
             </span>
-            <div className="h-9 flex items-center justify-between gap-1.5 sm:gap-2">
+            <div className="text-2xl sm:text-3xl font-black tracking-tight whitespace-nowrap h-9 flex items-center gap-2">
               <span
-                className={`text-2xl sm:text-3xl font-black tracking-tight whitespace-nowrap ${
+                className={
                   (dashboard?.pendingDueCount ?? 0) > 0
                     ? 'text-rose-500'
                     : 'text-slate-900 dark:text-white'
-                }`}
+                }
               >
                 {toBengaliDigits(dashboard?.pendingDueCount ?? 0)} টি
               </span>
-              {(dashboard?.pendingDueCount ?? 0) > 0 && (
-                <button
-                  type="button"
-                  onClick={() => openPaymentModal(true)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer shrink-0 transition-colors"
-                >
-                  পরিশোধ করুন
-                </button>
-              )}
+
             </div>
           </div>
         </div>
@@ -640,11 +692,11 @@ export default function MemberDashboardPage() {
       </div>
 
       {/* =========================================================================
-          3. ২০২৬ সালের অনুদান অগ্রগতি (Yearly Contribution Progress)
+          3. ২০২৬ সালের অনুদান অগ্রগতি (Yearly Contribution Progress - Clean Open Layout, 4 per row)
          ========================================================================= */}
-      <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#071317] border border-slate-200/80 dark:border-emerald-500/20 p-5 sm:p-6 shadow-soft dark:shadow-xl space-y-3.5 text-slate-900 dark:text-white transition-colors">
+      <div className="space-y-3 pt-1 text-slate-900 dark:text-white transition-colors">
         {/* Header: Progress Summary */}
-        <div className="flex items-center justify-between text-xs sm:text-sm">
+        <div className="flex items-center justify-between text-xs sm:text-sm px-1">
           <span className="font-bold text-slate-800 dark:text-slate-200">
             {toBengaliDigits(currentYear)} সালের অনুদান অগ্রগতি
           </span>
@@ -654,47 +706,56 @@ export default function MemberDashboardPage() {
         </div>
 
         {/* Progress Bar Track */}
-        <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800/90 overflow-hidden">
+        <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
           <div
             style={{ width: `${Math.min(100, Math.round((paidMonthsCount / 12) * 100))}%` }}
             className="h-full rounded-full bg-brand-emerald dark:bg-emerald-400 transition-all duration-500"
           />
         </div>
 
-        {/* 12-Month Calendar Chips (Pill Design) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
+        {/* 12-Month Calendar Chips (4 Per Row, Clean Open Layout) */}
+        <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 gap-1.5 sm:gap-2 pt-0.5">
           {calendar.map((item) => {
-            const isDue = !item.isPaid && item.month <= new Date().getMonth() + 1;
+            const isDue = !item.isPaid && !item.isPending && item.month <= new Date().getMonth() + 1;
 
             return (
               <div
                 key={item.month}
-                className={`p-2.5 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 border transition-all ${
+                className={`py-2 px-1 sm:py-2.5 sm:px-2 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 transition-all ${
                   item.isPaid
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-500/30'
+                    ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 dark:border-emerald-500/20 text-brand-emerald dark:text-emerald-400'
+                    : item.isPending
+                    ? 'bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/25 dark:border-amber-500/20 text-amber-600 dark:text-amber-400'
                     : isDue
-                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200/80 dark:border-rose-500/30'
-                    : 'bg-slate-50 dark:bg-white/[0.03] border-slate-200/60 dark:border-white/10'
+                    ? 'bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/25 dark:border-rose-500/20 text-rose-600 dark:text-rose-400'
+                    : 'bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200/50 dark:border-white/5 text-slate-500 dark:text-slate-400'
                 }`}
               >
-                <div className="text-[10px] font-bold flex items-center gap-1">
+                <div className="text-[9px] sm:text-[10px] font-bold flex items-center justify-center gap-0.5 leading-none">
                   {item.isPaid ? (
-                    <span className="text-brand-emerald dark:text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
+                    <span className="text-brand-emerald dark:text-emerald-400 flex items-center justify-center gap-0.5 whitespace-nowrap">
+                      <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
                       <span>পরিশোধিত</span>
                     </span>
+                  ) : item.isPending ? (
+                    <span className="text-amber-600 dark:text-amber-400 flex items-center justify-center gap-0.5 whitespace-nowrap">
+                      <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
+                      <span>প্রক্রিয়াধীন</span>
+                    </span>
                   ) : isDue ? (
-                    <span className="text-rose-600 dark:text-rose-400">বকেয়া</span>
+                    <span className="text-rose-600 dark:text-rose-400 whitespace-nowrap">বকেয়া</span>
                   ) : (
-                    <span className="text-slate-400 dark:text-slate-500">আসন্ন</span>
+                    <span className="text-slate-400 dark:text-slate-500 whitespace-nowrap">আসন্ন</span>
                   )}
                 </div>
                 <span
-                  className={`text-xs font-bold ${
+                  className={`text-[11px] sm:text-xs font-bold leading-tight mt-0.5 truncate max-w-full ${
                     item.isPaid
                       ? 'text-slate-900 dark:text-white'
+                      : item.isPending
+                      ? 'text-amber-900 dark:text-amber-200'
                       : isDue
-                      ? 'text-rose-900 dark:text-rose-200'
+                      ? 'text-rose-950 dark:text-rose-200'
                       : 'text-slate-600 dark:text-slate-400'
                   }`}
                 >
@@ -838,9 +899,20 @@ export default function MemberDashboardPage() {
                         <div className="text-xs sm:text-sm font-black text-brand-emerald dark:text-emerald-400 whitespace-nowrap">
                           ৳{toBengaliNumber(p.amount)}
                         </div>
-                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/30 whitespace-nowrap">
-                          সফল
-                        </span>
+                        {p.status === 'PENDING' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-500/30 whitespace-nowrap">
+                            <Clock className="w-2.5 h-2.5" />
+                            অপেক্ষমাণ
+                          </span>
+                        ) : p.status === 'REJECTED' ? (
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200/80 dark:border-rose-500/30 whitespace-nowrap">
+                            বাতিলকৃত
+                          </span>
+                        ) : (
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/30 whitespace-nowrap">
+                            অনুমোদিত
+                          </span>
+                        )}
                       </div>
 
                       {/* 'রশিদ দেখুন' Button */}
@@ -983,11 +1055,11 @@ export default function MemberDashboardPage() {
             {/* Scrollable Form Body */}
             <form onSubmit={handlePaySubmit} className="overflow-y-auto space-y-4 pr-1">
               {/* Overdue Warning Banner */}
-              {dueMonths.length > 0 && (
+              {dueMonthsForYear.length > 0 && (
                 <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-500/30 text-xs space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-300">
                     <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>আপনার {toBengaliDigits(dueMonths.length)} টি কিস্তি বকেয়া রয়েছে</span>
+                    <span>{toBengaliDigits(payYear)} সালে আপনার {toBengaliDigits(dueMonthsForYear.length)} টি কিস্তি বকেয়া রয়েছে</span>
                   </div>
                   <p className="text-[11px] text-rose-600 dark:text-rose-400/90 leading-relaxed">
                     সংগঠনের নিয়ম অনুযায়ী পূর্বের বকেয়া কিস্তি পরিশোধ না করে পরবর্তী মাসের কিস্তি দেওয়া যাবে না। অনুগ্রহ করে বকেয়া মাস আগে পরিশোধ করুন।
@@ -995,83 +1067,31 @@ export default function MemberDashboardPage() {
                 </div>
               )}
 
-              {/* Month Selection Presets */}
+              {/* Month Selection */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    পরিশোধের মাস নির্বাচন করুন ({toBengaliDigits(selectedMonths.length)} মাস নির্বাচিত)
+                    পরিশোধের মাস নির্বাচন করুন
                   </label>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    <span>বছর:</span>
-                    <select
-                      value={payYear}
-                      onChange={(e) => setPayYear(Number(e.target.value))}
-                      className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 font-bold text-slate-800 dark:text-slate-200 text-xs cursor-pointer"
-                    >
-                      {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                        <option key={y} value={y} className="bg-white dark:bg-slate-900">
-                          {toBengaliDigits(y)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <select
+                    value={payYear}
+                    onChange={(e) => handleYearChange(Number(e.target.value))}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 font-bold text-slate-800 dark:text-slate-200 text-xs cursor-pointer outline-none"
+                  >
+                    {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+                      <option key={y} value={y} className="bg-white dark:bg-slate-900">
+                        {toBengaliDigits(y)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Quick Presets Bar */}
-                <div className="flex flex-wrap gap-1.5">
-                  {dueMonths.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMonths([...dueMonths])}
-                      className="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
-                    >
-                      বকেয়া সব ({toBengaliDigits(dueMonths.length)} মাস)
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => selectPresetCount(1)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-                  >
-                    ১ মাস
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectPresetCount(2)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-                  >
-                    ২ মাস
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectPresetCount(3)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-                  >
-                    ৩ মাস
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectPresetCount(6)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-                  >
-                    ৬ মাস
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectPresetCount(12)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-                  >
-                    পূর্ণ বছর
-                  </button>
-                </div>
-
-                {/* 12-Month Interactive Grid */}
+                {/* 12-Month Interactive Grid (Linked Dynamically to Selected payYear) */}
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const m = i + 1;
-                    const calItem = calendar.find((c) => c.month === m);
-                    const isPaid = Boolean(calItem?.isPaid);
-                    const isDue = dueMonths.includes(m);
+                  {yearCalendar.map((item) => {
+                    const m = item.month;
+                    const isPaid = item.isPaid;
+                    const isDue = item.isDue;
                     const isSelected = selectedMonths.includes(m);
 
                     if (isPaid) {
@@ -1085,6 +1105,23 @@ export default function MemberDashboardPage() {
                             <span>পরিশোধিত</span>
                           </div>
                           <div className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                            {MONTH_NAMES_BN[m - 1]}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (item.isPending) {
+                      return (
+                        <div
+                          key={m}
+                          className="p-2 rounded-xl text-center bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 opacity-80 cursor-not-allowed select-none"
+                        >
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center gap-0.5">
+                            <Clock className="w-3 h-3" />
+                            <span>প্রক্রিয়াধীন</span>
+                          </div>
+                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
                             {MONTH_NAMES_BN[m - 1]}
                           </div>
                         </div>
@@ -1335,42 +1372,68 @@ export default function MemberDashboardPage() {
                   </div>
                 </div>
 
-                {/* Amount Box */}
-                <div className="relative z-10 rounded-2xl bg-emerald-50 border border-emerald-500/30 p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-emerald-900 block">
-                      প্রাপ্ত অনুদানের মোট পরিমাণ:
-                    </span>
-                    <span className="text-[11px] text-emerald-700">
-                      কেন্দ্রীয় ফান্ড লেজারে সরাসরি সংযোজিত ও নিরীক্ষিত
-                    </span>
+                {/* Amount Box / Status Banner */}
+                {selectedReceipt.status === 'PENDING' ? (
+                  <div className="relative z-10 rounded-2xl bg-amber-50 border border-amber-500/30 p-4 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-amber-900 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        জমা সম্পন্ন (যাচাই ও অনুমোদন প্রক্রিয়াধীন)
+                      </span>
+                      <span className="text-[11px] text-amber-700 block">
+                        অ্যাডমিনের যাচাই ও অনুমোদনের পর চূড়ান্ত রসিদ কার্যকর হবে
+                      </span>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-amber-600">
+                      ৳{toBengaliNumber(selectedReceipt.amount)}
+                    </div>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black text-brand-emerald">
-                    ৳{toBengaliNumber(selectedReceipt.amount)}
+                ) : (
+                  <div className="relative z-10 rounded-2xl bg-emerald-50 border border-emerald-500/30 p-4 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-emerald-900 block">
+                        প্রাপ্ত অনুদানের মোট পরিমাণ:
+                      </span>
+                      <span className="text-[11px] text-emerald-700">
+                        কেন্দ্রীয় ফান্ড লেজারে সরাসরি সংযোজিত ও নিরীক্ষিত
+                      </span>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-brand-emerald">
+                      ৳{toBengaliNumber(selectedReceipt.amount)}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Official Seals & Signature */}
-                <div className="relative z-10 pt-4 grid grid-cols-2 gap-4 text-center">
-                  <div className="space-y-1">
-                    <div className="border-t border-slate-400 pt-1.5 w-3/4 mx-auto" />
-                    <span className="text-[10px] text-emerald-600 font-bold block">
-                      ✓ ডিজিটালভাবে স্বাক্ষরিত
-                    </span>
-                    <span className="text-xs font-bold text-slate-800 block">
-                      অর্থ সম্পাদক / কোষাধ্যক্ষ
+                {selectedReceipt.status === 'PENDING' ? (
+                  <div className="relative z-10 pt-4 text-center">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-700 border border-amber-500/30">
+                      <Clock className="w-3.5 h-3.5" />
+                      অ্যাডমিন অনুমোদন ও নিরীক্ষা প্রক্রিয়াধীন
                     </span>
                   </div>
-                  <div className="space-y-1">
-                    <div className="border-t border-slate-400 pt-1.5 w-3/4 mx-auto" />
-                    <span className="text-[10px] text-emerald-600 font-bold block">
-                      ✓ ডিজিটালভাবে অনুমোদিত
-                    </span>
-                    <span className="text-xs font-bold text-slate-800 block">
-                      সাধারণ সম্পাদক / সভাপতি
-                    </span>
+                ) : (
+                  <div className="relative z-10 pt-4 grid grid-cols-2 gap-4 text-center">
+                    <div className="space-y-1">
+                      <div className="border-t border-slate-400 pt-1.5 w-3/4 mx-auto" />
+                      <span className="text-[10px] text-emerald-600 font-bold block">
+                        ✓ ডিজিটালভাবে স্বাক্ষরিত
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 block">
+                        অর্থ সম্পাদক / কোষাধ্যক্ষ
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="border-t border-slate-400 pt-1.5 w-3/4 mx-auto" />
+                      <span className="text-[10px] text-emerald-600 font-bold block">
+                        ✓ ডিজিটালভাবে অনুমোদিত
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 block">
+                        সাধারণ সম্পাদক / সভাপতি
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Footer Note */}
                 <div className="relative z-10 text-center pt-2 border-t border-slate-200">

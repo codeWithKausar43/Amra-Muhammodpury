@@ -8,6 +8,12 @@ export const metadata: Metadata = {
     template: '%s | আমরা মোহাম্মদপুরী',
   },
   description: 'Community platform connecting residents and initiatives.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'আমরা মোহাম্মদপুরী',
+  },
 };
 
 export default function RootLayout({

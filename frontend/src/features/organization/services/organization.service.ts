@@ -23,6 +23,10 @@ import {
   CreateVotingPollInput,
   UpdateVotingScheduleInput,
   VotingPollMonitoring,
+  AdminMembersResult,
+  AdminMemberDetails,
+  ContributionTrackingResult,
+  AdminDesignationItem,
 } from '../types';
 
 export const organizationService = {
@@ -207,6 +211,18 @@ export const organizationService = {
     const res = await apiClient<ApiResponse<OrgApplication>>(`/org/admin/applications/${id}/review`, {
       method: 'POST',
       body: JSON.stringify({ status, rejectionReason }),
+    });
+    return res.data!;
+  },
+
+  async reviewPayment(
+    id: string,
+    status: 'VERIFIED' | 'REJECTED',
+    notes?: string,
+  ): Promise<any> {
+    const res = await apiClient<ApiResponse<any>>(`/org/admin/payments/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ status, notes }),
     });
     return res.data!;
   },
@@ -446,4 +462,175 @@ export const organizationService = {
     );
     return res.data!;
   },
+
+  // ==========================================
+  // Member Management & Contribution Tracking
+  // ==========================================
+
+  async getAdminMembers(query?: {
+    search?: string;
+    status?: string;
+    designationId?: string;
+    committeeId?: string;
+    paymentStatus?: string;
+    year?: number;
+    month?: number;
+    page?: number;
+    limit?: number;
+  }): Promise<AdminMembersResult> {
+    const params = new URLSearchParams();
+    if (query?.search) params.set('search', query.search);
+    if (query?.status) params.set('status', query.status);
+    if (query?.designationId) params.set('designationId', query.designationId);
+    if (query?.committeeId) params.set('committeeId', query.committeeId);
+    if (query?.paymentStatus) params.set('paymentStatus', query.paymentStatus);
+    if (query?.year) params.set('year', query.year.toString());
+    if (query?.month) params.set('month', query.month.toString());
+    if (query?.page) params.set('page', query.page.toString());
+    if (query?.limit) params.set('limit', query.limit.toString());
+
+    const qs = params.toString();
+    const res = await apiClient<ApiResponse<AdminMembersResult>>(
+      `/org/admin/members${qs ? '?' + qs : ''}`
+    );
+    return res.data!;
+  },
+
+  async getAdminMemberDetails(id: string): Promise<AdminMemberDetails> {
+    const res = await apiClient<ApiResponse<AdminMemberDetails>>(`/org/admin/members/${id}`);
+    return res.data!;
+  },
+
+  async updateMemberStatus(
+    id: string,
+    data: {
+      status: 'ACTIVE' | 'APPROVED_PAYMENT_PENDING' | 'SUSPENDED' | 'ARCHIVED';
+      notes?: string;
+    }
+  ): Promise<OrgMembership> {
+    const res = await apiClient<ApiResponse<OrgMembership>>(`/org/admin/members/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return res.data!;
+  },
+
+  async assignMemberDesignation(
+    id: string,
+    data: {
+      designationId?: string | null;
+      committeeId?: string | null;
+      customTitle?: string | null;
+      startDate?: string | null;
+    }
+  ): Promise<OrgMembership> {
+    const res = await apiClient<ApiResponse<OrgMembership>>(
+      `/org/admin/members/${id}/designation`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data!;
+  },
+
+  async getContributionTracking(query?: {
+    year?: number;
+    month?: number;
+  }): Promise<ContributionTrackingResult> {
+    const params = new URLSearchParams();
+    if (query?.year) params.set('year', query.year.toString());
+    if (query?.month) params.set('month', query.month.toString());
+
+    const qs = params.toString();
+    const res = await apiClient<ApiResponse<ContributionTrackingResult>>(
+      `/org/admin/contributions/tracking${qs ? '?' + qs : ''}`
+    );
+    return res.data!;
+  },
+
+  async sendManualContributionReminder(data: {
+    memberId?: string;
+    userId?: string;
+    year?: number;
+    periodYear?: number;
+    month?: number;
+    periodMonth?: number;
+    channel?: string;
+    customNote?: string;
+  }): Promise<{ reminder?: any; notification?: any; memberName?: string; message?: string }> {
+    const res = await apiClient<ApiResponse<{ reminder: any; notification: any; memberName: string }>>(
+      '/org/admin/contributions/remind',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data!;
+  },
+
+  async sendBulkContributionReminders(data: {
+    year?: number;
+    periodYear?: number;
+    month?: number;
+    periodMonth?: number;
+    userIds?: string[];
+    memberIds?: string[];
+    filter?: 'ALL_UNPAID' | 'ONLY_OVERDUE';
+    customNote?: string;
+  }): Promise<{
+    targetedMembersCount: number;
+    remindersSent: number;
+    skippedCooldownCount: number;
+    details: Array<{ memberId: string; name: string; status: string; reason?: string }>;
+  }> {
+    const res = await apiClient<ApiResponse<{
+      targetedMembersCount: number;
+      remindersSent: number;
+      skippedCooldownCount: number;
+      details: Array<{ memberId: string; name: string; status: string; reason?: string }>;
+    }>>('/org/admin/contributions/bulk-remind', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data!;
+  },
+
+  async getAdminDesignations(): Promise<AdminDesignationItem[]> {
+    const res = await apiClient<ApiResponse<AdminDesignationItem[]>>('/org/admin/designations');
+    return res.data!;
+  },
+
+  async createDesignation(data: {
+    code: string;
+    name: string;
+    rank?: number;
+    description?: string;
+  }): Promise<AdminDesignationItem> {
+    const res = await apiClient<ApiResponse<AdminDesignationItem>>('/org/admin/designations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data!;
+  },
+
+  async updateDesignation(
+    id: string,
+    data: {
+      name?: string;
+      rank?: number;
+      description?: string;
+      isActive?: boolean;
+    }
+  ): Promise<AdminDesignationItem> {
+    const res = await apiClient<ApiResponse<AdminDesignationItem>>(
+      `/org/admin/designations/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data!;
+  },
+
 };

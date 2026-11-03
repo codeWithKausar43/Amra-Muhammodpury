@@ -43,6 +43,11 @@ export const ReviewApplicationSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
+export const ReviewPaymentSchema = z.object({
+  status: z.enum(['VERIFIED', 'REJECTED']),
+  notes: z.string().optional(),
+});
+
 export const CreateFundSchema = z.object({
   name: z.string().min(2, 'তহবিলের নাম আবশ্যক'),
   code: z.string().min(2, 'তহবিল কোড আবশ্যক').toUpperCase(),
@@ -215,5 +220,76 @@ export const UpdateVotingScheduleSchema = z.object({
 
 export const UpdateVotingConfigSchema = z.object({
   isVotingEnabled: z.boolean(),
+});
+
+// ==========================================
+// Organization Member Management & Tracking Schemas
+// ==========================================
+
+export const AdminMembersQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.enum(['ALL', 'ACTIVE', 'PENDING', 'APPROVED_PAYMENT_PENDING', 'SUSPENDED', 'ARCHIVED']).default('ALL'),
+  designationId: z.string().optional(),
+  committeeId: z.string().optional(),
+  paymentStatus: z.enum(['ALL', 'PAID', 'UNPAID', 'PENDING', 'OVERDUE']).default('ALL'),
+  year: z.coerce.number().optional(),
+  month: z.coerce.number().min(1).max(12).optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
+});
+
+export const UpdateMemberStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'ARCHIVED', 'APPROVED_PAYMENT_PENDING']),
+  notes: z.string().optional(),
+});
+
+export const AssignMemberDesignationSchema = z.object({
+  designationId: z.string().uuid().nullable().optional(),
+  committeeId: z.string().uuid().optional(),
+  customTitle: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const ContributionTrackingQuerySchema = z.object({
+  year: z.coerce.number().optional(),
+  month: z.coerce.number().min(1).max(12).optional(),
+});
+
+export const SendContributionReminderSchema = z.object({
+  userId: z.string().min(1).optional(),
+  memberId: z.string().min(1).optional(),
+  periodYear: z.coerce.number().min(2020).max(2050).optional(),
+  year: z.coerce.number().min(2020).max(2050).optional(),
+  periodMonth: z.coerce.number().min(1).max(12).optional(),
+  month: z.coerce.number().min(1).max(12).optional(),
+  channel: z.string().optional(),
+  customNote: z.string().optional(),
+});
+
+export const BulkContributionReminderSchema = z.object({
+  userIds: z.array(z.string()).optional(),
+  memberIds: z.array(z.string()).optional(),
+  periodYear: z.coerce.number().min(2020).max(2050).optional(),
+  year: z.coerce.number().min(2020).max(2050).optional(),
+  periodMonth: z.coerce.number().min(1).max(12).optional(),
+  month: z.coerce.number().min(1).max(12).optional(),
+  filter: z.enum(['ALL_UNPAID', 'ONLY_OVERDUE']).optional(),
+  customNote: z.string().optional(),
+});
+
+export const CreateDesignationSchema = z.object({
+  name: z.string().min(2, 'পদবির নাম আবশ্যক'),
+  code: z.string().min(2, 'পদবি কোড আবশ্যক').toUpperCase(),
+  rank: z.coerce.number().default(10),
+  description: z.string().optional(),
+});
+
+export const UpdateDesignationSchema = z.object({
+  name: z.string().min(2).optional(),
+  rank: z.coerce.number().optional(),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 

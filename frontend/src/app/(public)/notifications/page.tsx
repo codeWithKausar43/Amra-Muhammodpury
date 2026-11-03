@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Bell,
   Heart,
@@ -8,6 +9,7 @@ import {
   UserPlus,
   Users2,
   Loader2,
+  CreditCard,
 } from 'lucide-react';
 import {
   useNotificationsQuery,
@@ -18,6 +20,7 @@ import { NotificationItem } from '@/features/social/services/social.service';
 export default function NotificationsPage() {
   const { data: notifData, isLoading } = useNotificationsQuery();
   const mutations = useSocialMutations();
+  const router = useRouter();
 
   const notifications = notifData?.notifications ?? [];
   const unreadCount = notifData?.unreadCount ?? 0;
@@ -35,6 +38,9 @@ export default function NotificationsPage() {
     if (!notif.isRead) {
       await mutations.markNotificationRead.mutateAsync(notif.id);
     }
+    if (notif.type === 'CONTRIBUTION_REMINDER' || notif.entityType === 'ORG_CONTRIBUTION') {
+      router.push('/organization/member');
+    }
   };
 
   const getIcon = (type: string) => {
@@ -50,6 +56,8 @@ export default function NotificationsPage() {
       case 'GROUP_APPROVED':
       case 'GROUP_JOIN_REQUEST':
         return <Users2 className="w-4 h-4 text-purple-500" />;
+      case 'CONTRIBUTION_REMINDER':
+        return <CreditCard className="w-4 h-4 text-amber-500" />;
       default:
         return <Bell className="w-4 h-4 text-brand-emerald" />;
     }

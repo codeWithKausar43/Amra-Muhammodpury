@@ -3,7 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, X, Menu, MessageSquare, Heart, UserPlus } from 'lucide-react';
+import { Search, Bell, X, Menu, MessageSquare, Heart, UserPlus, CreditCard } from 'lucide-react';
+import { notificationAudio } from '@/lib/audio/notificationSound';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { SettingsDrawer } from './SettingsDrawer';
 import { useFeedModal } from '../context/FeedModalContext';
@@ -28,6 +29,15 @@ export function Navbar({ onSearch }: NavbarProps) {
   const notificationsList = notifData?.notifications ?? [];
   const unreadCount = notifData?.unreadCount ?? 0;
   const hasUnread = unreadCount > 0;
+
+  // Play sweet chime sound when new unread notification arrives
+  const prevUnreadRef = React.useRef(unreadCount);
+  React.useEffect(() => {
+    if (unreadCount > prevUnreadRef.current) {
+      notificationAudio.play(1.0);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   const notificationRef = React.useRef<HTMLDivElement>(null);
 
@@ -75,6 +85,8 @@ export function Navbar({ onSearch }: NavbarProps) {
       case 'FRIEND_REQUEST':
       case 'FRIEND_ACCEPT':
         return { Icon: UserPlus, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' };
+      case 'CONTRIBUTION_REMINDER':
+        return { Icon: CreditCard, color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/40' };
       default:
         return { Icon: Bell, color: 'text-brand-emerald bg-emerald-50 dark:bg-emerald-950/40' };
     }
@@ -191,7 +203,7 @@ export function Navbar({ onSearch }: NavbarProps) {
                           return (
                             <Link
                               key={n.id}
-                              href="/notifications"
+                              href={n.type === 'CONTRIBUTION_REMINDER' ? '/organization/member' : '/notifications'}
                               onClick={() => setNotificationsOpen(false)}
                               className={`p-3 flex items-start gap-2.5 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 ${
                                 !n.isRead ? 'bg-emerald-50/40 dark:bg-brand-emerald/5' : ''
@@ -230,6 +242,7 @@ export function Navbar({ onSearch }: NavbarProps) {
                         সকল নোটিফিকেশন দেখুন →
                       </Link>
                     </div>
+
                   </div>
                 </>
               )}

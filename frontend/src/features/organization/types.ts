@@ -103,11 +103,14 @@ export interface OrgMemberDashboardData {
   agreement: ContributionAgreement | null;
   totalContributed: number;
   pendingDueCount: number;
+  pendingReviewCount?: number;
   payments: ContributionPayment[];
   calendar: Array<{
     month: number;
     year: number;
     isPaid: boolean;
+    isPending?: boolean;
+    status?: string;
     amount: number;
     paidAt?: string;
   }>;
@@ -198,9 +201,15 @@ export interface OrgAdminStats {
     amount: number;
     periodMonth: number;
     periodYear: number;
+    paymentMethod?: string;
+    trxId?: string | null;
+    senderNumber?: string | null;
+    receiptNumber?: string;
     status: string;
+    notes?: string | null;
     paidAt: string;
-    user?: { id?: string; name: string; email: string; image?: string | null };
+    createdAt?: string;
+    user?: { id?: string; name: string; email: string; image?: string | null; phone?: string | null };
   }>;
 }
 
@@ -462,3 +471,150 @@ export interface ElectionResult {
   };
 }
 
+
+
+// ==========================================
+// Organization Member Management & Tracking Types
+// ==========================================
+
+export interface AdminMemberSummaryCounts {
+  totalRegistered: number;
+  totalActive: number;
+  pendingApps: number;
+  approvedPaymentPending: number;
+  suspendedCount: number;
+  archivedCount: number;
+  paidThisMonth: number;
+  unpaidThisMonth: number;
+  overdueCount: number;
+}
+
+export interface AdminMemberItem {
+  id: string;
+  userId: string;
+  memberNumber: string | null;
+  status: 'ACTIVE' | 'APPROVED_PAYMENT_PENDING' | 'SUSPENDED' | 'ARCHIVED';
+  joinedAt: string;
+  monthlyContribution: number;
+  lastReminderSentAt: string | null;
+  designationId: string | null;
+  designation: {
+    id: string;
+    name: string;
+    code: string;
+    rank: number;
+  } | null;
+  user: {
+    id: string;
+    name: string;
+    phone: string | null;
+    image: string | null;
+    profession?: string | null;
+    email?: string | null;
+  };
+  committees: Array<{
+    committeeId: string;
+    committeeName: string;
+    customTitle: string | null;
+  }>;
+  currentMonthStatus: 'PAID' | 'UNPAID' | 'PENDING' | 'OVERDUE' | 'NOT_APPLICABLE';
+  currentMonthPaidAmount?: number;
+}
+
+export interface AdminMembersResult {
+  summary: AdminMemberSummaryCounts;
+  members: AdminMemberItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  designations: Array<{ id: string; name: string; code: string; rank: number }>;
+  committees: Array<{ id: string; name: string }>;
+}
+
+export interface AdminMemberDetails {
+  membership: OrgMembership & {
+    designation: { id: string; name: string; code: string; rank: number } | null;
+  };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    image: string | null;
+    profession?: string | null;
+    role?: string;
+  };
+  committees: Array<{
+    id: string;
+    committeeId: string;
+    customTitle: string | null;
+    isCurrent: boolean;
+    startDate: string;
+    endDate: string | null;
+    committee: { id: string; name: string };
+  }>;
+  recentPayments: ContributionPayment[];
+  reminders: Array<{
+    id: string;
+    slot: string;
+    sentAt: string;
+    channel: string;
+    periodMonth: number;
+    periodYear: number;
+  }>;
+  currentMonthStatus: 'PAID' | 'UNPAID' | 'PENDING' | 'OVERDUE' | 'NOT_APPLICABLE';
+}
+
+export interface ContributionTrackingCategoryItem {
+  memberId: string;
+  userId: string;
+  name: string;
+  phone: string | null;
+  image: string | null;
+  memberNumber: string | null;
+  agreedAmount: number;
+  paidAmount?: number;
+  paymentDate?: string;
+  verificationStatus?: string;
+  paymentId?: string;
+  trxId?: string | null;
+  paymentMethod?: string;
+  dueMonth?: number;
+  dueYear?: number;
+  lastReminderSentAt?: string | null;
+  designation?: string | null;
+}
+
+export interface ContributionTrackingResult {
+  period: {
+    year: number;
+    month: number;
+    monthName: string;
+    totalActiveMembers: number;
+  };
+  counts: {
+    paid: number;
+    unpaid: number;
+    pending: number;
+    overdue: number;
+  };
+  paid: ContributionTrackingCategoryItem[];
+  unpaid: ContributionTrackingCategoryItem[];
+  pending: ContributionTrackingCategoryItem[];
+  overdue: ContributionTrackingCategoryItem[];
+}
+
+export interface AdminDesignationItem {
+  id: string;
+  code: string;
+  name: string;
+  rank: number;
+  description: string | null;
+  isActive: boolean;
+  memberCount: number;
+  createdAt: string;
+  updatedAt: string;
+}

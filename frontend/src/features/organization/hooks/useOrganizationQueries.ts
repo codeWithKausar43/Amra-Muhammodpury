@@ -243,6 +243,53 @@ export function prefetchOrgTabData(queryClient: ReturnType<typeof useQueryClient
 // ==========================================
 // 5. Mutation Hooks
 // ==========================================
+
+// ==========================================
+// Admin Member Management & Tracking Hooks
+// ==========================================
+
+export function useAdminMembersQuery(query?: {
+  search?: string;
+  status?: string;
+  designationId?: string;
+  committeeId?: string;
+  paymentStatus?: string;
+  year?: number;
+  month?: number;
+  page?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: ['org', 'admin', 'members', query],
+    queryFn: () => organizationService.getAdminMembers(query),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useAdminMemberDetailsQuery(memberId: string | null) {
+  return useQuery({
+    queryKey: ['org', 'admin', 'members', 'detail', memberId],
+    queryFn: () => organizationService.getAdminMemberDetails(memberId!),
+    enabled: Boolean(memberId),
+  });
+}
+
+export function useContributionTrackingQuery(query?: { year?: number; month?: number }) {
+  return useQuery({
+    queryKey: ['org', 'admin', 'contributions', 'tracking', query?.year, query?.month],
+    queryFn: () => organizationService.getContributionTracking(query),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useAdminDesignationsQuery() {
+  return useQuery({
+    queryKey: ['org', 'admin', 'designations'],
+    queryFn: () => organizationService.getAdminDesignations(),
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useOrgMutations() {
   const queryClient = useQueryClient();
 
@@ -280,6 +327,18 @@ export function useOrgMutations() {
       queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'applications'] });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.membershipStatus });
+    },
+  });
+
+  const reviewPayment = useMutation({
+    mutationFn: (vars: { id: string; status: 'VERIFIED' | 'REJECTED'; notes?: string }) =>
+      organizationService.reviewPayment(vars.id, vars.status, vars.notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.funds });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDashboard });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.membershipStatus });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
     },
   });
 
@@ -462,11 +521,116 @@ export function useOrgMutations() {
     },
   });
 
+
+  const updateMemberStatus = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        status: 'ACTIVE' | 'APPROVED_PAYMENT_PENDING' | 'SUSPENDED' | 'ARCHIVED';
+        notes?: string;
+      };
+    }) => organizationService.updateMemberStatus(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+    },
+  });
+
+  const assignMemberDesignation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        designationId?: string | null;
+        committeeId?: string | null;
+        customTitle?: string | null;
+        startDate?: string | null;
+      };
+    }) => organizationService.assignMemberDesignation(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'designations'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.committees });
+    },
+  });
+
+  const sendManualReminder = useMutation({
+    mutationFn: (data: {
+      memberId?: string;
+      userId?: string;
+      year?: number;
+      periodYear?: number;
+      month?: number;
+      periodMonth?: number;
+      channel?: string;
+      customNote?: string;
+    }) => organizationService.sendManualContributionReminder(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'contributions', 'tracking'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+    },
+  });
+
+  const sendBulkReminders = useMutation({
+    mutationFn: (data: {
+      year?: number;
+      periodYear?: number;
+      month?: number;
+      periodMonth?: number;
+      userIds?: string[];
+      memberIds?: string[];
+      filter?: 'ALL_UNPAID' | 'ONLY_OVERDUE';
+      customNote?: string;
+    }) => organizationService.sendBulkContributionReminders(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'contributions', 'tracking'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+    },
+  });
+
+  const createDesignation = useMutation({
+    mutationFn: (data: {
+      code: string;
+      name: string;
+      rank?: number;
+      description?: string;
+    }) => organizationService.createDesignation(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'designations'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.designations });
+    },
+  });
+
+  const updateDesignation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        name?: string;
+        rank?: number;
+        description?: string;
+        isActive?: boolean;
+      };
+    }) => organizationService.updateDesignation(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'designations'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.designations });
+    },
+  });
+
   return {
     applyMembership,
     submitInitialPayment,
     payMonthlyContribution,
     reviewApplication,
+    reviewPayment,
     createFund,
     recordTransaction,
     createCommittee,
@@ -487,5 +651,11 @@ export function useOrgMutations() {
     finalizeElection,
     updateElectionStatus,
     deleteElection,
+    updateMemberStatus,
+    assignMemberDesignation,
+    sendManualReminder,
+    sendBulkReminders,
+    createDesignation,
+    updateDesignation,
   };
 }
