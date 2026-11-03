@@ -22,6 +22,7 @@ export interface OrgMembership {
   userId: string;
   memberId: string;
   memberNumber?: string | null;
+  monthlyContribution?: number;
   orgRole: string; // 'PRESIDENT' | 'VICE_PRESIDENT' | 'GENERAL_SECRETARY' | 'TREASURER' | 'MODERATOR' | 'MEMBER'
   status: 'PENDING' | 'APPROVED_PAYMENT_PENDING' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
   joinedAt: string;
@@ -73,14 +74,16 @@ export interface ContributionAgreement {
 export interface ContributionPayment {
   id: string;
   userId: string;
-  fundId: string;
+  fundId?: string;
   amount: number;
   periodMonth: number;
   periodYear: number;
   paymentMethod: string;
   trxId: string | null;
   senderNumber: string | null;
-  status: 'COMPLETED' | 'PENDING' | 'FAILED';
+  receiptNumber?: string;
+  notes?: string | null;
+  status: 'COMPLETED' | 'PENDING' | 'FAILED' | 'VERIFIED' | string;
   paidAt: string;
   fund?: {
     name: string;

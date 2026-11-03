@@ -91,15 +91,16 @@ export const organizationService = {
   },
 
   async payMonthlyContribution(data: {
-    periodMonth: number;
+    periodMonth?: number;
+    months?: number[];
     periodYear: number;
     amount: number;
     paymentMethod: string;
     trxId?: string;
     senderNumber?: string;
     notes?: string;
-  }): Promise<ContributionPayment> {
-    const res = await apiClient<ApiResponse<ContributionPayment>>('/org/contributions/pay', {
+  }): Promise<ContributionPayment | any> {
+    const res = await apiClient<ApiResponse<any>>('/org/contributions/pay', {
       method: 'POST',
       body: JSON.stringify(data),
     });

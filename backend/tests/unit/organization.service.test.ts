@@ -17,6 +17,10 @@ describe('OrganizationService', () => {
         findUnique: vi.fn(),
         count: vi.fn(),
         create: vi.fn(),
+        update: vi.fn(),
+      },
+      orgMeeting: {
+        findMany: vi.fn(),
       },
       orgApplication: {
         findFirst: vi.fn(),
@@ -24,6 +28,11 @@ describe('OrganizationService', () => {
         update: vi.fn(),
       },
       contributionAgreement: {
+        findFirst: vi.fn(),
+        create: vi.fn(),
+      },
+      contributionPayment: {
+        findMany: vi.fn(),
         findFirst: vi.fn(),
         create: vi.fn(),
       },
@@ -336,6 +345,117 @@ describe('OrganizationService', () => {
       expect(trends.fundAllocation.funds[0]?.percentage).toBe(80);
       expect(trends.fundAllocation.funds[1]?.shortName).toBe('চিকিৎসা');
       expect(trends.fundAllocation.funds[1]?.percentage).toBe(20);
+    });
+
+    describe('payMonthlyContribution (Multi-month & Sequential Rules)', () => {
+      it('should throw BadRequestError if prior due month is skipped', async () => {
+        mockPrisma.orgMembership.findUnique.mockResolvedValueOnce({
+          id: 'mem-1',
+          status: 'ACTIVE',
+          monthlyContribution: 100,
+          joinedAt: new Date('2026-01-01'),
+        });
+        // Month 1 is NOT paid in 2026
+        mockPrisma.contributionPayment.findMany.mockResolvedValueOnce([]);
+
+        // Try to pay Month 2 alone
+        await expect(
+          service.payMonthlyContribution('user-1', {
+            periodYear: 2026,
+            months: [2],
+            amount: 100,
+            paymentMethod: 'BKASH',
+          }),
+        ).rejects.toThrow(BadRequestError);
+      });
+
+      it('should throw BadRequestError if selected months are not contiguous', async () => {
+        mockPrisma.orgMembership.findUnique.mockResolvedValueOnce({
+          id: 'mem-1',
+          status: 'ACTIVE',
+          monthlyContribution: 100,
+          joinedAt: new Date('2026-01-01'),
+        });
+        mockPrisma.contributionPayment.findMany.mockResolvedValueOnce([]);
+
+        // Try to pay Month 1 and Month 3 (skipping Month 2)
+        await expect(
+          service.payMonthlyContribution('user-1', {
+            periodYear: 2026,
+            months: [1, 3],
+            amount: 200,
+            paymentMethod: 'BKASH',
+          }),
+        ).rejects.toThrow(BadRequestError);
+      });
+
+      it('should successfully pay multiple consecutive months in one transaction', async () => {
+        mockPrisma.orgMembership.findUnique.mockResolvedValueOnce({
+          id: 'mem-1',
+          status: 'ACTIVE',
+          monthlyContribution: 100,
+          joinedAt: new Date('2026-01-01'),
+        });
+        mockPrisma.contributionPayment.findMany.mockResolvedValueOnce([]);
+        mockPrisma.contributionPayment.create
+          .mockResolvedValueOnce({ id: 'pay-1', periodMonth: 1, amount: 100 })
+          .mockResolvedValueOnce({ id: 'pay-2', periodMonth: 2, amount: 100 });
+        mockPrisma.orgMembership.update.mockResolvedValueOnce({});
+        mockPrisma.orgFund.findUnique.mockResolvedValueOnce({ id: 'fund-gen', code: 'GENERAL' });
+        mockPrisma.orgFund.update.mockResolvedValueOnce({});
+        mockPrisma.fundTransaction.create.mockResolvedValueOnce({});
+
+        const res = await service.payMonthlyContribution('user-1', {
+          periodYear: 2026,
+          months: [1, 2],
+          amount: 200,
+          paymentMethod: 'BKASH',
+          trxId: 'TRX-123456',
+        });
+
+        expect(res.count).toBe(2);
+        expect(mockPrisma.contributionPayment.create).toHaveBeenCalledTimes(2);
+        expect(mockPrisma.fundTransaction.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              amount: 200,
+              type: 'CONTRIBUTION',
+            }),
+          }),
+        );
+      });
+    });
+
+    describe('getMemberDashboard', () => {
+      it('should return complete dashboard with dynamic calendar, totalContributed, and pendingDueCount', async () => {
+        mockPrisma.orgMembership.findUnique.mockResolvedValueOnce({
+          id: 'mem-1',
+          monthlyContribution: 100,
+          status: 'ACTIVE',
+          joinedAt: new Date('2026-01-01'),
+          user: { name: 'Kausar' },
+        });
+
+        // 1 verified payment for month 1 in 2026
+        mockPrisma.contributionPayment.findMany
+          .mockResolvedValueOnce([
+            { id: 'p-1', periodYear: 2026, periodMonth: 1, amount: 100, paidAt: new Date('2026-01-05') },
+          ])
+          .mockResolvedValueOnce([
+            { id: 'p-1', periodYear: 2026, periodMonth: 1, amount: 100, paidAt: new Date('2026-01-05') },
+          ]);
+        mockPrisma.orgNotice.findMany.mockResolvedValueOnce([]);
+        mockPrisma.orgMeeting.findMany.mockResolvedValueOnce([]);
+        mockPrisma.election.findMany.mockResolvedValueOnce([]);
+
+        const dashboard = await service.getMemberDashboard('user-1');
+
+        expect(dashboard.totalContributed).toBe(100);
+        expect(dashboard.calendar).toHaveLength(12);
+        expect(dashboard.calendar[0]?.isPaid).toBe(true);
+        expect(dashboard.agreement).toBeDefined();
+        expect(dashboard.agreement?.agreedAmount).toBe(100);
+      });
     });
   });
 });

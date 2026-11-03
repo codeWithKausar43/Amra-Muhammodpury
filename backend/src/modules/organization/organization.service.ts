@@ -34,6 +34,21 @@ function cleanImageUrl(url?: string | null): string | null {
   return trimmed;
 }
 
+const MONTH_NAMES_BN = [
+  'জানুয়ারি',
+  'ফেব্রুয়ারি',
+  'মার্চ',
+  'এপ্রিল',
+  'মে',
+  'জুন',
+  'জুলাই',
+  'আগস্ট',
+  'সেপ্টেম্বর',
+  'অক্টোবর',
+  'নভেম্বর',
+  'ডিসেম্বর',
+];
+
 export class OrganizationService {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -410,7 +425,8 @@ export class OrganizationService {
   public async payMonthlyContribution(
     userId: string,
     data: {
-      periodMonth: number;
+      periodMonth?: number;
+      months?: number[];
       periodYear: number;
       amount: number;
       paymentMethod: string;
@@ -427,41 +443,101 @@ export class OrganizationService {
       throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ মাসিক চাঁদা প্রদান করতে পারবেন');
     }
 
-    if (data.amount < membership.monthlyContribution) {
-      throw new BadRequestError(`অনুদান আপনার নির্ধারিত মাসিক অনুদান (৳${membership.monthlyContribution}) এর কম হতে পারবে না`);
+    const rawMonths =
+      data.months && data.months.length > 0
+        ? data.months
+        : data.periodMonth !== undefined
+        ? [data.periodMonth]
+        : [];
+
+    if (rawMonths.length === 0) {
+      throw new BadRequestError('কমপক্ষে একটি মাস নির্বাচন করতে হবে');
     }
 
-    // Check duplicate payment for this period
-    const existing = await this.prisma.contributionPayment.findFirst({
+    // Sort unique months ascending
+    const targetMonths = Array.from(new Set(rawMonths)).sort((a, b) => a - b);
+
+    // Required minimum amount = targetMonths.length * monthlyContribution
+    const requiredMin = targetMonths.length * membership.monthlyContribution;
+    if (data.amount < requiredMin) {
+      throw new BadRequestError(
+        `অনুদান আপনার নির্ধারিত মাসিক অনুদান (${targetMonths.length} মাসের জন্য ৳${requiredMin}) এর কম হতে পারবে না`,
+      );
+    }
+
+    // Check duplicate payment for these periods
+    const existingPayments = await this.prisma.contributionPayment.findMany({
       where: {
         userId,
-        periodMonth: data.periodMonth,
         periodYear: data.periodYear,
         status: { in: ['VERIFIED', 'PENDING'] },
       },
+      select: { periodMonth: true },
     });
 
-    if (existing) {
-      throw new ConflictError(`${data.periodYear} সালের ${data.periodMonth} তম মাসের চাঁদা ইতিমধ্যেই পরিশোধিত বা প্রক্রিয়াদিন`);
+    const paidMonthSet = new Set(existingPayments.map((p) => p.periodMonth));
+
+    for (const m of targetMonths) {
+      if (paidMonthSet.has(m)) {
+        throw new ConflictError(
+          `${data.periodYear} সালের ${MONTH_NAMES_BN[m - 1] || `${m} তম`} মাসের চাঁদা ইতিমধ্যেই পরিশোধিত বা প্রক্রিয়াদিন`,
+        );
+      }
     }
 
-    const receiptNumber = `AMP-REC-${data.periodYear}${String(data.periodMonth).padStart(2, '0')}-${crypto.randomInt(1000, 9999)}`;
+    // Enforce Strict Due-First Sequential Rule:
+    // 1. Continuous block check: targetMonths must be contiguous (e.g. 1, 2, 3)
+    const firstSelectedMonth = targetMonths[0]!;
+    for (let i = 0; i < targetMonths.length - 1; i++) {
+      const curr = targetMonths[i]!;
+      const next = targetMonths[i + 1]!;
+      if (next !== curr + 1) {
+        throw new BadRequestError(
+          'একসাথে একাধিক মাস পরিশোধ করতে হলে ধারাবাহিক মাস নির্বাচন করতে হবে (কোনো মাস বাদ দেওয়া যাবে না)',
+        );
+      }
+    }
+
+    // 2. Due-first check: no unpaid month earlier than targetMonths[0] in the applicable period
+    const joinedYear = membership.joinedAt ? new Date(membership.joinedAt).getFullYear() : data.periodYear;
+    const joinedMonth = membership.joinedAt ? new Date(membership.joinedAt).getMonth() + 1 : 1;
+    const startMonth = data.periodYear === joinedYear ? joinedMonth : 1;
+
+    for (let m = startMonth; m < firstSelectedMonth; m++) {
+      if (!paidMonthSet.has(m)) {
+        const monthName = MONTH_NAMES_BN[m - 1] || `${m} তম মাস`;
+        throw new BadRequestError(
+          `পূর্বের বকেয়া কিস্তি (${monthName}) পরিশোধ না করে পরবর্তী মাসের কিস্তি পরিশোধ করা যাবে না। দয়া করে পূর্বের বকেয়া মাস আগে নির্বাচন করুন।`,
+        );
+      }
+    }
+
+    const perMonthAmount = Math.round(data.amount / targetMonths.length);
 
     return this.prisma.$transaction(async (tx) => {
-      const payment = await tx.contributionPayment.create({
-        data: {
-          userId,
-          amount: data.amount,
-          periodMonth: data.periodMonth,
-          periodYear: data.periodYear,
-          paymentMethod: data.paymentMethod,
-          trxId: data.trxId?.trim() || null,
-          senderNumber: data.senderNumber?.trim() || null,
-          receiptNumber,
-          status: 'VERIFIED',
-          notes: data.notes || null,
-        },
-      });
+      const createdPayments = [];
+      const receiptNumbers: string[] = [];
+
+      for (const m of targetMonths) {
+        const receiptNumber = `AMP-REC-${data.periodYear}${String(m).padStart(2, '0')}-${crypto.randomInt(1000, 9999)}`;
+        receiptNumbers.push(receiptNumber);
+
+        const payment = await tx.contributionPayment.create({
+          data: {
+            userId,
+            amount: perMonthAmount,
+            periodMonth: m,
+            periodYear: data.periodYear,
+            paymentMethod: data.paymentMethod,
+            trxId: data.trxId?.trim() || null,
+            senderNumber: data.senderNumber?.trim() || null,
+            receiptNumber,
+            status: 'VERIFIED',
+            notes: data.notes || null,
+          },
+        });
+        createdPayments.push(payment);
+      }
 
       await tx.orgMembership.update({
         where: { userId },
@@ -475,21 +551,29 @@ export class OrganizationService {
           data: { balance: { increment: data.amount } },
         });
 
+        const monthLabels = targetMonths
+          .map((m) => MONTH_NAMES_BN[m - 1] || `${m} তম`)
+          .join(', ');
+
         await tx.fundTransaction.create({
           data: {
             fundId: generalFund.id,
             type: 'CONTRIBUTION',
             amount: data.amount,
-            title: `মাসিক চাঁদা পরিশোধ (${data.periodMonth}/${data.periodYear})`,
-            description: `রশিদ নম্বর: ${receiptNumber}`,
+            title: `মাসিক চাঁদা পরিশোধ (${monthLabels} ${data.periodYear})`,
+            description: `রশিদ নম্বরসমূহ: ${receiptNumbers.join(', ')}`,
             category: 'সদস্য চাঁদা',
-            referenceId: payment.id,
+            referenceId: createdPayments[0]?.id,
             performedBy: userId,
           },
         });
       }
 
-      return payment;
+      return {
+        ...createdPayments[0],
+        count: createdPayments.length,
+        payments: createdPayments,
+      };
     });
   }
 
@@ -510,11 +594,15 @@ export class OrganizationService {
 
     const now = new Date();
     const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
 
-    const [payments, notices, meetings, upcomingElections] = await Promise.all([
+    const [allPayments, recentPayments, notices, meetings, upcomingElections] = await Promise.all([
+      this.prisma.contributionPayment.findMany({
+        where: { userId, status: 'VERIFIED' },
+      }),
       this.prisma.contributionPayment.findMany({
         where: { userId },
-        orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }],
+        orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }, { paidAt: 'desc' }],
         take: 12,
       }),
       this.prisma.orgNotice.findMany({
@@ -537,18 +625,62 @@ export class OrganizationService {
       }),
     ]);
 
-    // Calculate paid months for current year
-    const paidMonthsThisYear = payments
-      .filter((p) => p.periodYear === currentYear)
-      .map((p) => p.periodMonth);
+    // Calculate total contributed by member
+    const totalContributed = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Filter payments for current year
+    const paymentsThisYear = allPayments.filter((p) => p.periodYear === currentYear);
+    const paidMonthSet = new Set(paymentsThisYear.map((p) => p.periodMonth));
+    const paidMonthsThisYear = Array.from(paidMonthSet);
+
+    // Build 12-month calendar for current year
+    const calendar = Array.from({ length: 12 }, (_, i) => {
+      const month = i + 1;
+      const payment = paymentsThisYear.find((p) => p.periodMonth === month);
+      return {
+        month,
+        year: currentYear,
+        isPaid: Boolean(payment),
+        amount: payment?.amount || membership.monthlyContribution,
+        paidAt: payment?.paidAt ? payment.paidAt.toISOString() : undefined,
+      };
+    });
+
+    // Calculate pending dues up to the current month in current year
+    const joinedYear = membership.joinedAt ? new Date(membership.joinedAt).getFullYear() : currentYear;
+    const joinedMonth = membership.joinedAt ? new Date(membership.joinedAt).getMonth() + 1 : 1;
+    const startMonth = currentYear === joinedYear ? joinedMonth : 1;
+
+    let pendingDueCount = 0;
+    if (currentYear >= joinedYear) {
+      for (let m = startMonth; m <= currentMonth; m++) {
+        if (!paidMonthSet.has(m)) {
+          pendingDueCount++;
+        }
+      }
+    }
+
+    const agreement = {
+      id: `agr-${membership.id}`,
+      userId,
+      agreedAmount: membership.monthlyContribution,
+      effectiveFrom: membership.joinedAt ? membership.joinedAt.toISOString() : now.toISOString(),
+      isCurrent: true,
+    };
 
     return {
       membership,
+      agreement,
+      totalContributed,
+      pendingDueCount,
+      calendar,
       currentYear,
       paidMonthsThisYear,
-      payments,
+      payments: recentPayments,
       notices,
-      meetings,
+      upcomingMeetings: meetings,
+      latestNotices: notices,
+      activeElectionsCount: upcomingElections.length,
       upcomingElections,
     };
   }

@@ -20,13 +20,17 @@ export const InitialPaymentSchema = z.object({
 });
 
 export const PayContributionSchema = z.object({
-  periodMonth: z.coerce.number().min(1).max(12),
+  periodMonth: z.coerce.number().min(1).max(12).optional(),
+  months: z.array(z.coerce.number().min(1).max(12)).min(1).optional(),
   periodYear: z.coerce.number().min(2020).max(2050),
   amount: z.coerce.number().min(50, 'অনুদান সর্বনিম্ন ৫০ টাকা হতে হবে'),
   paymentMethod: z.enum(['BKASH', 'NAGAD', 'ROCKET', 'BANK', 'CASH']),
   trxId: z.string().optional(),
   senderNumber: z.string().optional(),
   notes: z.string().optional(),
+}).refine((data) => data.periodMonth !== undefined || (data.months && data.months.length > 0), {
+  message: 'কমপক্ষে একটি মাস নির্বাচন করতে হবে',
+  path: ['months'],
 });
 
 export const ChangeContributionSchema = z.object({
