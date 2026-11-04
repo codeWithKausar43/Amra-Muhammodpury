@@ -192,7 +192,7 @@ export function FinancialAnalyticsChart({
 
   return (
     <div
-      className={`rounded-2xl sm:rounded-3xl bg-white dark:bg-[#071317] border border-slate-200/80 dark:border-emerald-500/25 shadow-soft dark:shadow-xl p-5 sm:p-6 text-slate-900 dark:text-white transition-all duration-300 relative overflow-hidden ${className}`}
+      className={`space-y-4 py-2 px-1 text-slate-900 dark:text-white transition-all duration-300 relative ${className}`}
     >
       {/* Background glow overlay */}
       <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -219,7 +219,7 @@ export function FinancialAnalyticsChart({
           </div>
 
           {/* Period Switcher Capsule */}
-          <div className="bg-slate-100/90 dark:bg-[#071013] border border-slate-200/80 dark:border-slate-700/60 p-1 rounded-xl flex items-center gap-1 shadow-sm dark:shadow-inner">
+          <div className="bg-slate-100 dark:bg-white/5 p-1 rounded-xl flex items-center gap-1">
             <button
               type="button"
               onClick={() => {
@@ -547,7 +547,7 @@ export function FinancialAnalyticsChart({
       {/* =========================================================================
           3. Legend & Net Surplus Badge
          ========================================================================= */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t border-slate-200/60 dark:border-white/10">
         {/* Left: Legend Dots */}
         <div className="flex items-center gap-4 text-xs font-semibold">
           <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
@@ -562,10 +562,10 @@ export function FinancialAnalyticsChart({
 
         {/* Right: Net Surplus Badge */}
         <div
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border shadow-sm transition-all ${
+          className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
             isSurplusPositive
-              ? 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-200/90 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 shadow-emerald-900/10'
-              : 'bg-rose-50 dark:bg-rose-950/70 border-rose-200/90 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 shadow-rose-900/10'
+              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-brand-emerald dark:text-emerald-400'
+              : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
           }`}
         >
           <span>
@@ -578,7 +578,7 @@ export function FinancialAnalyticsChart({
       {/* =========================================================================
           4. Welfare Fund Allocation Ratio ("তহবিল বরাদ্দ অনুপাত")
          ========================================================================= */}
-      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
+      <div className="mt-5 pt-4 border-t border-slate-200/60 dark:border-white/10 space-y-2.5">
         {/* Header Row */}
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <span className="font-bold text-slate-800 dark:text-slate-200">
@@ -591,7 +591,7 @@ export function FinancialAnalyticsChart({
         </div>
 
         {/* Multi-Segment Colored Progress Bar */}
-        <div className="w-full h-2.5 sm:h-3 rounded-full bg-slate-100 dark:bg-slate-800/90 overflow-hidden flex items-stretch p-0.5 border border-slate-200/80 dark:border-slate-700/50 shadow-inner">
+        <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-stretch">
           {fundAllocations.map((fund, idx) => {
             // Guarantee at least a tiny visible segment if percentage > 0
             const widthPct = Math.max(fund.percentage, fund.balance > 0 ? 2 : 0);

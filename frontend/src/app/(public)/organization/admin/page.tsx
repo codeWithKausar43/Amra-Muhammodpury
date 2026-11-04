@@ -586,6 +586,12 @@ export default function OrganizationAdminPage() {
           2. Executive Financial Overview (Target Design: Hero Net Balance + 2 Sub-Cards)
          ========================================================================= */}
       <div className="space-y-3 sm:space-y-4">
+        {/* Card 4: লাইভ আর্থিক অ্যানালিটিক্স ও ট্রেন্ড */}
+        <FinancialAnalyticsChart
+          trends={stats?.financialTrends}
+          funds={stats?.funds?.fundList}
+        />
+
         {/* Card 1: বর্তমান মোট ক্যাশ (Net Balance) */}
         <div className="relative rounded-3xl bg-white dark:bg-gradient-to-r dark:from-[#0E1714] dark:via-[#14231E] dark:to-[#172722] p-5 sm:p-6 border border-slate-200/80 dark:border-brand-emerald/35 shadow-soft dark:shadow-glass space-y-4 overflow-hidden text-slate-900 dark:text-white transition-colors">
           <div className="flex items-center justify-between">
@@ -648,12 +654,6 @@ export default function OrganizationAdminPage() {
             </p>
           </div>
         </div>
-
-        {/* Card 4: লাইভ আর্থিক অ্যানালিটিক্স ও ট্রেন্ড */}
-        <FinancialAnalyticsChart
-          trends={stats?.financialTrends}
-          funds={stats?.funds?.fundList}
-        />
       </div>
 
       {/* =========================================================================

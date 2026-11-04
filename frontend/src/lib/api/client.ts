@@ -38,14 +38,25 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
     normalizedPath = `/api/v1${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`;
   }
 
-  const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${normalizedPath}`, {
-    credentials: 'include', // Include Better Auth session cookies
-    headers: {
-      ...defaultHeaders,
-      ...headers,
-    },
-    ...customConfig,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${env.NEXT_PUBLIC_API_URL}${normalizedPath}`, {
+      credentials: 'include', // Include Better Auth session cookies
+      headers: {
+        ...defaultHeaders,
+        ...headers,
+      },
+      ...customConfig,
+    });
+  } catch (err: any) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(
+      'সার্ভারের সাথে সংযোগ স্থাপন করা সম্ভব হয়নি (Failed to fetch)। ব্যাকএন্ড সার্ভার চালু আছে কিনা নিশ্চিত করুন।',
+      0,
+      'NETWORK_ERROR',
+      { originalError: err?.message, targetUrl: `${env.NEXT_PUBLIC_API_URL}${normalizedPath}` },
+    );
+  }
 
   const data = await response.json().catch(() => null);
 

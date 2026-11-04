@@ -126,7 +126,7 @@ describe('Social Services (Unit Tests)', () => {
       expect(res.success).toBe(true);
       expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith({
         where: { recipientId: 'u1', isRead: false },
-        data: { isRead: true },
+        data: { isRead: true, readAt: expect.any(Date) },
       });
     });
   });

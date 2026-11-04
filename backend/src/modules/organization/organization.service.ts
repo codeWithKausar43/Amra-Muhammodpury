@@ -545,7 +545,7 @@ export class OrganizationService {
       }
 
       // Trigger push notification to officers and admins (excluding paying user)
-      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }).then((user) => {
+      this.prisma.user?.findUnique?.({ where: { id: userId }, select: { name: true } })?.then((user) => {
         const monthNames = targetMonths.map((m) => MONTH_NAMES_BN[m - 1] || `${m} তম`).join(', ');
         this.notificationService.sendPushToOfficers({
           title: 'নতুন মাসিক চাঁদা জমা 🔔',
@@ -559,8 +559,8 @@ export class OrganizationService {
           title: 'চাঁদা জমা গৃহীত হয়েছে ⏳',
           body: `আপনার ${monthNames} (${data.periodYear}) এর ৳${data.amount} চাঁদা জমার তথ্য পাওয়া গেছে। এটি অ্যাডমিনের যাচাই ও অনুমোদনের অপেক্ষায় রয়েছে।`,
           url: '/organization/member',
-        }).catch(() => {});
-      }).catch(() => {});
+        })?.catch?.(() => {});
+      })?.catch?.(() => {});
 
       return {
         ...createdPayments[0],
@@ -645,14 +645,14 @@ export class OrganizationService {
           body: `আপনার ${monthLabel} ${payment.periodYear} এর ৳${payment.amount} মাসিক চাঁদা সফলভাবে অনুমোদিত হয়েছে। ধন্যবাদ!`,
           url: '/organization/member',
           sound: '/sounds/notification.wav',
-        }).catch(() => {});
+        })?.catch?.(() => {});
       } else {
         this.notificationService.sendPushToUser(payment.userId, {
           title: 'মাসিক চাঁদা আবেদন বাতিল ⚠️',
           body: `আপনার ${monthLabel} ${payment.periodYear} এর চাঁদা আবেদনটি বাতিল করা হয়েছে${notes ? `: ${notes}` : ''}।`,
           url: '/organization/member',
           sound: '/sounds/notification.wav',
-        }).catch(() => {});
+        })?.catch?.(() => {});
       }
 
       return updatedPayment;
