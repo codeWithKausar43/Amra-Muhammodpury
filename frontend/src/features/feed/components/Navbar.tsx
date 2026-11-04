@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAdminNav } from '@/features/organization/context/AdminNavContext';
+import { AdminDrawer } from '@/features/organization/components/AdminDrawer';
 import { Search, Bell, X, Menu, MessageSquare, Heart, UserPlus, CreditCard } from 'lucide-react';
 import { notificationAudio } from '@/lib/audio/notificationSound';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -19,6 +21,13 @@ interface NavbarProps {
 
 export function Navbar({ onSearch }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdminDashboard = pathname === '/organization/admin' || pathname?.startsWith('/organization/admin');
+  const {
+    isAdminDrawerOpen,
+    setIsAdminDrawerOpen,
+    badgeCounts,
+  } = useAdminNav();
   const { searchQuery, setSearchQuery } = useFeedModal();
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -253,16 +262,29 @@ export function Navbar({ onSearch }: NavbarProps) {
               <ThemeToggle />
             </div>
 
-            {/* Hamburger Menu & Settings Button */}
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="মেনু ও সেটিংস"
-              title="মেনু ও সেটিংস"
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-all cursor-pointer ring-1 ring-slate-200 dark:ring-white/10"
-            >
-              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
+            {/* Hamburger Menu: Shows dedicated Admin Drawer on /organization/admin, else regular Settings Hamburger */}
+            {isAdminDashboard ? (
+              <button
+                type="button"
+                onClick={() => setIsAdminDrawerOpen(true)}
+                aria-label="অ্যাডমিন কন্ট্রোল মেনু"
+                title="অ্যাডমিন মেনু ও অপশন (ড্রয়ার)"
+                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl bg-brand-emerald text-white hover:bg-emerald-600 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shadow-emerald-500/20 active:scale-95"
+              >
+                <Menu className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                <span className="text-xs font-bold hidden sm:inline">অ্যাডমিন মেনু</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="মেনু ও সেটিংস"
+                title="মেনু ও সেটিংস"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-all cursor-pointer ring-1 ring-slate-200 dark:ring-white/10"
+              >
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -304,6 +326,20 @@ export function Navbar({ onSearch }: NavbarProps) {
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+
+      {/* Slide-over Admin Drawer (Dedicated for /organization/admin) */}
+      {isAdminDashboard && (
+        <AdminDrawer
+          isOpen={isAdminDrawerOpen}
+          onClose={() => setIsAdminDrawerOpen(false)}
+                    fundsCount={badgeCounts.fundsCount}
+          noticesCount={badgeCounts.noticesCount}
+          onOpenGeneralSettings={() => {
+            setIsAdminDrawerOpen(false);
+            setSettingsOpen(true);
+          }}
+        />
+      )}
     </>
   );
 }

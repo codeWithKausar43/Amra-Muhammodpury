@@ -186,9 +186,18 @@ export class OrganizationService {
     const membership = await this.prisma.orgMembership.findUnique({
       where: { userId },
       include: {
+        designation: true,
         user: {
-          select: { id: true, name: true, email: true, phone: true, image: true },
+          select: { id: true, name: true, email: true, phone: true, image: true, role: true },
         },
+      },
+    });
+
+    const committeeMember = await this.prisma.orgCommitteeMember.findFirst({
+      where: { userId, isCurrent: true },
+      include: {
+        designation: true,
+        committee: true,
       },
     });
 
@@ -204,6 +213,7 @@ export class OrganizationService {
     return {
       hasMembership: Boolean(membership),
       membership,
+      committeeMember,
       latestApplication: application,
       currentAgreement: agreement,
     };

@@ -23,6 +23,7 @@ import {
   useOrgMutations,
 } from '../hooks/useOrganizationQueries';
 import type { AdminMemberItem } from '../types';
+import { MemberAnalyticsGraph } from './MemberAnalyticsGraph';
 
 function toBengaliNumber(num: number | string | undefined | null): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -135,71 +136,27 @@ export function OrganizationMemberManagement() {
           </div>
         </div>
 
-        {/* 9 Accurate DB Counts Grid */}
-        <div className="grid grid-cols-2 min-[420px]:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-2.5">
-          <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">মোট নিবন্ধিত</span>
-            <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
-              {toBengaliNumber(summary?.totalRegistered)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-brand-emerald/10 border border-brand-emerald/30 shadow-xs">
-            <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 block">সক্রিয় সদস্য</span>
-            <div className="text-lg sm:text-xl font-black text-emerald-700 dark:text-emerald-400 mt-0.5">
-              {toBengaliNumber(summary?.totalActive)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 shadow-xs">
-            <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 block">নতুন আবেদন</span>
-            <div className="text-lg sm:text-xl font-black text-amber-700 dark:text-amber-400 mt-0.5">
-              {toBengaliNumber(summary?.pendingApps)} <span className="text-xs font-normal">টি</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-sky-50/70 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800/40 shadow-xs">
-            <span className="text-[11px] font-semibold text-sky-700 dark:text-sky-400 block">পেমেন্ট অপেক্ষমাণ</span>
-            <div className="text-lg sm:text-xl font-black text-sky-700 dark:text-sky-400 mt-0.5">
-              {toBengaliNumber(summary?.approvedPaymentPending)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 shadow-xs">
-            <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 block">চলতি মাস পরিশোধিত</span>
-            <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {toBengaliNumber(summary?.paidThisMonth)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 shadow-xs">
-            <span className="text-[11px] font-semibold text-rose-700 dark:text-rose-400 block">চলতি মাস বকেয়া</span>
-            <div className="text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5">
-              {toBengaliNumber(summary?.unpaidThisMonth)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800/50 shadow-xs">
-            <span className="text-[11px] font-semibold text-red-700 dark:text-red-400 block">মেয়াদোত্তীর্ণ বকেয়া</span>
-            <div className="text-lg sm:text-xl font-black text-red-600 dark:text-red-400 mt-0.5">
-              {toBengaliNumber(summary?.overdueCount)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block">স্থগিত সদস্য</span>
-            <div className="text-lg sm:text-xl font-black text-slate-700 dark:text-slate-300 mt-0.5">
-              {toBengaliNumber(summary?.suspendedCount)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-xs col-span-2 min-[420px]:col-span-1">
-            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block">আর্কাইভকৃত</span>
-            <div className="text-lg sm:text-xl font-black text-slate-700 dark:text-slate-300 mt-0.5">
-              {toBengaliNumber(summary?.archivedCount)} <span className="text-xs font-normal">জন</span>
-            </div>
-          </div>
-        </div>
+        {/* Dynamic Real-Time Member Graph Chart */}
+        <MemberAnalyticsGraph
+          summary={summary}
+          currentStatusFilter={status}
+          currentPaymentFilter={paymentStatus}
+          onSelectFilter={(type, val) => {
+            if (type === 'status') {
+              setStatus(val);
+              setPaymentStatus('ALL');
+            } else if (type === 'payment') {
+              setPaymentStatus(val);
+              setStatus('ALL');
+            }
+            setPage(1);
+          }}
+          onResetFilters={() => {
+            setStatus('ALL');
+            setPaymentStatus('ALL');
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* 2. Search, Filters & Quick Selectors */}
