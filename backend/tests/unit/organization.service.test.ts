@@ -40,6 +40,7 @@ describe('OrganizationService', () => {
         findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
       },
       orgProject: {
         count: vi.fn(),
@@ -462,8 +463,7 @@ describe('OrganizationService', () => {
         // Reviewer is ADMIN
         mockPrisma.user.findUnique.mockResolvedValueOnce({ role: 'ADMIN' });
 
-        // Payment is PENDING
-        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce({
+        const paymentRecord = {
           id: 'pay-1',
           userId: 'user-member',
           amount: 500,
@@ -472,8 +472,15 @@ describe('OrganizationService', () => {
           status: 'PENDING',
           receiptNumber: 'AMP-REC-202611-1234',
           trxId: 'TRX-BKASH-789',
+          createdAt: new Date(),
           user: { id: 'user-member', name: 'Md Salman' },
-        });
+        };
+
+        // Payment is PENDING
+        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce(paymentRecord);
+
+        // Sibling lookup (trxId is set, so findMany is called)
+        mockPrisma.contributionPayment.findMany.mockResolvedValueOnce([paymentRecord]);
 
         // General fund exists
         mockPrisma.orgFund.findUnique.mockResolvedValueOnce({
@@ -482,16 +489,18 @@ describe('OrganizationService', () => {
           balance: 10000,
         });
 
-        mockPrisma.contributionPayment.update.mockResolvedValueOnce({
+        // updateMany (batch update) + findUnique (return updated)
+        mockPrisma.contributionPayment.updateMany.mockResolvedValueOnce({ count: 1 });
+        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce({
           id: 'pay-1',
           status: 'VERIFIED',
         });
 
         const res = await service.reviewContributionPayment('user-reviewer', 'pay-1', 'VERIFIED');
 
-        expect(mockPrisma.contributionPayment.update).toHaveBeenCalledWith(
+        expect(mockPrisma.contributionPayment.updateMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: { id: 'pay-1' },
+            where: { id: { in: ['pay-1'] } },
             data: expect.objectContaining({ status: 'VERIFIED' }),
           }),
         );
@@ -517,7 +526,7 @@ describe('OrganizationService', () => {
         // Reviewer is ADMIN
         mockPrisma.user.findUnique.mockResolvedValueOnce({ role: 'ADMIN' });
 
-        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce({
+        const paymentRecord = {
           id: 'pay-2',
           userId: 'user-member',
           amount: 500,
@@ -525,18 +534,27 @@ describe('OrganizationService', () => {
           periodMonth: 11,
           status: 'PENDING',
           receiptNumber: 'AMP-REC-202611-5678',
-        });
+          trxId: null,
+          createdAt: new Date(),
+        };
 
-        mockPrisma.contributionPayment.update.mockResolvedValueOnce({
+        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce(paymentRecord);
+
+        // Sibling lookup (no trxId, uses time window)
+        mockPrisma.contributionPayment.findMany.mockResolvedValueOnce([paymentRecord]);
+
+        // updateMany + findUnique for return value
+        mockPrisma.contributionPayment.updateMany.mockResolvedValueOnce({ count: 1 });
+        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce({
           id: 'pay-2',
           status: 'REJECTED',
         });
 
         await service.reviewContributionPayment('user-admin', 'pay-2', 'REJECTED', 'ভুল TrxID');
 
-        expect(mockPrisma.contributionPayment.update).toHaveBeenCalledWith(
+        expect(mockPrisma.contributionPayment.updateMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: { id: 'pay-2' },
+            where: { id: { in: ['pay-2'] } },
             data: expect.objectContaining({ status: 'REJECTED' }),
           }),
         );

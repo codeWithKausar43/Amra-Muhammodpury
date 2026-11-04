@@ -618,18 +618,73 @@ export class OrganizationService {
     }
 
     if (payment.status !== 'PENDING') {
-      throw new BadRequestError(`এই পেমেন্টটি ইতিমধ্যে ${payment.status === 'VERIFIED' ? 'অনুমোদিত' : 'বাতিলকৃত'}`);
+      throw new BadRequestError(`এই পেমেন্টটি ইতিমধ্যে ${payment.status === 'VERIFIED' ? 'অনুমোদিত' : 'বাতিলকৃত'}`);
+    }
+
+    // Find all sibling pending payments in the same batch (same userId + trxId, or within 60s window)
+    let siblingPayments: (typeof payment)[] = [payment];
+    if (payment.trxId && payment.trxId.trim()) {
+      const found = await this.prisma.contributionPayment.findMany({
+        where: {
+          userId: payment.userId,
+          trxId: payment.trxId.trim(),
+          status: 'PENDING',
+        },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
+      if (found.length > 0) siblingPayments = found;
+    } else {
+      // Group by 60-second creation window
+      const windowStart = new Date(new Date(payment.createdAt).getTime() - 30000);
+      const windowEnd = new Date(new Date(payment.createdAt).getTime() + 30000);
+      const found = await this.prisma.contributionPayment.findMany({
+        where: {
+          userId: payment.userId,
+          trxId: null,
+          status: 'PENDING',
+          createdAt: { gte: windowStart, lte: windowEnd },
+        },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
+      if (found.length > 0) siblingPayments = found;
+    }
+
+    const siblingIds = siblingPayments.map((p) => p.id);
+    const totalAmount = siblingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+    // Build combined period label for notifications
+    const sortedSiblings = [...siblingPayments].sort((a, b) =>
+      a.periodYear !== b.periodYear ? a.periodYear - b.periodYear : a.periodMonth - b.periodMonth,
+    );
+    const firstSibling = sortedSiblings[0]!;
+    const lastSibling = sortedSiblings[sortedSiblings.length - 1]!;
+    let batchPeriodLabel: string;
+    if (sortedSiblings.length === 1) {
+      const mn = MONTH_NAMES_BN[firstSibling.periodMonth - 1] || `${firstSibling.periodMonth} তম`;
+      batchPeriodLabel = `${mn} ${firstSibling.periodYear}`;
+    } else {
+      const firstMn = MONTH_NAMES_BN[firstSibling.periodMonth - 1] || `${firstSibling.periodMonth} তম`;
+      const lastMn = MONTH_NAMES_BN[lastSibling.periodMonth - 1] || `${lastSibling.periodMonth} তম`;
+      if (firstSibling.periodYear === lastSibling.periodYear) {
+        batchPeriodLabel = `${firstMn} - ${lastMn} ${firstSibling.periodYear} (${sortedSiblings.length} মাস)`;
+      } else {
+        batchPeriodLabel = `${firstMn} ${firstSibling.periodYear} - ${lastMn} ${lastSibling.periodYear} (${sortedSiblings.length} মাস)`;
+      }
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const updatedPayment = await tx.contributionPayment.update({
-        where: { id: paymentId },
+      // Update ALL sibling payments in one go
+      await tx.contributionPayment.updateMany({
+        where: { id: { in: siblingIds } },
         data: {
           status,
           verifiedBy: reviewerId,
           notes: notes ? (payment.notes ? `${payment.notes} | ${notes}` : notes) : payment.notes,
         },
       });
+
+      // Return the first updated payment for API response
+      const updatedPayment = await tx.contributionPayment.findUnique({ where: { id: paymentId } });
 
       if (status === 'VERIFIED') {
         // Update member's last payment date
@@ -638,7 +693,7 @@ export class OrganizationService {
           data: { lastPaymentDate: new Date() },
         });
 
-        // Credit general fund
+        // Credit general fund with TOTAL amount of the batch
         let generalFund = await tx.orgFund.findUnique({ where: { code: 'GENERAL' } });
         if (!generalFund) {
           generalFund = await tx.orgFund.findFirst({
@@ -656,18 +711,18 @@ export class OrganizationService {
         if (generalFund) {
           await tx.orgFund.update({
             where: { id: generalFund.id },
-            data: { balance: { increment: payment.amount } },
+            data: { balance: { increment: totalAmount } },
           });
 
-          const monthLabel = MONTH_NAMES_BN[payment.periodMonth - 1] || `${payment.periodMonth} তম`;
-
+          // Single fund transaction for the entire batch
+          const receiptSummary = sortedSiblings.map((p) => p.receiptNumber).join(', ');
           await tx.fundTransaction.create({
             data: {
               fundId: generalFund.id,
               type: 'CONTRIBUTION',
-              amount: payment.amount,
-              title: `মাসিক চাঁদা অনুমোদন (${monthLabel} ${payment.periodYear}) - ${payment.user?.name || 'সদস্য'}`,
-              description: `রশিদ: ${payment.receiptNumber}${payment.trxId ? `, TrxID: ${payment.trxId}` : ''}`,
+              amount: totalAmount,
+              title: `মাসিক চাঁদা অনুমোদন (${batchPeriodLabel}) - ${payment.user?.name || 'সদস্য'}`,
+              description: `রশিদ: ${receiptSummary}${payment.trxId ? `, TrxID: ${payment.trxId}` : ''}`,
               category: 'সদস্য চাঁদা',
               referenceId: payment.id,
               performedBy: reviewerId,
@@ -676,19 +731,18 @@ export class OrganizationService {
         }
       }
 
-      // Trigger push notification with sound to the member's phone
-      const monthLabel = MONTH_NAMES_BN[payment.periodMonth - 1] || `${payment.periodMonth} তম`;
+      // Single push notification for the entire batch
       if (status === 'VERIFIED') {
         this.notificationService.sendPushToUser(payment.userId, {
           title: 'মাসিক চাঁদা অনুমোদিত! ✅',
-          body: `আপনার ${monthLabel} ${payment.periodYear} এর ৳${payment.amount} মাসিক চাঁদা সফলভাবে অনুমোদিত হয়েছে। ধন্যবাদ!`,
+          body: `আপনার ${batchPeriodLabel} এর ৳${totalAmount} মাসিক চাঁদা সফলভাবে অনুমোদিত হয়েছে। ধন্যবাদ!`,
           url: '/organization/member',
           sound: '/sounds/notification.wav',
         })?.catch?.(() => { });
       } else {
         this.notificationService.sendPushToUser(payment.userId, {
           title: 'মাসিক চাঁদা আবেদন বাতিল ⚠️',
-          body: `আপনার ${monthLabel} ${payment.periodYear} এর চাঁদা আবেদনটি বাতিল করা হয়েছে${notes ? `: ${notes}` : ''}।`,
+          body: `আপনার ${batchPeriodLabel} এর চাঁদা আবেদনটি বাতিল করা হয়েছে${notes ? `: ${notes}` : ''}।`,
           url: '/organization/member',
           sound: '/sounds/notification.wav',
         })?.catch?.(() => { });
@@ -3029,6 +3083,8 @@ export class OrganizationService {
           paymentMethod: verified.paymentMethod,
           trxId: verified.trxId,
           receiptNumber: verified.receiptNumber,
+          periodMonth: verified.periodMonth || targetMonth,
+          periodYear: verified.periodYear || targetYear,
           status: 'VERIFIED',
         });
       } else if (pending) {
@@ -3071,38 +3127,87 @@ export class OrganizationService {
     }
 
     // Merge any other pending payments across all periods so admin can verify all pending submissions in one place
-    const existingPaymentIds = new Set(pendingMembers.map((p) => p.paymentId).filter(Boolean));
+    // Group by batch key (userId + trxId, or userId + 60-second time window) so multi-month submissions appear as ONE entry
     const pendingToMerge = Array.isArray(allPendingPayments) ? allPendingPayments : [];
+
+    // Clear pendingMembers and rebuild entirely from allPendingPayments grouped by batch
+    // This ensures even the target-period pending payments are grouped correctly
+    pendingMembers.length = 0;
+
+    // Build batch groups from ALL pending payments
+    const batchMap = new Map<string, typeof allPendingPayments>();
     for (const p of pendingToMerge) {
-      if (!existingPaymentIds.has(p.id)) {
-        const member = activeMembers.find((m) => m.userId === p.userId);
-        const monthName = MONTH_NAMES_BN[p.periodMonth - 1] || `${p.periodMonth} তম মাস`;
-        pendingMembers.push({
-          memberId: member?.id || p.userId,
-          userId: p.userId,
-          name: p.user?.name || member?.user?.name || 'সদস্য',
-          phone: p.user?.phone || member?.user?.phone || '—',
-          image: p.user?.image || member?.user?.image || null,
-          memberNumber: member?.memberNumber || 'AMP-MEMBER',
-          agreedAmount: member?.monthlyContribution || p.amount,
-          designation: member?.designation?.name || member?.orgRole || 'MEMBER',
-          canSendReminder: false,
-          paymentId: p.id,
-          paidAmount: p.amount,
-          submittedAmount: p.amount,
-          submittedAt: p.paidAt || p.createdAt,
-          paymentDate: p.paidAt || p.createdAt,
-          paymentMethod: p.paymentMethod || 'মোবাইল ব্যাংকিং',
-          trxId: p.trxId,
-          senderNumber: p.senderNumber,
-          receiptNumber: p.receiptNumber,
-          periodMonth: p.periodMonth,
-          periodYear: p.periodYear,
-          periodLabel: `${monthName} ${p.periodYear}`,
-          status: 'PENDING',
-        });
-        existingPaymentIds.add(p.id);
+      let batchKey: string;
+      if (p.trxId && p.trxId.trim()) {
+        // Same user + same trxId → same batch
+        batchKey = `${p.userId}_trx_${p.trxId.trim()}`;
+      } else {
+        // Same user, no trxId → group by 60-second submission window
+        batchKey = `${p.userId}_time_${Math.floor(new Date(p.createdAt).getTime() / 60000)}`;
       }
+      if (!batchMap.has(batchKey)) batchMap.set(batchKey, []);
+      batchMap.get(batchKey)!.push(p);
+    }
+
+    for (const [, batchPayments] of batchMap) {
+      // Sort by periodYear asc, periodMonth asc for label building
+      batchPayments.sort((a, b) =>
+        a.periodYear !== b.periodYear ? a.periodYear - b.periodYear : a.periodMonth - b.periodMonth,
+      );
+
+      const first = batchPayments[0]!;
+      const last = batchPayments[batchPayments.length - 1]!;
+      const member = activeMembers.find((m) => m.userId === first.userId);
+      const count = batchPayments.length;
+      const totalAmount = batchPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      // Build human-readable period label
+      let periodLabel: string;
+      if (count === 1) {
+        const mn = MONTH_NAMES_BN[first.periodMonth - 1] || `${first.periodMonth} তম মাস`;
+        periodLabel = `${mn} ${first.periodYear}`;
+      } else {
+        const firstMn = MONTH_NAMES_BN[first.periodMonth - 1] || `${first.periodMonth} তম`;
+        const lastMn = MONTH_NAMES_BN[last.periodMonth - 1] || `${last.periodMonth} তম`;
+        // If same year, show "এপ্রিল - জুন ২০২৬ (৩ মাস)", else include both years
+        if (first.periodYear === last.periodYear) {
+          periodLabel = `${firstMn} - ${lastMn} ${first.periodYear} (${count} মাস)`;
+        } else {
+          periodLabel = `${firstMn} ${first.periodYear} - ${lastMn} ${last.periodYear} (${count} মাস)`;
+        }
+      }
+
+      const lastReminder = member?.lastReminderSentAt;
+      const canSendReminder =
+        !lastReminder || Date.now() - new Date(lastReminder).getTime() > 60 * 60 * 1000;
+
+      pendingMembers.push({
+        memberId: member?.id || first.userId,
+        userId: first.userId,
+        name: first.user?.name || member?.user?.name || 'সদস্য',
+        phone: first.user?.phone || member?.user?.phone || '—',
+        image: first.user?.image || member?.user?.image || null,
+        memberNumber: member?.memberNumber || 'AMP-MEMBER',
+        agreedAmount: member?.monthlyContribution || first.amount,
+        designation: member?.designation?.name || (member?.orgRole as string) || 'MEMBER',
+        canSendReminder,
+        // For batch approval, paymentId = first record's id; allPaymentIds has them all
+        paymentId: first.id,
+        allPaymentIds: batchPayments.map((p) => p.id),
+        monthsCount: count,
+        paidAmount: totalAmount,
+        submittedAmount: totalAmount,
+        submittedAt: first.paidAt || first.createdAt,
+        paymentDate: first.paidAt || first.createdAt,
+        paymentMethod: first.paymentMethod || 'মোবাইল ব্যাংকিং',
+        trxId: first.trxId,
+        senderNumber: first.senderNumber,
+        receiptNumber: first.receiptNumber,
+        periodMonth: first.periodMonth,
+        periodYear: first.periodYear,
+        periodLabel,
+        status: 'PENDING',
+      });
     }
 
     return {

@@ -428,50 +428,66 @@ export function MonthlyContributionTracking() {
                     এই মাসের চাঁদা এখনো কোনো সদস্য পরিশোধ করেননি।
                   </div>
                 ) : (
-                  <div className="overflow-x-auto pb-1 scrollbar-none sm:scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10 -mx-1 px-1">
-                    <div className="min-w-[345px] sm:min-w-full divide-y divide-slate-200/70 dark:divide-white/10">
+                  <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 -mx-1 px-1">
+                    <div className="min-w-[480px] divide-y divide-slate-100 dark:divide-white/5">
                       {paidList.map((item) => (
                         <div
                           key={item.memberId}
-                          className="py-2.5 sm:py-3 px-1 sm:px-2 hover:bg-slate-50/70 dark:hover:bg-white/[0.03] flex items-center justify-between gap-3 sm:gap-3.5 transition-colors group"
+                          className="py-3 px-2 sm:px-3 grid grid-cols-[minmax(180px,1.4fr)_minmax(150px,1.1fr)_minmax(120px,auto)] items-center gap-4 sm:gap-6 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors group"
                         >
-                          {/* Column 1: Avatar + Full Name + Phone + Payment Date */}
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-white/10 relative overflow-hidden border border-slate-200/60 dark:border-white/10 shrink-0">
+                          {/* Column 1: Avatar + Name + Month Period */}
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-brand-emerald/10 text-brand-emerald flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden relative ring-1 ring-brand-emerald/20">
                               {item.image ? (
-                                <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <Image
+                                  src={item.image}
+                                  alt={item.name}
+                                  fill
+                                  className="object-cover"
+                                />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 text-xs">
-                                  {item.name.charAt(0)}
-                                </div>
+                                item.name?.charAt(0) || 'স'
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                              <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate group-hover:text-brand-emerald transition-colors">
                                 {item.name}
                               </h4>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5 font-medium font-mono">
-                                {item.phone || (item.memberNumber ? `#${item.memberNumber}` : 'ফোন নম্বর নেই')}
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                মাসিক কিস্তি • {toBengaliNumber(item.periodMonth || selectedMonth)}/{toBengaliNumber(item.periodYear || selectedYear)}
                               </p>
-                              {item.paymentDate && (
-                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 whitespace-nowrap mt-0.5 font-medium">
-                                  পরিশোধ: {new Date(item.paymentDate).toLocaleDateString('bn-BD')}
-                                </p>
+                            </div>
+                          </div>
+
+                          {/* Column 2: Phone + Method Badge & TrxID */}
+                          <div className="min-w-0">
+                            <div className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-mono truncate">
+                              {item.phone || (item.memberNumber ? `#${item.memberNumber}` : '—')}
+                            </div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              {item.paymentMethod && (
+                                <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                                  {item.paymentMethod}
+                                </span>
+                              )}
+                              {item.trxId && (
+                                <span className="text-[10px] text-slate-400 font-mono truncate max-w-[120px]" title={item.trxId}>
+                                  Trx: {item.trxId}
+                                </span>
                               )}
                             </div>
                           </div>
 
-                          {/* Column 2: Amount & Verified Badge */}
-                          <div className="flex items-center gap-3 sm:gap-3.5 shrink-0">
-                            <div className="shrink-0 text-right min-w-[52px] sm:min-w-[58px]">
-                              <div className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 leading-tight">
-                                + ৳ {toBengaliNumber(item.paidAmount || item.agreedAmount)}
-                              </div>
-                              <div className="mt-0.5">
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                                  পরিশোধিত
-                                </span>
-                              </div>
+                          {/* Column 3: Amount (+ ৳ পরিমাণ) + Paid Status Badge with Dot */}
+                          <div className="flex flex-col items-end text-right justify-center shrink-0">
+                            <div className="font-mono font-bold text-xs sm:text-sm text-brand-emerald dark:text-brand-mint">
+                              + ৳ {toBengaliNumber(item.paidAmount || item.agreedAmount)}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5 justify-end">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-emerald/15 text-brand-emerald whitespace-nowrap">
+                                <span className="w-1.5 h-1.5 rounded-full bg-brand-emerald" />
+                                পরিশোধিত
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -605,11 +621,21 @@ export function MonthlyContributionTracking() {
                             </div>
                           </div>
 
-                          {/* Column 2: Date + Method & Trx */}
+                          {/* Column 2: Date + Period Label + Method & Trx */}
                           <div className="min-w-0">
                             <div className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
                               {formatBengaliDate(item.paymentDate || item.submittedAt)}
+                              {(item as any).monthsCount > 1 && (
+                                <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100/80 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
+                                  {(item as any).monthsCount} মাস
+                                </span>
+                              )}
                             </div>
+                            {(item as any).periodLabel && (
+                              <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium whitespace-nowrap">
+                                {(item as any).periodLabel}
+                              </div>
+                            )}
                             <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 whitespace-nowrap font-medium">
                               <span className="font-semibold text-slate-600 dark:text-slate-300">{item.paymentMethod || 'মোবাইল ব্যাংকিং'}</span>
                               {item.trxId && (
