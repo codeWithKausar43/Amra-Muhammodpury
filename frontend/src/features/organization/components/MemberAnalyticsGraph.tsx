@@ -3,7 +3,6 @@
 import * as React from 'react';
 import {
   BarChart3,
-  RotateCcw,
   LineChart,
 } from 'lucide-react';
 import type { AdminMemberSummaryCounts } from '../types';
@@ -53,9 +52,9 @@ function getSplinePath(points: { x: number; y: number }[], maxY?: number): strin
 
 export interface MemberAnalyticsGraphProps {
   summary?: AdminMemberSummaryCounts;
+  defaultChartStyle?: ChartStyle;
   currentStatusFilter?: string;
   currentPaymentFilter?: string;
-  defaultChartStyle?: ChartStyle;
   onSelectFilter?: (type: 'status' | 'payment', val: string) => void;
   onResetFilters?: () => void;
 }
@@ -70,18 +69,12 @@ interface DataPoint {
   fullLabel: string;
   value: number;
   color: string;
-  filterType: 'status' | 'payment' | null;
-  filterValue: string | null;
   unit: string;
 }
 
 export function MemberAnalyticsGraph({
   summary,
-  currentStatusFilter = 'ALL',
-  currentPaymentFilter = 'ALL',
   defaultChartStyle = 'CURVE',
-  onSelectFilter,
-  onResetFilters,
 }: MemberAnalyticsGraphProps) {
   const [activeView, setActiveView] = React.useState<ChartView>('ALL');
   const [chartStyle, setChartStyle] = React.useState<ChartStyle>(defaultChartStyle);
@@ -117,8 +110,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'মোট সক্রিয় সদস্য',
           value: totalActive,
           color: '#10B981',
-          filterType: 'status',
-          filterValue: 'ACTIVE',
           unit: 'জন',
         },
         {
@@ -128,8 +119,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'চলতি মাস পরিশোধিত চাঁদা',
           value: paidThisMonth,
           color: '#059669',
-          filterType: 'payment',
-          filterValue: 'PAID',
           unit: 'জন',
         },
         {
@@ -139,8 +128,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'চলতি মাস বকেয়া চাঁদা',
           value: unpaidThisMonth,
           color: '#F43F5E',
-          filterType: 'payment',
-          filterValue: 'UNPAID',
           unit: 'জন',
         },
         {
@@ -150,8 +137,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'দীর্ঘমেয়াদী বকেয়া তাগিদ',
           value: overdueCount,
           color: '#DC2626',
-          filterType: 'payment',
-          filterValue: 'OVERDUE',
           unit: 'জন',
         },
       ];
@@ -166,8 +151,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'নিয়মিত সক্রিয় সদস্য',
           value: totalActive,
           color: '#10B981',
-          filterType: 'status',
-          filterValue: 'ACTIVE',
           unit: 'জন',
         },
         {
@@ -177,8 +160,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'নতুন সদস্যপদ আবেদন',
           value: pendingApps,
           color: '#F59E0B',
-          filterType: null,
-          filterValue: null,
           unit: 'টি',
         },
         {
@@ -188,8 +169,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'অনুমোদিত ফি অপেক্ষমাণ',
           value: approvedPaymentPending,
           color: '#0284C7',
-          filterType: 'status',
-          filterValue: 'APPROVED_PAYMENT_PENDING',
           unit: 'জন',
         },
         {
@@ -199,8 +178,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'সাময়িক স্থগিত সদস্যপদ',
           value: suspendedCount,
           color: '#64748B',
-          filterType: 'status',
-          filterValue: 'SUSPENDED',
           unit: 'জন',
         },
         {
@@ -210,8 +187,6 @@ export function MemberAnalyticsGraph({
           fullLabel: 'সংরক্ষিত/নিষ্ক্রিয় অ্যাকাউন্ট',
           value: archivedCount,
           color: '#475569',
-          filterType: 'status',
-          filterValue: 'ARCHIVED',
           unit: 'জন',
         },
       ];
@@ -226,8 +201,6 @@ export function MemberAnalyticsGraph({
         fullLabel: 'মোট নিবন্ধিত সদস্য সংখ্যা',
         value: totalRegistered,
         color: '#6366F1',
-        filterType: 'status',
-        filterValue: 'ALL',
         unit: 'জন',
       },
       {
@@ -237,8 +210,6 @@ export function MemberAnalyticsGraph({
         fullLabel: 'অনুমোদিত ও সক্রিয় সদস্য',
         value: totalActive,
         color: '#10B981',
-        filterType: 'status',
-        filterValue: 'ACTIVE',
         unit: 'জন',
       },
       {
@@ -248,8 +219,6 @@ export function MemberAnalyticsGraph({
         fullLabel: 'চলতি মাসে চাঁদা পরিশোধিত',
         value: paidThisMonth,
         color: '#059669',
-        filterType: 'payment',
-        filterValue: 'PAID',
         unit: 'জন',
       },
       {
@@ -259,8 +228,6 @@ export function MemberAnalyticsGraph({
         fullLabel: 'চলতি মাসে চাঁদা বকেয়া রয়েছে',
         value: unpaidThisMonth,
         color: '#F43F5E',
-        filterType: 'payment',
-        filterValue: 'UNPAID',
         unit: 'জন',
       },
       {
@@ -270,8 +237,6 @@ export function MemberAnalyticsGraph({
         fullLabel: 'একাধিক মাস অনাদায়ী বকেয়া',
         value: overdueCount,
         color: '#DC2626',
-        filterType: 'payment',
-        filterValue: 'OVERDUE',
         unit: 'জন',
       },
       {
@@ -281,8 +246,6 @@ export function MemberAnalyticsGraph({
         fullLabel: 'পর্যালোচনার জন্য অপেক্ষমাণ',
         value: pendingApps,
         color: '#F59E0B',
-        filterType: null,
-        filterValue: null,
         unit: 'টি',
       },
       {
@@ -292,8 +255,6 @@ export function MemberAnalyticsGraph({
         fullLabel: 'অনুমোদন শেষে ফি অপেক্ষমাণ',
         value: approvedPaymentPending,
         color: '#0284C7',
-        filterType: 'status',
-        filterValue: 'APPROVED_PAYMENT_PENDING',
         unit: 'জন',
       },
     ];
@@ -365,27 +326,7 @@ export function MemberAnalyticsGraph({
     return `${splinePath} L ${svgWidth} ${baseLineY} L 0 ${baseLineY} Z`;
   }, [splinePath, svgWidth, baseLineY]);
 
-  const activePoint = React.useMemo(() => {
-    if (hoveredIdx !== null) return mappedPoints[hoveredIdx] ?? null;
-    if (currentStatusFilter !== 'ALL') {
-      return (
-        mappedPoints.find(
-          (p) => p.filterType === 'status' && p.filterValue === currentStatusFilter
-        ) ?? null
-      );
-    }
-    if (currentPaymentFilter !== 'ALL') {
-      return (
-        mappedPoints.find(
-          (p) => p.filterType === 'payment' && p.filterValue === currentPaymentFilter
-        ) ?? null
-      );
-    }
-    return null;
-  }, [hoveredIdx, mappedPoints, currentStatusFilter, currentPaymentFilter]);
-
-  const hasActiveFilter =
-    currentStatusFilter !== 'ALL' || currentPaymentFilter !== 'ALL';
+  const activePoint = hoveredIdx !== null ? mappedPoints[hoveredIdx] ?? null : null;
 
   return (
     <div className="w-full space-y-3 py-1">
@@ -512,10 +453,6 @@ export function MemberAnalyticsGraph({
       {chartStyle === 'BARS' ? (
         <div className="divide-y divide-slate-100/80 dark:divide-white/5">
           {points.map((p) => {
-            const isCurrentFilter =
-              (p.filterType === 'status' && currentStatusFilter === p.filterValue) ||
-              (p.filterType === 'payment' && currentPaymentFilter === p.filterValue);
-
             const percentOfMax =
               maxValue > 0 ? Math.round((p.value / maxValue) * 100) : 0;
 
@@ -527,20 +464,7 @@ export function MemberAnalyticsGraph({
             return (
               <div
                 key={p.id}
-                onClick={() => {
-                  if (onSelectFilter && p.filterType && p.filterValue) {
-                    if (isCurrentFilter) {
-                      onResetFilters?.();
-                    } else {
-                      onSelectFilter(p.filterType, p.filterValue);
-                    }
-                  }
-                }}
-                className={`group py-2.5 px-2 rounded-xl transition-all cursor-pointer select-none ${
-                  isCurrentFilter
-                    ? 'bg-brand-emerald/5 dark:bg-emerald-500/10'
-                    : 'hover:bg-slate-50/70 dark:hover:bg-white/[0.02]'
-                }`}
+                className="py-2.5 px-2 rounded-xl transition-all select-none hover:bg-slate-50/70 dark:hover:bg-white/[0.02]"
               >
                 {/* Metric Label and Real Data Digits */}
                 <div className="flex items-center justify-between gap-2 mb-1">
@@ -552,11 +476,6 @@ export function MemberAnalyticsGraph({
                     <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
                       {p.shortLabel}
                     </span>
-                    {isCurrentFilter && (
-                      <span className="text-[10px] font-bold text-brand-emerald bg-brand-emerald/10 px-1.5 py-0.2 rounded">
-                        ফিল্টার সক্রিয়
-                      </span>
-                    )}
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
@@ -596,7 +515,7 @@ export function MemberAnalyticsGraph({
       ) : (
         /* Alternative Curve View */
         <div className="relative py-1">
-          {/* Active / Selected Point Detail Pill */}
+          {/* Active / Hovered Point Detail Pill */}
           {activePoint ? (
             <div className="flex items-center justify-between bg-slate-50 dark:bg-white/5 px-2.5 py-1.5 rounded-lg border border-slate-200/60 dark:border-white/10 text-xs mb-1.5">
               <div className="flex items-center gap-1.5 truncate">
@@ -669,26 +588,12 @@ export function MemberAnalyticsGraph({
             {/* Nodes, drop lines, numbers & hitboxes */}
             {mappedPoints.map((p, idx) => {
               const isHovered = hoveredIdx === idx;
-              const isCurrentFilter =
-                (p.filterType === 'status' && currentStatusFilter === p.filterValue) ||
-                (p.filterType === 'payment' && currentPaymentFilter === p.filterValue);
-              const isHighlighted = isHovered || isCurrentFilter;
 
               return (
                 <g
                   key={p.id}
-                  className="cursor-pointer"
                   onMouseEnter={() => setHoveredIdx(idx)}
                   onMouseLeave={() => setHoveredIdx(null)}
-                  onClick={() => {
-                    if (onSelectFilter && p.filterType && p.filterValue) {
-                      if (isCurrentFilter) {
-                        onResetFilters?.();
-                      } else {
-                        onSelectFilter(p.filterType, p.filterValue);
-                      }
-                    }
-                  }}
                 >
                   {/* Vertical drop guideline to baseline */}
                   <line
@@ -697,13 +602,13 @@ export function MemberAnalyticsGraph({
                     x2={p.x}
                     y2={baseLineY}
                     stroke={p.color}
-                    strokeWidth={isHighlighted ? 1.5 : 1}
+                    strokeWidth={isHovered ? 1.5 : 1}
                     strokeDasharray="2 3"
-                    opacity={isHighlighted ? 0.8 : 0.25}
+                    opacity={isHovered ? 0.8 : 0.25}
                   />
 
                   {/* Pulsing Highlight Halo */}
-                  {isHighlighted && (
+                  {isHovered && (
                     <circle
                       cx={p.x}
                       cy={p.y}
@@ -719,10 +624,10 @@ export function MemberAnalyticsGraph({
                   <circle
                     cx={p.x}
                     cy={p.y}
-                    r={isHighlighted ? 6.5 : 4.5}
+                    r={isHovered ? 6.5 : 4.5}
                     fill="#ffffff"
                     stroke={p.color}
-                    strokeWidth={isHighlighted ? 3 : 2}
+                    strokeWidth={isHovered ? 3 : 2}
                     className="transition-all duration-200"
                   />
 
@@ -757,29 +662,17 @@ export function MemberAnalyticsGraph({
           {/* High-Contrast, Perfectly Aligned Metric Columns Directly Below the Graph */}
           <div className="flex items-center justify-between gap-1 px-1 sm:px-2 pt-1.5 pb-0.5 select-none">
             {points.map((p, idx) => {
-              const isCurrentFilter =
-                (p.filterType === 'status' && currentStatusFilter === p.filterValue) ||
-                (p.filterType === 'payment' && currentPaymentFilter === p.filterValue);
-              const isSelected = hoveredIdx === idx || isCurrentFilter;
+              const isHovered = hoveredIdx === idx;
 
               return (
                 <div
                   key={p.id}
-                  onClick={() => {
-                    setHoveredIdx(idx);
-                    if (onSelectFilter && p.filterType && p.filterValue) {
-                      if (isCurrentFilter) {
-                        onResetFilters?.();
-                      } else {
-                        onSelectFilter(p.filterType, p.filterValue);
-                      }
-                    }
-                  }}
                   onMouseEnter={() => setHoveredIdx(idx)}
                   onMouseLeave={() => setHoveredIdx(null)}
-                  className={`group flex flex-col items-center justify-between py-1 px-1 rounded-lg transition-all cursor-pointer select-none text-center ${
-                    isSelected
-                      ? 'bg-slate-100 dark:bg-white/10 ring-1.5 ring-brand-emerald shadow-2xs'
+                  onTouchStart={() => setHoveredIdx(idx)}
+                  className={`flex flex-col items-center justify-between py-1 px-1 rounded-lg transition-all select-none text-center ${
+                    isHovered
+                      ? 'bg-slate-100 dark:bg-white/10'
                       : 'hover:bg-slate-50 dark:hover:bg-white/5'
                   }`}
                 >
@@ -795,7 +688,7 @@ export function MemberAnalyticsGraph({
 
                   <span
                     className={`text-[10.5px] sm:text-xs font-bold leading-tight block truncate ${
-                      isSelected
+                      isHovered
                         ? 'text-brand-emerald dark:text-emerald-400'
                         : 'text-slate-700 dark:text-slate-200'
                     }`}
@@ -808,24 +701,6 @@ export function MemberAnalyticsGraph({
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* 3. Filter Reset if active */}
-      {hasActiveFilter && onResetFilters && (
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-white/5 text-xs">
-          <span className="text-brand-emerald dark:text-emerald-300 font-bold flex items-center gap-1.5 truncate">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-emerald animate-pulse shrink-0" />
-            <span>গ্রাফ অনুযায়ী ফিল্টার সক্রিয়</span>
-          </span>
-          <button
-            type="button"
-            onClick={onResetFilters}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-bold transition-colors cursor-pointer text-xs shrink-0"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>রিসেট</span>
-          </button>
         </div>
       )}
     </div>

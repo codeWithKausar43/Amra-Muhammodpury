@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemberAnalyticsGraph } from '@/features/organization/components/MemberAnalyticsGraph';
 import type { AdminMemberSummaryCounts } from '@/features/organization/types';
@@ -40,19 +40,17 @@ describe('MemberAnalyticsGraph', () => {
     expect(statusBtn).toHaveClass('text-brand-emerald');
   });
 
-  it('invokes onSelectFilter when an interactive bar is clicked', () => {
-    const onSelectFilter = vi.fn();
-    render(
-      <MemberAnalyticsGraph
-        summary={mockSummary}
-        onSelectFilter={onSelectFilter}
-      />
-    );
+  it('toggles between curve and bar chart visualization styles', () => {
+    render(<MemberAnalyticsGraph summary={mockSummary} />);
 
-    // Click on active member row
-    const activeLabel = screen.getByText('সক্রিয় সদস্য');
-    fireEvent.click(activeLabel.closest('div[class*="group"]')!);
+    // Toggle to bar graph
+    const barToggleBtn = screen.getByTitle('বার গ্রাফ');
+    fireEvent.click(barToggleBtn);
+    expect(barToggleBtn).toHaveClass('text-brand-emerald');
 
-    expect(onSelectFilter).toHaveBeenCalledWith('status', 'ACTIVE');
+    // Toggle back to curve graph
+    const curveToggleBtn = screen.getByTitle('কার্ভ ট্রেন্ড গ্রাফ');
+    fireEvent.click(curveToggleBtn);
+    expect(curveToggleBtn).toHaveClass('text-brand-emerald');
   });
 });

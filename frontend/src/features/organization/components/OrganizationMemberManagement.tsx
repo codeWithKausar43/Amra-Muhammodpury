@@ -51,7 +51,6 @@ export function OrganizationMemberManagement() {
   const [search, setSearch] = React.useState('');
   const [status, setStatus] = React.useState<string>('ALL');
   const [designationId, setDesignationId] = React.useState<string>('ALL');
-  const [committeeId, setCommitteeId] = React.useState<string>('ALL');
   const [paymentStatus, setPaymentStatus] = React.useState<string>('ALL');
   const [page, setPage] = React.useState<number>(1);
 
@@ -70,7 +69,6 @@ export function OrganizationMemberManagement() {
     search: search || undefined,
     status: status !== 'ALL' ? status : undefined,
     designationId: designationId !== 'ALL' ? designationId : undefined,
-    committeeId: committeeId !== 'ALL' ? committeeId : undefined,
     paymentStatus: paymentStatus !== 'ALL' ? paymentStatus : undefined,
     page,
     limit: 15,
@@ -137,34 +135,15 @@ export function OrganizationMemberManagement() {
         </div>
 
         {/* Dynamic Real-Time Member Graph Chart */}
-        <MemberAnalyticsGraph
-          summary={summary}
-          currentStatusFilter={status}
-          currentPaymentFilter={paymentStatus}
-          onSelectFilter={(type, val) => {
-            if (type === 'status') {
-              setStatus(val);
-              setPaymentStatus('ALL');
-            } else if (type === 'payment') {
-              setPaymentStatus(val);
-              setStatus('ALL');
-            }
-            setPage(1);
-          }}
-          onResetFilters={() => {
-            setStatus('ALL');
-            setPaymentStatus('ALL');
-            setPage(1);
-          }}
-        />
+        <MemberAnalyticsGraph summary={summary} />
       </div>
 
       {/* 2. Search, Filters & Quick Selectors */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
-        <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center">
+      <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+        <div className="flex flex-col gap-2">
           {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="relative w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="নাম, ফোন বা সদস্য আইডি (যেমন AM-2026) দিয়ে খুঁজুন..."
@@ -173,19 +152,19 @@ export function OrganizationMemberManagement() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 outline-none focus:border-brand-emerald"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-100/90 dark:bg-white/5 text-xs text-slate-900 dark:text-white border border-slate-200/70 dark:border-white/10 outline-none focus:border-brand-emerald focus:ring-1 focus:ring-brand-emerald/30 transition-all placeholder:text-slate-400"
             />
           </div>
 
-          {/* Quick Filter Selects */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* Quick Filter Selects: Exactly 3 in ONE single clean row */}
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             <select
               value={status}
               onChange={(e) => {
                 setStatus(e.target.value);
                 setPage(1);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 outline-none"
+              className="w-full px-2 py-1.5 rounded-xl bg-slate-100/90 dark:bg-white/5 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-white/10 outline-none truncate cursor-pointer focus:border-brand-emerald transition-colors"
             >
               <option value="ALL">সব স্ট্যাটাস</option>
               <option value="ACTIVE">সক্রিয় সদস্য</option>
@@ -200,7 +179,7 @@ export function OrganizationMemberManagement() {
                 setPaymentStatus(e.target.value);
                 setPage(1);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 outline-none"
+              className="w-full px-2 py-1.5 rounded-xl bg-slate-100/90 dark:bg-white/5 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-white/10 outline-none truncate cursor-pointer focus:border-brand-emerald transition-colors"
             >
               <option value="ALL">সব চাঁদা অবস্থা</option>
               <option value="PAID">পরিশোধিত</option>
@@ -215,28 +194,12 @@ export function OrganizationMemberManagement() {
                 setDesignationId(e.target.value);
                 setPage(1);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 outline-none truncate"
+              className="w-full px-2 py-1.5 rounded-xl bg-slate-100/90 dark:bg-white/5 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-white/10 outline-none truncate cursor-pointer focus:border-brand-emerald transition-colors"
             >
               <option value="ALL">সকল পদবি</option>
               {designations.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={committeeId}
-              onChange={(e) => {
-                setCommitteeId(e.target.value);
-                setPage(1);
-              }}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 outline-none truncate"
-            >
-              <option value="ALL">সকল কমিটি</option>
-              {committees.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
                 </option>
               ))}
             </select>
@@ -262,129 +225,106 @@ export function OrganizationMemberManagement() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-2.5">
-            {members.map((member) => {
-              const statusBadge = STATUS_LABELS[member.status] ?? STATUS_LABELS['ACTIVE']!;
-              const payBadge = PAYMENT_STATUS_LABELS[member.currentMonthStatus] ?? PAYMENT_STATUS_LABELS['NOT_APPLICABLE']!;
+          <div className="space-y-2">
+            {/* Header info */}
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 px-1">
+              <span>সদস্য তালিকা ({toBengaliNumber(pagination?.total || members.length)} জন)</span>
+              <span className="text-[11px] font-normal text-slate-400">ট্যাপ করে সম্পূর্ণ প্রোফাইল দেখুন</span>
+            </div>
 
-              return (
-                <div
-                  key={member.id}
-                  className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
-                >
-                  {/* Left: Avatar + Details */}
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-white/10 shrink-0 overflow-hidden relative border border-slate-200 dark:border-white/10">
-                      {member.user.image ? (
-                        <Image
-                          src={member.user.image}
-                          alt={member.user.name}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 text-sm">
-                          {member.user.name?.charAt(0) || 'ম'}
+            {/* Flat, Clean Directory List with comfortable space and consistent column gaps */}
+            <div className="overflow-x-auto pb-1 scrollbar-none sm:scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10 -mx-1 px-1">
+              <div className="min-w-[345px] sm:min-w-full divide-y divide-slate-200/70 dark:divide-white/10">
+                {members.map((member) => {
+                  const payBadge =
+                    PAYMENT_STATUS_LABELS[member.currentMonthStatus] ??
+                    PAYMENT_STATUS_LABELS['NOT_APPLICABLE']!;
+
+                  return (
+                    <div
+                      key={member.id}
+                      onClick={() => setSelectedMemberId(member.id)}
+                      className="py-2.5 sm:py-3 px-1 sm:px-2 hover:bg-slate-50/70 dark:hover:bg-white/[0.03] flex items-center justify-between gap-3 sm:gap-3.5 transition-colors cursor-pointer group"
+                    >
+                      {/* Column 1: Avatar + Full Name (No truncation on long names) + Phone */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="relative shrink-0">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-white/10 relative overflow-hidden border border-slate-200/60 dark:border-white/10">
+                            {member.user.image ? (
+                              <Image
+                                src={member.user.image}
+                                alt={member.user.name}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 text-xs">
+                                {member.user.name?.charAt(0) || 'ম'}
+                              </div>
+                            )}
+                          </div>
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-white dark:border-[#141F1B] ${
+                              member.status === 'ACTIVE'
+                                ? 'bg-emerald-500'
+                                : member.status === 'APPROVED_PAYMENT_PENDING'
+                                ? 'bg-sky-500'
+                                : 'bg-slate-400'
+                            }`}
+                            title={STATUS_LABELS[member.status]?.label || member.status}
+                          />
                         </div>
-                      )}
-                    </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                          {member.user.name}
-                        </h4>
-                        {member.memberNumber && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-                            #{member.memberNumber}
-                          </span>
-                        )}
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusBadge.color}`}>
-                          {statusBadge.label}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                            {member.user.name}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5 font-medium font-mono">
+                            {member.user.phone || (member.memberNumber ? `#${member.memberNumber}` : 'ফোন নম্বর নেই')}
+                            {member.designation && (
+                              <span className="font-sans text-brand-emerald dark:text-brand-mint ml-1.5">
+                                • {member.designation.name}
+                              </span>
+                            )}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
-                        {member.user.phone && (
-                          <span className="flex items-center gap-1 font-mono">
-                            <Phone className="w-3 h-3 text-slate-400" />
-                            <a href={`tel:${member.user.phone}`} className="hover:underline">
-                              {member.user.phone}
-                            </a>
-                          </span>
-                        )}
+                      {/* Column 2 & Column 3 Grouped with Consistent Column Gap */}
+                      <div className="flex items-center gap-3 sm:gap-3.5 shrink-0">
+                        {/* Column 2: Monthly Fee + Payment Status Badge */}
+                        <div className="shrink-0 text-right min-w-[52px] sm:min-w-[58px]">
+                          <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                            ৳ {toBengaliNumber(member.monthlyContribution)}
+                          </div>
+                          <div className="mt-0.5">
+                            <span
+                              className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${payBadge.color} whitespace-nowrap`}
+                            >
+                              {payBadge.label}
+                            </span>
+                          </div>
+                        </div>
 
-                        {member.designation ? (
-                          <span className="flex items-center gap-1 text-brand-emerald dark:text-brand-mint font-semibold">
-                            <Award className="w-3 h-3" />
-                            <span>{member.designation.name}</span>
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-slate-400">সাধারণ সদস্য</span>
-                        )}
-
-                        {member.user.profession && (
-                          <span className="flex items-center gap-1">
-                            <Briefcase className="w-3 h-3 text-slate-400" />
-                            <span>{member.user.profession}</span>
-                          </span>
-                        )}
+                        {/* Column 3: Compact Action Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedMemberId(member.id);
+                          }}
+                          className="shrink-0 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-brand-emerald hover:text-white dark:bg-white/10 dark:hover:bg-brand-emerald text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+                          title="বিস্তারিত দেখুন"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-brand-emerald group-hover:text-white transition-colors shrink-0" />
+                          <span>বিস্তারিত</span>
+                        </button>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Middle: Contribution Info */}
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 dark:border-white/5">
-                    <div className="text-left sm:text-right">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">
-                        ৳ {toBengaliNumber(member.monthlyContribution)} <span className="text-[10px] font-normal text-slate-500">/মাস</span>
-                      </div>
-                      <div className="mt-0.5 flex items-center sm:justify-end gap-1">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${payBadge.color}`}>
-                          চলতি মাস: {payBadge.label}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Actions Menu */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMemberId(member.id)}
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-colors"
-                        title="বিস্তারিত দেখুন"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatusModalMember(member);
-                          setNewStatus(member.status);
-                        }}
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-colors"
-                        title="স্ট্যাটাস পরিবর্তন"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDesignationModalMember(member);
-                          setTargetDesignationId(member.designationId || '');
-                        }}
-                        className="p-2 rounded-xl bg-brand-emerald/10 hover:bg-brand-emerald/20 text-brand-emerald dark:text-brand-mint transition-colors"
-                        title="পদবি নির্ধারণ"
-                      >
-                        <Award className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -483,7 +423,10 @@ export function OrganizationMemberManagement() {
                     {/* Core Information Grid */}
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10">
-                        <span className="text-[10px] text-slate-400 block">ফোন নম্বর</span>
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span>ফোন নম্বর</span>
+                        </span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
                           {user?.phone || 'দেওয়া হয়নি'}
                         </span>
@@ -497,7 +440,10 @@ export function OrganizationMemberManagement() {
                       </div>
 
                       <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10">
-                        <span className="text-[10px] text-slate-400 block">পেশা</span>
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1 mb-0.5">
+                          <Briefcase className="w-3 h-3 text-slate-400" />
+                          <span>পেশা</span>
+                        </span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {user?.profession || 'সাধারণ'}
                         </span>
@@ -636,7 +582,37 @@ export function OrganizationMemberManagement() {
             </div>
 
             {/* Drawer Footer */}
-            <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-end">
+            <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const m = members.find((x) => x.id === selectedMemberId);
+                    if (m) {
+                      setStatusModalMember(m);
+                      setNewStatus(m.status);
+                    }
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-brand-emerald" />
+                  <span>স্ট্যাটাস পরিবর্তন</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const m = members.find((x) => x.id === selectedMemberId);
+                    if (m) {
+                      setDesignationModalMember(m);
+                      setTargetDesignationId(m.designationId || '');
+                    }
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-brand-emerald/10 hover:bg-brand-emerald/20 text-xs font-bold text-brand-emerald dark:text-brand-mint flex items-center gap-1.5 transition-colors"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>পদবি নির্ধারণ</span>
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setSelectedMemberId(null)}
