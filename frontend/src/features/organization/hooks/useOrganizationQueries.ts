@@ -317,6 +317,7 @@ export function useOrgMutations() {
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDashboard });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.funds });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'contributions'] });
     },
   });
 
@@ -327,6 +328,7 @@ export function useOrgMutations() {
       queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'applications'] });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.membershipStatus });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'contributions'] });
     },
   });
 
@@ -334,6 +336,8 @@ export function useOrgMutations() {
     mutationFn: (vars: { id: string; status: 'VERIFIED' | 'REJECTED'; notes?: string }) =>
       organizationService.reviewPayment(vars.id, vars.status, vars.notes),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'contributions'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.funds });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDashboard });

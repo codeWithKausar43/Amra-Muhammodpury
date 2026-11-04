@@ -22,6 +22,7 @@ import {
   useAdminMemberDetailsQuery,
   useOrgMutations,
 } from '../hooks/useOrganizationQueries';
+import { toast } from '@/components/feedback/Toast';
 import type { AdminMemberItem } from '../types';
 import { MemberAnalyticsGraph } from './MemberAnalyticsGraph';
 
@@ -93,10 +94,11 @@ export function OrganizationMemberManagement() {
           notes: statusNote || undefined,
         },
       });
+      toast.success('সদস্যের স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে।');
       setStatusModalMember(null);
       setStatusNote('');
     } catch (err: any) {
-      alert(err.message || 'স্ট্যাটাস আপডেট ব্যর্থ হয়েছে');
+      toast.error(err.message || 'স্ট্যাটাস আপডেট ব্যর্থ হয়েছে');
     }
   };
 
@@ -111,10 +113,11 @@ export function OrganizationMemberManagement() {
           customTitle: customTitle || null,
         },
       });
+      toast.success('পদবি সফলভাবে নির্ধারণ করা হয়েছে।');
       setDesignationModalMember(null);
       setCustomTitle('');
     } catch (err: any) {
-      alert(err.message || 'পদবি নির্ধারণ ব্যর্থ হয়েছে');
+      toast.error(err.message || 'পদবি নির্ধারণ ব্যর্থ হয়েছে');
     }
   };
 

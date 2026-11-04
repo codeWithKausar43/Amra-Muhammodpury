@@ -15,9 +15,12 @@ describe('OrganizationService', () => {
       },
       orgMembership: {
         findUnique: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
         count: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
       },
       orgMeeting: {
         findMany: vi.fn(),
@@ -34,7 +37,9 @@ describe('OrganizationService', () => {
       contributionPayment: {
         findMany: vi.fn(),
         findFirst: vi.fn(),
+        findUnique: vi.fn(),
         create: vi.fn(),
+        update: vi.fn(),
       },
       orgProject: {
         count: vi.fn(),
@@ -48,6 +53,7 @@ describe('OrganizationService', () => {
       },
       orgFund: {
         findMany: vi.fn(),
+        findFirst: vi.fn(),
         findUnique: vi.fn(),
         update: vi.fn(),
         aggregate: vi.fn(),
@@ -448,6 +454,205 @@ describe('OrganizationService', () => {
         expect(dashboard.calendar[0]?.isPaid).toBe(true);
         expect(dashboard.agreement).toBeDefined();
         expect(dashboard.agreement?.agreedAmount).toBe(100);
+      });
+    });
+
+    describe('reviewContributionPayment & Financial Integrity', () => {
+      it('should verify payment, update member date, credit general fund, and create fund transaction', async () => {
+        // Reviewer is ADMIN
+        mockPrisma.user.findUnique.mockResolvedValueOnce({ role: 'ADMIN' });
+
+        // Payment is PENDING
+        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce({
+          id: 'pay-1',
+          userId: 'user-member',
+          amount: 500,
+          periodYear: 2026,
+          periodMonth: 11,
+          status: 'PENDING',
+          receiptNumber: 'AMP-REC-202611-1234',
+          trxId: 'TRX-BKASH-789',
+          user: { id: 'user-member', name: 'Md Salman' },
+        });
+
+        // General fund exists
+        mockPrisma.orgFund.findUnique.mockResolvedValueOnce({
+          id: 'fund-gen-1',
+          code: 'GENERAL',
+          balance: 10000,
+        });
+
+        mockPrisma.contributionPayment.update.mockResolvedValueOnce({
+          id: 'pay-1',
+          status: 'VERIFIED',
+        });
+
+        const res = await service.reviewContributionPayment('user-reviewer', 'pay-1', 'VERIFIED');
+
+        expect(mockPrisma.contributionPayment.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: 'pay-1' },
+            data: expect.objectContaining({ status: 'VERIFIED' }),
+          }),
+        );
+        expect(mockPrisma.orgFund.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: 'fund-gen-1' },
+            data: { balance: { increment: 500 } },
+          }),
+        );
+        expect(mockPrisma.fundTransaction.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              fundId: 'fund-gen-1',
+              type: 'CONTRIBUTION',
+              amount: 500,
+              referenceId: 'pay-1',
+            }),
+          }),
+        );
+      });
+
+      it('should reject payment without crediting fund when status is REJECTED', async () => {
+        // Reviewer is ADMIN
+        mockPrisma.user.findUnique.mockResolvedValueOnce({ role: 'ADMIN' });
+
+        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce({
+          id: 'pay-2',
+          userId: 'user-member',
+          amount: 500,
+          periodYear: 2026,
+          periodMonth: 11,
+          status: 'PENDING',
+          receiptNumber: 'AMP-REC-202611-5678',
+        });
+
+        mockPrisma.contributionPayment.update.mockResolvedValueOnce({
+          id: 'pay-2',
+          status: 'REJECTED',
+        });
+
+        await service.reviewContributionPayment('user-admin', 'pay-2', 'REJECTED', 'ভুল TrxID');
+
+        expect(mockPrisma.contributionPayment.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: 'pay-2' },
+            data: expect.objectContaining({ status: 'REJECTED' }),
+          }),
+        );
+        // Fund should NOT be updated
+        expect(mockPrisma.orgFund.update).not.toHaveBeenCalled();
+        expect(mockPrisma.fundTransaction.create).not.toHaveBeenCalled();
+      });
+
+      it('should throw BadRequestError if payment is already VERIFIED or REJECTED', async () => {
+        mockPrisma.user.findUnique.mockResolvedValueOnce({ role: 'ADMIN' });
+
+        mockPrisma.contributionPayment.findUnique.mockResolvedValueOnce({
+          id: 'pay-3',
+          status: 'VERIFIED',
+        });
+
+        await expect(
+          service.reviewContributionPayment('user-admin', 'pay-3', 'VERIFIED'),
+        ).rejects.toThrow(BadRequestError);
+      });
+    });
+
+    describe('getContributionTracking (Category Math & Pending Integrity)', () => {
+      it('should categorize verified, pending, unpaid, and overdue members with mathematical balance', async () => {
+        // Reviewer has ADMIN role
+        mockPrisma.user.findUnique.mockResolvedValueOnce({ role: 'ADMIN' });
+
+        // 4 active members
+        mockPrisma.orgMembership.findMany.mockResolvedValueOnce([
+          {
+            id: 'mem-1',
+            userId: 'u-1',
+            monthlyContribution: 500,
+            status: 'ACTIVE',
+            joinedAt: new Date('2026-01-01'),
+            user: { name: 'Member 1', phone: '01711111111' },
+          },
+          {
+            id: 'mem-2',
+            userId: 'u-2',
+            monthlyContribution: 300,
+            status: 'ACTIVE',
+            joinedAt: new Date('2026-01-01'),
+            user: { name: 'Member 2', phone: '01722222222' },
+          },
+          {
+            id: 'mem-3',
+            userId: 'u-3',
+            monthlyContribution: 250,
+            status: 'ACTIVE',
+            joinedAt: new Date('2026-11-01'), // joined this month -> 1 month due
+            user: { name: 'Member 3', phone: '01733333333' },
+          },
+          {
+            id: 'mem-4',
+            userId: 'u-4',
+            monthlyContribution: 400,
+            status: 'ACTIVE',
+            joinedAt: new Date('2025-01-01'), // joined long ago -> multiple months due
+            user: { name: 'Member 4', phone: '01744444444' },
+          },
+        ]);
+
+        // Payments for target period (Nov 2026):
+        // u-1 has VERIFIED payment
+        // u-2 has PENDING payment
+        // u-3 has NO payment (1 month unpaid)
+        // u-4 has NO payment (multiple months overdue)
+        mockPrisma.contributionPayment.findMany
+          .mockResolvedValueOnce([
+            {
+              id: 'p-u1',
+              userId: 'u-1',
+              periodYear: 2026,
+              periodMonth: 11,
+              amount: 500,
+              status: 'VERIFIED',
+              paidAt: new Date('2026-11-02'),
+            },
+            {
+              id: 'p-u2',
+              userId: 'u-2',
+              periodYear: 2026,
+              periodMonth: 11,
+              amount: 300,
+              status: 'PENDING',
+              paidAt: new Date('2026-11-03'),
+              trxId: 'TRX-PENDING-999',
+              senderNumber: '01722222222',
+            },
+          ])
+          // allMemberPayments
+          .mockResolvedValueOnce([
+            { id: 'p-u1', userId: 'u-1', periodYear: 2026, periodMonth: 11, amount: 500, status: 'VERIFIED' },
+            { id: 'p-u2', userId: 'u-2', periodYear: 2026, periodMonth: 11, amount: 300, status: 'PENDING' },
+          ]);
+
+        const tracking = await service.getContributionTracking('admin-user-id', 2026, 11);
+
+        expect(tracking.period.totalActiveMembers).toBe(4);
+        expect(tracking.counts.paid).toBe(1);
+        expect(tracking.counts.pending).toBe(1);
+        expect(tracking.counts.unpaid).toBe(1);
+        expect(tracking.counts.overdue).toBe(1);
+
+        // Mathematical consistency check
+        expect(
+          tracking.counts.paid + tracking.counts.pending + tracking.counts.unpaid + tracking.counts.overdue,
+        ).toBe(tracking.period.totalActiveMembers);
+
+        // Pending item verification
+        expect(tracking.pending[0]?.paymentId).toBe('p-u2');
+        expect(tracking.pending[0]?.submittedAmount).toBe(300);
+        expect(tracking.pending[0]?.paidAmount).toBe(300);
+        expect(tracking.pending[0]?.trxId).toBe('TRX-PENDING-999');
+        expect(tracking.pending[0]?.senderNumber).toBe('01722222222');
       });
     });
   });

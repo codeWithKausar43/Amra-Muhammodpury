@@ -557,6 +557,10 @@ export interface AdminMemberDetails {
     committee: { id: string; name: string };
   }>;
   recentPayments: ContributionPayment[];
+  payments?: ContributionPayment[];
+  overdueMonths?: OverdueMonthDetail[];
+  overdueMonthsCount?: number;
+  totalOverdueAmount?: number;
   reminders: Array<{
     id: string;
     slot: string;
@@ -568,6 +572,15 @@ export interface AdminMemberDetails {
   currentMonthStatus: 'PAID' | 'UNPAID' | 'PENDING' | 'OVERDUE' | 'NOT_APPLICABLE';
 }
 
+export interface OverdueMonthDetail {
+  year: number;
+  month: number;
+  monthName: string;
+  amount: number;
+  status: 'OVERDUE' | 'PENDING';
+  formattedPeriod?: string;
+}
+
 export interface ContributionTrackingCategoryItem {
   memberId: string;
   userId: string;
@@ -577,15 +590,22 @@ export interface ContributionTrackingCategoryItem {
   memberNumber: string | null;
   agreedAmount: number;
   paidAmount?: number;
+  submittedAmount?: number;
   paymentDate?: string;
+  submittedAt?: string;
   verificationStatus?: string;
   paymentId?: string;
   trxId?: string | null;
+  senderNumber?: string | null;
+  receiptNumber?: string | null;
   paymentMethod?: string;
   dueMonth?: number;
   dueYear?: number;
   lastReminderSentAt?: string | null;
   designation?: string | null;
+  overdueMonths?: OverdueMonthDetail[];
+  overdueMonthsCount?: number;
+  totalOverdueAmount?: number;
 }
 
 export interface ContributionTrackingResult {

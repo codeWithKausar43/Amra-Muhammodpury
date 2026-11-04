@@ -14,6 +14,7 @@ import {
   useAdminDesignationsQuery,
   useOrgMutations,
 } from '../hooks/useOrganizationQueries';
+import { toast } from '@/components/feedback/Toast';
 import type { AdminDesignationItem } from '../types';
 
 function toBengaliNumber(num: number | string | undefined | null): string {
@@ -51,7 +52,7 @@ export function DesignationManagementSection() {
 
   const handleCreate = async () => {
     if (!createName.trim()) {
-      alert('পদবির নাম আবশ্যক');
+      toast.warning('পদবির নাম আবশ্যক');
       return;
     }
     const code = createCode.trim() || createName.trim().toUpperCase().replace(/\s+/g, '_');
@@ -62,13 +63,14 @@ export function DesignationManagementSection() {
         rank: createRank,
         description: createDesc.trim() || undefined,
       });
+      toast.success('নতুন পদবি সফলভাবে তৈরি হয়েছে।');
       setCreateModalOpen(false);
       setCreateCode('');
       setCreateName('');
       setCreateDesc('');
       setCreateRank(10);
     } catch (err: any) {
-      alert(err.message || 'পদবি তৈরি ব্যর্থ হয়েছে');
+      toast.error(err.message || 'পদবি তৈরি ব্যর্থ হয়েছে');
     }
   };
 
@@ -84,9 +86,10 @@ export function DesignationManagementSection() {
           isActive: editIsActive,
         },
       });
+      toast.success('পদবি সফলভাবে আপডেট হয়েছে।');
       setEditingItem(null);
     } catch (err: any) {
-      alert(err.message || 'পদবি আপডেট ব্যর্থ হয়েছে');
+      toast.error(err.message || 'পদবি আপডেট ব্যর্থ হয়েছে');
     }
   };
 
