@@ -599,6 +599,9 @@ export interface ContributionTrackingCategoryItem {
   senderNumber?: string | null;
   receiptNumber?: string | null;
   paymentMethod?: string;
+  periodMonth?: number;
+  periodYear?: number;
+  periodLabel?: string;
   dueMonth?: number;
   dueYear?: number;
   lastReminderSentAt?: string | null;

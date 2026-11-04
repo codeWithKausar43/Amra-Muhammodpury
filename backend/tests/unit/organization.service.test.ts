@@ -632,6 +632,20 @@ describe('OrganizationService', () => {
           .mockResolvedValueOnce([
             { id: 'p-u1', userId: 'u-1', periodYear: 2026, periodMonth: 11, amount: 500, status: 'VERIFIED' },
             { id: 'p-u2', userId: 'u-2', periodYear: 2026, periodMonth: 11, amount: 300, status: 'PENDING' },
+          ])
+          // allPendingPayments
+          .mockResolvedValueOnce([
+            {
+              id: 'p-u2',
+              userId: 'u-2',
+              periodYear: 2026,
+              periodMonth: 11,
+              amount: 300,
+              status: 'PENDING',
+              paidAt: new Date('2026-11-03'),
+              trxId: 'TRX-PENDING-999',
+              senderNumber: '01722222222',
+            },
           ]);
 
         const tracking = await service.getContributionTracking('admin-user-id', 2026, 11);

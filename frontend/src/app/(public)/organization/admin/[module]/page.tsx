@@ -1168,53 +1168,15 @@ export default function AdminModulePage() {
 
                           <div className="flex items-center gap-1.5 mt-0.5 justify-end">
                             {isPending ? (
-                              <>
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap">
-                                  <Clock className="w-2.5 h-2.5" />
-                                  অপেক্ষমাণ
-                                </span>
-                                <button
-                                  type="button"
-                                  disabled={mutations.reviewPayment.isPending}
-                                  onClick={async () => {
-                                    try {
-                                      await mutations.reviewPayment.mutateAsync({
-                                        id: p.id,
-                                        status: 'VERIFIED',
-                                      });
-                                      notificationAudio.play(1.0);
-                                    } catch (err: any) {
-                                      alert(err?.message || 'অনুমোদন ব্যর্থ হয়েছে');
-                                    }
-                                  }}
-                                  className="w-7 h-7 rounded-lg bg-brand-emerald text-white hover:bg-emerald-600 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 shadow-2xs active:scale-95 shrink-0"
-                                  title="চাঁদা অনুমোদন করুন"
-                                  aria-label="অনুমোদন করুন"
-                                >
-                                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={mutations.reviewPayment.isPending}
-                                  onClick={async () => {
-                                    if (!confirm('আপনি কি নিশ্চিত যে এই পেমেন্টটি বাতিল করতে চান?')) return;
-                                    try {
-                                      await mutations.reviewPayment.mutateAsync({
-                                        id: p.id,
-                                        status: 'REJECTED',
-                                      });
-                                      notificationAudio.play(1.0);
-                                    } catch (err: any) {
-                                      alert(err?.message || 'বাতিলকরণ ব্যর্থ হয়েছে');
-                                    }
-                                  }}
-                                  className="w-7 h-7 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-800 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
-                                  title="পেমেন্ট বাতিল করুন"
-                                  aria-label="বাতিল করুন"
-                                >
-                                  <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                                </button>
-                              </>
+                              <Link
+                                href="/organization/admin/contributions"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25 hover:bg-amber-500/25 transition-colors whitespace-nowrap cursor-pointer"
+                                title="মাসিক চাঁদা ট্র্যাকিং ড্যাশবোর্ডে গিয়ে যাচাই করুন"
+                              >
+                                <Clock className="w-2.5 h-2.5 text-amber-600" />
+                                <span>যাচাই অপেক্ষমাণ</span>
+                                <span className="text-[9px] opacity-75 font-normal">→ যাচাই</span>
+                              </Link>
                             ) : isRejected ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap">
                                 <X className="w-2.5 h-2.5" />

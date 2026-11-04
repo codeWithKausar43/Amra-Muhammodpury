@@ -2879,8 +2879,8 @@ export class OrganizationService {
       orderBy: [{ joinedAt: 'asc' }],
     });
 
-    // 2. Fetch all payments for this target period + historical payments for active members
-    const [paymentsThisPeriod, allMemberPayments] = await Promise.all([
+    // 2. Fetch all payments for this target period + historical payments + all pending payments
+    const [paymentsThisPeriod, allMemberPayments, allPendingPayments] = await Promise.all([
       this.prisma.contributionPayment.findMany({
         where: {
           periodYear: targetYear,
@@ -2904,6 +2904,15 @@ export class OrganizationService {
           status: true,
           amount: true,
         },
+      }),
+      this.prisma.contributionPayment.findMany({
+        where: {
+          status: 'PENDING',
+        },
+        include: {
+          user: { select: { id: true, name: true, phone: true, image: true } },
+        },
+        orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }, { createdAt: 'desc' }],
       }),
     ]);
 
@@ -3023,6 +3032,7 @@ export class OrganizationService {
           status: 'VERIFIED',
         });
       } else if (pending) {
+        const monthName = MONTH_NAMES_BN[pending.periodMonth - 1] || `${pending.periodMonth} তম মাস`;
         pendingMembers.push({
           ...memberItem,
           paymentId: pending.id,
@@ -3034,6 +3044,9 @@ export class OrganizationService {
           trxId: pending.trxId,
           senderNumber: pending.senderNumber,
           receiptNumber: pending.receiptNumber,
+          periodMonth: pending.periodMonth,
+          periodYear: pending.periodYear,
+          periodLabel: `${monthName} ${pending.periodYear}`,
           status: 'PENDING',
         });
       } else {
@@ -3054,6 +3067,41 @@ export class OrganizationService {
             status: isMonthOverdue ? 'OVERDUE' : 'UPCOMING',
           });
         }
+      }
+    }
+
+    // Merge any other pending payments across all periods so admin can verify all pending submissions in one place
+    const existingPaymentIds = new Set(pendingMembers.map((p) => p.paymentId).filter(Boolean));
+    const pendingToMerge = Array.isArray(allPendingPayments) ? allPendingPayments : [];
+    for (const p of pendingToMerge) {
+      if (!existingPaymentIds.has(p.id)) {
+        const member = activeMembers.find((m) => m.userId === p.userId);
+        const monthName = MONTH_NAMES_BN[p.periodMonth - 1] || `${p.periodMonth} তম মাস`;
+        pendingMembers.push({
+          memberId: member?.id || p.userId,
+          userId: p.userId,
+          name: p.user?.name || member?.user?.name || 'সদস্য',
+          phone: p.user?.phone || member?.user?.phone || '—',
+          image: p.user?.image || member?.user?.image || null,
+          memberNumber: member?.memberNumber || 'AMP-MEMBER',
+          agreedAmount: member?.monthlyContribution || p.amount,
+          designation: member?.designation?.name || member?.orgRole || 'MEMBER',
+          canSendReminder: false,
+          paymentId: p.id,
+          paidAmount: p.amount,
+          submittedAmount: p.amount,
+          submittedAt: p.paidAt || p.createdAt,
+          paymentDate: p.paidAt || p.createdAt,
+          paymentMethod: p.paymentMethod || 'মোবাইল ব্যাংকিং',
+          trxId: p.trxId,
+          senderNumber: p.senderNumber,
+          receiptNumber: p.receiptNumber,
+          periodMonth: p.periodMonth,
+          periodYear: p.periodYear,
+          periodLabel: `${monthName} ${p.periodYear}`,
+          status: 'PENDING',
+        });
+        existingPaymentIds.add(p.id);
       }
     }
 

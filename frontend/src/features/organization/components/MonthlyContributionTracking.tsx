@@ -45,6 +45,20 @@ const MONTH_NAMES = [
   'ডিসেম্বর',
 ];
 
+function formatBengaliDate(dateInput: string | Date | undefined | null): string {
+  if (!dateInput) return '';
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const day = toBengaliNumber(d.getDate());
+    const month = MONTH_NAMES[d.getMonth()] || `${d.getMonth() + 1} তম মাস`;
+    const year = toBengaliNumber(d.getFullYear());
+    return `${day} ${month} ${year}`;
+  } catch {
+    return '';
+  }
+}
+
 export function MonthlyContributionTracking() {
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = React.useState<number>(currentDate.getFullYear());
@@ -563,16 +577,16 @@ export function MonthlyContributionTracking() {
                     কোনো পেমেন্ট যাচাইয়ের জন্য অপেক্ষমাণ নেই।
                   </div>
                 ) : (
-                  <div className="overflow-x-auto pb-1 scrollbar-none sm:scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10 -mx-1 px-1">
-                    <div className="min-w-[345px] sm:min-w-full divide-y divide-slate-200/70 dark:divide-white/10">
+                  <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 -mx-1 px-1">
+                    <div className="min-w-[530px] divide-y divide-slate-200/70 dark:divide-white/10">
                       {pendingList.map((item) => (
                         <div
-                          key={item.memberId}
-                          className="py-2.5 sm:py-3 px-1 sm:px-2 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 flex items-center justify-between gap-3 sm:gap-3.5 transition-colors group"
+                          key={item.paymentId || item.memberId}
+                          className="grid grid-cols-[minmax(185px,1.6fr)_minmax(130px,1.1fr)_minmax(70px,auto)_minmax(52px,auto)] items-center gap-4 sm:gap-6 py-3 px-1 sm:px-2 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 rounded-xl transition-colors"
                         >
-                          {/* Column 1: Avatar + Full Name + Method / Sender / Trx */}
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-white/10 relative overflow-hidden border border-slate-200/60 dark:border-white/10 shrink-0">
+                          {/* Column 1: Avatar + Name (Full, no truncation) + Phone */}
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/10 relative overflow-hidden border border-slate-200/60 dark:border-white/10 shrink-0">
                               {item.image ? (
                                 <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
                               ) : (
@@ -581,74 +595,72 @@ export function MonthlyContributionTracking() {
                                 </div>
                               )}
                             </div>
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0">
                               <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
                                 {item.name}
                               </h4>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5 font-medium font-mono">
                                 {item.phone || (item.memberNumber ? `#${item.memberNumber}` : 'ফোন নম্বর নেই')}
                               </p>
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5 font-medium flex items-center gap-1.5 flex-wrap">
-                                <span>{item.paymentMethod || 'মোবাইল ব্যাংকিং'}</span>
-                                {item.senderNumber && (
-                                  <span className="font-mono text-slate-600 dark:text-slate-300">
-                                    • প্রেরক: {item.senderNumber}
-                                  </span>
-                                )}
-                                {item.trxId && (
-                                  <span className="font-mono text-slate-800 dark:text-slate-200 font-bold bg-amber-100/60 dark:bg-amber-950/50 px-1 py-0.2 rounded">
-                                    Trx: {item.trxId}
-                                  </span>
-                                )}
-                              </div>
-                              {item.receiptNumber && (
-                                <p className="text-[9.5px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">
-                                  রশিদ: {item.receiptNumber}
-                                </p>
+                            </div>
+                          </div>
+
+                          {/* Column 2: Date + Method & Trx */}
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                              {formatBengaliDate(item.paymentDate || item.submittedAt)}
+                            </div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 whitespace-nowrap font-medium">
+                              <span className="font-semibold text-slate-600 dark:text-slate-300">{item.paymentMethod || 'মোবাইল ব্যাংকিং'}</span>
+                              {item.trxId && (
+                                <span className="font-mono text-slate-800 dark:text-slate-200 font-bold bg-amber-100/70 dark:bg-amber-950/50 px-1 py-0.2 rounded text-[10.5px]">
+                                  Trx: {item.trxId}
+                                </span>
                               )}
                             </div>
                           </div>
 
-                          {/* Column 2 & 3: Amount/Status + Approve/Reject Buttons */}
-                          <div className="flex items-center gap-3 sm:gap-3.5 shrink-0">
-                            <div className="shrink-0 text-right min-w-[54px] sm:min-w-[62px]">
-                              <div className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 leading-tight">
-                                ৳ {toBengaliNumber(item.paidAmount ?? item.submittedAmount ?? item.agreedAmount)}
-                              </div>
-                              <div className="mt-0.5">
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100/80 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 whitespace-nowrap">
-                                  যাচাই বাকি
-                                </span>
-                              </div>
+                          {/* Column 3: Amount & Verification Status */}
+                          <div className="text-right shrink-0">
+                            <div className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 leading-tight">
+                              ৳ {toBengaliNumber(item.paidAmount ?? item.submittedAmount ?? item.agreedAmount)}
                             </div>
+                            <div className="mt-0.5">
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100/80 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 whitespace-nowrap">
+                                যাচাই বাকি
+                              </span>
+                            </div>
+                          </div>
 
+                          {/* Column 4: Pure Icon Actions (✓ and ✕, consistent spacing, no box) */}
+                          <div className="flex items-center justify-end gap-1.5 shrink-0">
                             {item.paymentId && (
-                              <div className="flex items-center gap-1.5 shrink-0">
+                              <>
                                 <button
                                   type="button"
                                   onClick={() => handleReviewPayment(item.paymentId!, 'VERIFY')}
                                   disabled={mutations.reviewPayment.isPending}
-                                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60 shadow-xs"
+                                  className="p-1 text-emerald-600 hover:text-emerald-700 hover:scale-125 active:scale-95 transition-all cursor-pointer disabled:opacity-40 shrink-0"
                                   title="অনুমোদন করুন"
+                                  aria-label="অনুমোদন করুন"
                                 >
                                   {reviewingPaymentId === item.paymentId ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <Loader2 className="w-5 h-5 animate-spin" />
                                   ) : (
-                                    <Check className="w-3.5 h-3.5" />
+                                    <Check className="w-5 h-5 stroke-[3]" />
                                   )}
-                                  <span>অনুমোদন</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleReviewPayment(item.paymentId!, 'REJECT')}
                                   disabled={mutations.reviewPayment.isPending}
-                                  className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 dark:text-rose-300 text-xs font-bold flex items-center gap-1 border border-rose-200 dark:border-rose-800/40 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60"
+                                  className="p-1 text-rose-500 hover:text-rose-600 hover:scale-125 active:scale-95 transition-all cursor-pointer disabled:opacity-40 shrink-0"
                                   title="বাতিল করুন"
+                                  aria-label="বাতিল করুন"
                                 >
-                                  <X className="w-3.5 h-3.5" />
-                                  <span>বাতিল</span>
+                                  <X className="w-5 h-5 stroke-[3]" />
                                 </button>
-                              </div>
+                              </>
                             )}
                           </div>
                         </div>
