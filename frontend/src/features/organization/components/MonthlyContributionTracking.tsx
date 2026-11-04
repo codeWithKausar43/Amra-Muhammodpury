@@ -54,6 +54,12 @@ export function MonthlyContributionTracking() {
   // Review payment loading state
   const [reviewingPaymentId, setReviewingPaymentId] = React.useState<string | null>(null);
 
+  // Confirm dialog state (replaces window.confirm)
+  const [confirmDialog, setConfirmDialog] = React.useState<{
+    open: boolean;
+    paymentId: string;
+  }>({ open: false, paymentId: '' });
+
   // Single reminder state
   const [reminderTarget, setReminderTarget] = React.useState<ContributionTrackingCategoryItem | null>(null);
   const [reminderNote, setReminderNote] = React.useState('');
@@ -213,12 +219,13 @@ export function MonthlyContributionTracking() {
 
   const handleReviewPayment = async (paymentId: string, action: 'VERIFY' | 'REJECT') => {
     if (action === 'REJECT') {
-      const confirmed = window.confirm(
-        'আপনি কি নিশ্চিত যে এই চাঁদা পেমেন্টটি বাতিল করতে চান? বাতিল করলে সদস্যের পেমেন্টটি বাতিল হয়ে যাবে এবং তা পুনরায় বকেয়া হিসেবে গণ্য হবে।'
-      );
-      if (!confirmed) return;
+      setConfirmDialog({ open: true, paymentId });
+      return;
     }
+    await doActualReview(paymentId, 'VERIFY');
+  };
 
+  const doActualReview = async (paymentId: string, action: 'VERIFY' | 'REJECT') => {
     setReviewingPaymentId(paymentId);
     try {
       await mutations.reviewPayment.mutateAsync({
@@ -922,8 +929,8 @@ export function MonthlyContributionTracking() {
                 value={reminderNote}
                 onChange={(e) => setReminderNote(e.target.value)}
                 placeholder="যেমন: অনুগ্রহ করে আগামী ৩ দিনের মধ্যে চাঁদা পরিশোধ করুন..."
-                rows={5}
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white outline-none focus:border-brand-emerald min-h-[115px] resize-y leading-relaxed"
+                rows={6}
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white outline-none focus:border-brand-emerald min-h-[160px] resize-y leading-relaxed"
               />
               <p className="text-[10px] text-slate-400 mt-1">
                 * একই সদস্যকে বারবার তাগিদ এড়াতে ১ ঘণ্টার কুলডাউন সক্রিয় থাকবে।
@@ -1081,6 +1088,45 @@ export function MonthlyContributionTracking() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Dialog - Reject Payment */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-sm w-full p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-rose-100 dark:bg-rose-900/40 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">পেমেন্ট প্রত্যাখ্যান নিশ্চিত করুন</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  এই পেমেন্ট বাতিল করলে সদস্যের বকেয়া তালিকায় ফেরত যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog({ open: false, paymentId: '' })}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors cursor-pointer"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const id = confirmDialog.paymentId;
+                  setConfirmDialog({ open: false, paymentId: '' });
+                  await doActualReview(id, 'REJECT');
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                হ্যাঁ, প্রত্যাখ্যান করুন
+              </button>
+            </div>
           </div>
         </div>
       )}

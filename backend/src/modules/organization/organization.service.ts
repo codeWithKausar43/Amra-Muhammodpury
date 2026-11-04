@@ -321,11 +321,20 @@ export class OrganizationService {
       });
 
       if (status === 'APPROVED') {
-        await tx.orgMembership.update({
+        // upsert: membership may not exist if application was submitted by a re-applying user
+        await tx.orgMembership.upsert({
           where: { userId: application.userId },
-          data: {
+          update: {
             status: 'APPROVED_PAYMENT_PENDING',
             monthlyContribution: application.monthlyContribution,
+            profession: application.profession,
+          },
+          create: {
+            userId: application.userId,
+            status: 'APPROVED_PAYMENT_PENDING',
+            monthlyContribution: application.monthlyContribution,
+            profession: application.profession,
+            orgRole: 'MEMBER',
           },
         });
 
@@ -345,10 +354,17 @@ export class OrganizationService {
           },
         });
       } else {
-        await tx.orgMembership.update({
+        // For REJECTED: update if exists, skip if not (membership may not exist for edge cases)
+        const existingMembership = await tx.orgMembership.findUnique({
           where: { userId: application.userId },
-          data: { status: 'REJECTED' },
+          select: { userId: true },
         });
+        if (existingMembership) {
+          await tx.orgMembership.update({
+            where: { userId: application.userId },
+            data: { status: 'REJECTED' },
+          });
+        }
       }
 
       return updatedApp;
