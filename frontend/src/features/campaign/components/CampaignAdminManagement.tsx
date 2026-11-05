@@ -767,78 +767,74 @@ export const CampaignAdminManagement: React.FC = () => {
                     <tr>
                       <th className="py-3 px-4">দাতা ও যোগাযোগ</th>
                       <th className="py-3 px-3">ক্যাম্পেইন</th>
-                      <th className="py-3 px-3">পরিমাণ</th>
-                      <th className="py-3 px-3">মাধ্যম ও বিবরণ</th>
-                      <th className="py-3 px-3">তারিখ</th>
-                      <th className="py-3 px-3">স্ট্যাটাস</th>
+                      <th className="py-3 px-3">পরিমাণ ও মাধ্যম</th>
+                      <th className="py-3 px-3">স্ট্যাটাস ও তারিখ</th>
                       <th className="py-3 px-4 text-right">যাচাই পদক্ষেপ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-800 dark:text-slate-200">
                     {donationListData.items.map((don) => (
                       <tr key={don.id} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="py-3 px-4">
+                        <td className="py-3.5 px-4 align-top">
                           <div className="font-bold text-slate-900 dark:text-white">
                             {don.donorName}
                           </div>
-                          <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-slate-400" />
+                          <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                             <span>{don.donorPhone}</span>
                           </div>
+                          <div className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5 whitespace-nowrap">
+                            রশিদ: {don.receiptNumber}
+                          </div>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className="font-medium text-slate-700 dark:text-slate-300 line-clamp-1 max-w-[180px]">
+                        <td className="py-3.5 px-3 align-top">
+                          <span className="font-medium text-slate-800 dark:text-slate-200 line-clamp-2 max-w-[220px] leading-snug">
                             {don.campaign?.title}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {don.receiptNumber}
-                          </span>
                         </td>
-                        <td className="py-3 px-3 font-bold text-brand-emerald text-sm whitespace-nowrap">
-                          ৳ {toBengaliNumber(don.amount)}
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="font-semibold text-slate-800 dark:text-slate-200">
-                            {don.paymentMethod}
+                        <td className="py-3.5 px-3 align-top whitespace-nowrap">
+                          <div className="font-black text-brand-emerald text-sm">
+                            ৳ {toBengaliNumber(don.amount)}
                           </div>
-                          {don.status === 'REJECTED' ? (
+                          <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 mt-0.5">
+                            {don.paymentMethod}
+                            {don.senderNumber && (
+                              <span className="font-mono text-slate-500 font-normal ml-1">
+                                ({don.senderNumber})
+                              </span>
+                            )}
+                          </div>
+                          {don.status === 'REJECTED' && don.rejectionReason && (
                             <div
-                              className="text-[10px] text-rose-600 dark:text-rose-400 font-medium bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded mt-0.5 max-w-[150px] truncate"
-                              title={don.rejectionReason || 'বাতিলের কোনো কারণ উল্লেখ করা হয়নি'}
+                              className="text-[10px] text-rose-600 dark:text-rose-400 font-medium bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded mt-1 max-w-[170px] truncate"
+                              title={don.rejectionReason}
                             >
-                              বাতিল: {don.rejectionReason || 'কারণ নেই'}
-                            </div>
-                          ) : don.senderNumber ? (
-                            <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
-                              প্রেরক: {don.senderNumber}
-                            </div>
-                          ) : (
-                            <div className="text-[10px] font-mono text-slate-400">
-                              রশিদ: {don.receiptNumber}
+                              বাতিল: {don.rejectionReason}
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
-                          {formatBengaliDate(don.createdAt)}
-                        </td>
-                        <td className="py-3 px-3">
+                        <td className="py-3.5 px-3 align-top whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold ${don.status === 'VERIFIED'
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
+                              don.status === 'VERIFIED'
                                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                                 : don.status === 'PENDING'
                                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                                   : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                              }`}
+                            }`}
                           >
                             {don.status === 'VERIFIED'
                               ? 'অনুমোদিত'
                               : don.status === 'PENDING'
-                                ? 'অপেক্ষমাণ'
+                                ? 'যাচাই অপেক্ষমাণ'
                                 : 'বাতিল'}
                           </span>
+                          <div className="text-[11px] text-slate-400 mt-1">
+                            {formatBengaliDate(don.createdAt)}
+                          </div>
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="py-3.5 px-4 align-top text-right">
+                          <div className="flex items-center justify-end gap-1.5 pt-0.5">
                             {/* View Details */}
                             <button
                               type="button"
