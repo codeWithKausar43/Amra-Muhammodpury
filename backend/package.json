@@ -24,6 +24,7 @@
     "@fastify/helmet": "^13.0.1",
     "@fastify/swagger": "^9.4.2",
     "@fastify/swagger-ui": "^5.2.2",
+    "@fastify/websocket": "^11.3.7",
     "@prisma/client": "^6.4.1",
     "bcryptjs": "^2.4.3",
     "better-auth": "^1.7.14",

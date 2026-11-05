@@ -17,6 +17,7 @@ import {
   Settings,
   LayoutDashboard,
   ArrowUpRight,
+  Heart,
 } from 'lucide-react';
 
 interface AdminDrawerProps {
@@ -115,6 +116,12 @@ export function AdminDrawer({
           label: 'লেনদেন ও চাঁদা',
           subtext: 'আয়-ব্যয় খতিয়ান ও রসিদ তালিকা',
           icon: TrendingUp,
+        },
+        {
+          href: '/organization/admin/campaigns',
+          label: 'ক্যাম্পেইন ও দান অনুদান',
+          subtext: 'জনকল্যাণমূলক ক্যাম্পেইন ও পৃথক খতিয়ান',
+          icon: Heart,
         },
       ],
     },

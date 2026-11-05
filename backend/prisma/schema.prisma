@@ -800,3 +800,116 @@ model ElectionResult {
   @@index([electionId])
   @@map("election_result")
 }
+
+
+// ==========================================
+// CAMPAIGN & DONATION MANAGEMENT MODELS
+// ==========================================
+
+model CampaignCategory {
+  id           String     @id @default(uuid())
+  name         String     @unique // e.g. অসহায় মানুষের পাশে দাঁড়ানো, শীতবস্ত্র বিতরণ...
+  description  String?    @db.Text
+  icon         String?    // e.g. "heart", "hand-heart", "gift"
+  isActive     Boolean    @default(true)
+  isArchived   Boolean    @default(false)
+  displayOrder Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  campaigns    Campaign[]
+
+  @@map("campaign_category")
+}
+
+model Campaign {
+  id               String            @id @default(uuid())
+  title            String
+  slug             String?           @unique
+  categoryId       String?
+  category         CampaignCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryName     String?           // Preserved category name in case category is archived
+  coverImage       String            // Image URL
+  shortDescription String            @db.Text
+  description      String            @db.Text // Full details
+  goalAmount       Float?            // Target amount (optional)
+  collectedAmount  Float             @default(0.0) // Verified collected amount
+  startDate        DateTime
+  endDate          DateTime
+  location         String?
+  status           String            @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, PAUSED, COMPLETED, CANCELLED, ARCHIVED
+  isFeatured       Boolean           @default(false)
+  priority         Int               @default(0)
+  createdBy        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  donations        CampaignDonation[]
+  expenses         CampaignExpense[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([startDate, endDate])
+  @@map("campaign")
+}
+
+model CampaignDonation {
+  id              String    @id @default(uuid())
+  campaignId      String
+  campaign        Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  donorName       String
+  donorPhone      String
+  donorEmail      String?
+  amount          Float
+  paymentMethod   String    // BKASH, NAGAD, ROCKET, BANK, CASH, OTHER
+  trxId           String?
+  senderNumber    String?
+  receiptUrl      String?   // Proof screenshot URL
+  receiptNumber   String    @unique // e.g. AMP-DON-202611-1234
+  status          String    @default("PENDING") // PENDING, VERIFIED, REJECTED
+  verifiedBy      String?   // Reviewing admin ID
+  verifiedAt      DateTime?
+  rejectionReason String?   @db.Text
+  notes           String?   @db.Text // Internal admin verification notes
+  donorNotes      String?   @db.Text // Optional note from donor
+  userId          String?   // Linked if donor was logged in
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+  @@index([donorPhone])
+  @@index([createdAt])
+  @@map("campaign_donation")
+}
+
+model CampaignExpense {
+  id          String   @id @default(uuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  amount      Float
+  purpose     String
+  description String?  @db.Text
+  expenseDate DateTime @default(now())
+  voucherUrl  String?  // Receipt or voucher document URL
+  performedBy String   // Name or user ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([campaignId])
+  @@map("campaign_expense")
+}
+
+model CampaignPaymentConfig {
+  id            String   @id @default(uuid())
+  method        String   @unique // BKASH, NAGAD, ROCKET, BANK, OTHER
+  title         String   // বিকাশ (মার্চেন্ট), নগদ (ব্যক্তিগত), ব্যাংক...
+  accountNumber String   // 01XXXXXXXXX / A/C Number
+  accountType   String   // Personal, Merchant, Agent, Bank Account
+  instructions  String?  @db.Text // Payment instructions for donors
+  qrCodeUrl     String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("campaign_payment_config")
+}

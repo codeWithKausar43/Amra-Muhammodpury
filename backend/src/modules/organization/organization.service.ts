@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { NotificationService } from '../notifications/notification.service.js';
+import { realtimeService } from '../realtime/realtime.service.js';
 
 function cleanImageUrl(url?: string | null): string | null {
   if (!url || typeof url !== 'string') return null;
@@ -672,7 +673,7 @@ export class OrganizationService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Update ALL sibling payments in one go
       await tx.contributionPayment.updateMany({
         where: { id: { in: siblingIds } },
@@ -750,6 +751,12 @@ export class OrganizationService {
 
       return updatedPayment;
     });
+
+    // Real-Time notification to admin and member
+    realtimeService.publishToAdmins('ORG_PAYMENT_VERIFIED', { paymentId, status, batchPeriodLabel });
+    realtimeService.publishToUser(payment.userId, 'ORG_PAYMENT_VERIFIED', { paymentId, status, batchPeriodLabel });
+
+    return result;
   }
 
   // --------------------------------------------------------------------------

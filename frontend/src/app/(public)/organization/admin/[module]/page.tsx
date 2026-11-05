@@ -32,6 +32,7 @@ import {
   Play,
   Square,
   BarChart3,
+  Heart,
 } from 'lucide-react';
 import {
   useOrgAdminStatsQuery,
@@ -53,6 +54,7 @@ import { notificationAudio } from '@/lib/audio/notificationSound';
 import { OrganizationMemberManagement } from '@/features/organization/components/OrganizationMemberManagement';
 import { MonthlyContributionTracking } from '@/features/organization/components/MonthlyContributionTracking';
 import { DesignationManagementSection } from '@/features/organization/components/DesignationManagementSection';
+import { CampaignAdminManagement } from '@/features/campaign/components/CampaignAdminManagement';
 import { useAdminNav } from '@/features/organization/context/AdminNavContext';
 
 function toBengaliNumber(num: number | string): string {
@@ -109,6 +111,11 @@ const MODULE_META: Record<
     title: 'ডিজিটাল নির্বাচন পরিচালনা ও ব্যালট মনিটরিং',
     subtitle: 'তফশিল ঘোষণা, স্বয়ংক্রিয় শিডিউলিং, লাইভ ব্যালট মনিটরিং এবং ফলাফল চূড়ান্তকরণ',
     icon: Vote,
+  },
+  campaigns: {
+    title: 'ক্যাম্পেইন ও দান অনুদান ব্যবস্থাপনা',
+    subtitle: 'জনকল্যাণমূলক ক্যাম্পেইন পরিচালনা, দান যাচাই ও পৃথক আর্থিক খতিয়ান',
+    icon: Heart,
   },
 };
 
@@ -2302,6 +2309,9 @@ export default function AdminModulePage() {
           </div>
         </div>
       )}
+
+      {/* MODULE 9: CAMPAIGNS & DONATIONS */}
+      {moduleKey === 'campaigns' && <CampaignAdminManagement />}
 
       {/* 6. Voting Poll Monitoring Modal */}
       {monitoringElectionId && (

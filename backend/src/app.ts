@@ -19,6 +19,9 @@ import { searchRoutes } from './modules/search/search.routes.js';
 import { profileRoutes } from './modules/profile/profile.routes.js';
 import { safetyRoutes } from './modules/safety/safety.routes.js';
 import { organizationRoutes } from './modules/organization/organization.routes.js';
+import { campaignRoutes } from './modules/campaign/campaign.routes.js';
+import { realtimeRoutes } from './modules/realtime/realtime.routes.js';
+import fastifyWebsocket from '@fastify/websocket';
 import { errorResponse } from './utils/api-response.js';
 import { HTTP_STATUS } from './constants/status-codes.js';
 
@@ -62,6 +65,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
   await app.register(corsPlugin);
   await app.register(swaggerPlugin);
   await app.register(prismaPlugin);
+  await app.register(fastifyWebsocket);
 
   // Better Auth core plugin (serves /api/auth/*)
   await app.register(authPlugin);
@@ -82,6 +86,8 @@ export const buildApp = async (): Promise<FastifyInstance> => {
       await v1.register(profileRoutes);
       await v1.register(safetyRoutes);
       await v1.register(organizationRoutes, { prefix: '/org' });
+      await v1.register(campaignRoutes, { prefix: '/campaigns' });
+      await v1.register(realtimeRoutes, { prefix: '/realtime' });
     },
     { prefix: '/api/v1' },
   );

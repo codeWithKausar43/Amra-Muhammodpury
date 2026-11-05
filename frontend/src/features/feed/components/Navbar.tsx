@@ -152,6 +152,16 @@ export function Navbar({ onSearch }: NavbarProps) {
 
           {/* Right Actions */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Public Campaigns Link */}
+            <Link
+              href="/campaigns"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-brand-emerald/15 text-brand-emerald dark:text-brand-mint hover:bg-emerald-100 dark:hover:bg-brand-emerald/25 transition-colors border border-emerald-200/60 dark:border-brand-emerald/30 shadow-2xs"
+              title="জনকল্যাণমূলক ক্যাম্পেইন ও অনুদান"
+            >
+              <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+              <span className="hidden min-[420px]:inline">ক্যাম্পেইন</span>
+            </Link>
+
             {/* Mobile search toggle */}
             <button
               type="button"

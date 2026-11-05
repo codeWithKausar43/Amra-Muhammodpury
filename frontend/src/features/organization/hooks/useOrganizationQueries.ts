@@ -263,6 +263,7 @@ export function useAdminMembersQuery(query?: {
     queryKey: ['org', 'admin', 'members', query],
     queryFn: () => organizationService.getAdminMembers(query),
     staleTime: 30 * 1000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -279,6 +280,7 @@ export function useContributionTrackingQuery(query?: { year?: number; month?: nu
     queryKey: ['org', 'admin', 'contributions', 'tracking', query?.year, query?.month],
     queryFn: () => organizationService.getContributionTracking(query),
     staleTime: 30 * 1000,
+    placeholderData: (previousData) => previousData,
   });
 }
 

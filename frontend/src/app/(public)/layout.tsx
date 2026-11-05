@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Navbar, BottomNav } from '@/features/feed/components';
 import { FeedModalProvider } from '@/features/feed/context/FeedModalContext';
 import { AdminNavProvider } from '@/features/organization/context/AdminNavContext';
+import { CampaignEntryPopup } from '@/features/campaign/components/CampaignEntryPopup';
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <Navbar />
           <main className="flex-1 pb-20 md:pb-10">{children}</main>
           <BottomNav />
+          <CampaignEntryPopup />
         </div>
       </AdminNavProvider>
     </FeedModalProvider>

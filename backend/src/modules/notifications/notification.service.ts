@@ -1,5 +1,6 @@
 import { PrismaClient } from '../../config/database.js';
 import webpush from 'web-push';
+import { realtimeService } from '../realtime/realtime.service.js';
 
 export const VAPID_PUBLIC_KEY =
   process.env.VAPID_PUBLIC_KEY ||
@@ -45,6 +46,10 @@ export class NotificationService {
       where: { id: notificationId, recipientId: userId },
       data: { isRead: true, readAt: new Date() },
     });
+    const unreadCount = await this.prisma.notification.count({
+      where: { recipientId: userId, isRead: false },
+    });
+    realtimeService.publishNotificationRead(userId, { notificationId, unreadCount });
     return { success: true };
   }
 
@@ -53,6 +58,7 @@ export class NotificationService {
       where: { recipientId: userId, isRead: false },
       data: { isRead: true, readAt: new Date() },
     });
+    realtimeService.publishNotificationRead(userId, { unreadCount: 0 });
     return { success: true, message: 'সব নোটিফিকেশন পড়া হয়েছে হিসেবে চিহ্নিত করা হয়েছে' };
   }
 
@@ -121,7 +127,7 @@ export class NotificationService {
   ) {
     // 1. Create in-app notification in DB
     try {
-      await this.prisma.notification.create({
+      const inApp = await this.prisma.notification.create({
         data: {
           recipientId: userId,
           title: payload.title,
@@ -129,6 +135,11 @@ export class NotificationService {
           type: 'SYSTEM',
           entityType: 'push',
         },
+      });
+      realtimeService.publishNotification(userId, {
+        ...inApp,
+        sound: payload.sound || '/sounds/notification.wav',
+        url: payload.url || '/organization/member',
       });
     } catch (e) {
       console.warn('Failed to insert in-app notification:', e);
