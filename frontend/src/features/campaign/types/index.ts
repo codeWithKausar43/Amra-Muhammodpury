@@ -134,3 +134,25 @@ export interface CampaignAdminOverview {
   recentDonations: CampaignDonation[];
 }
 
+export interface CampaignDonationTracking {
+  receiptNumber: string;
+  status: DonationStatus;
+  donorName: string;
+  amount: number;
+  paymentMethod: string;
+  senderNumber?: string | null;
+  submittedAt: string;
+  verifiedAt?: string | null;
+  rejectionReason?: string | null;
+  campaign: {
+    id: string;
+    title: string;
+    slug?: string | null;
+    goalAmount: number;
+    collectedAmount: number;
+    progressPercent: number;
+    status: CampaignStatus;
+    coverImage: string;
+  };
+}
+

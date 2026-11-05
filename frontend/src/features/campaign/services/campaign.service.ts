@@ -7,12 +7,19 @@ import type {
   CampaignExpense,
   CampaignPaymentConfig,
   CampaignAdminOverview,
+  CampaignDonationTracking,
 } from '../types';
 
 export const campaignService = {
   // --------------------------------------------------------------------------
   // Public APIs
   // --------------------------------------------------------------------------
+  async trackDonation(receiptNumber: string) {
+    const clean = encodeURIComponent(receiptNumber.trim());
+    const res = await apiClient<ApiResponse<CampaignDonationTracking>>(`/campaigns/track/${clean}`);
+    return res.data;
+  },
+
   async getPublicCampaigns(params: {
     page?: number;
     limit?: number;

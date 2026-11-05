@@ -48,7 +48,14 @@ export const campaignRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(successResponse(methods, 'পেমেন্ট নির্দেশনাবলী পাওয়া গেছে'));
   });
 
-  // 5. Campaign Details
+  // 5. Track Donation Status & Campaign Progress by Receipt Number
+  fastify.get('/track/:receiptNumber', async (request, reply) => {
+    const { receiptNumber } = request.params as { receiptNumber: string };
+    const tracking = await service.trackDonationByReceipt(receiptNumber);
+    return reply.send(successResponse(tracking, 'অনুদান ট্র্যাকিং তথ্য পাওয়া গেছে'));
+  });
+
+  // 6. Campaign Details
   fastify.get('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const campaign = await service.getPublicCampaignDetails(id);

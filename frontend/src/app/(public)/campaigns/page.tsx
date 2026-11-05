@@ -17,6 +17,7 @@ import {
   usePublicCategoriesQuery,
 } from '@/features/campaign/hooks/useCampaignQueries';
 import { DonationModal } from '@/features/campaign/components/DonationModal';
+import { DonationTrackingModal } from '@/features/campaign/components/DonationTrackingModal';
 import type { Campaign } from '@/features/campaign/types';
 
 function toBengaliNumber(num: number | string): string {
@@ -40,6 +41,7 @@ export default function PublicCampaignsPage() {
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [page, setPage] = React.useState<number>(1);
   const [donatingCampaign, setDonatingCampaign] = React.useState<Campaign | null>(null);
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = React.useState<boolean>(false);
 
   const { data: categories = [] } = usePublicCategoriesQuery();
   const { data: campaignData, isLoading } = usePublicCampaignsQuery({
@@ -67,6 +69,17 @@ export default function PublicCampaignsPage() {
           <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-medium">
             মোহাম্মদপুরের অসহায়, শীতার্ত, দরিদ্র শিক্ষার্থী ও প্রাকৃতিক দুর্যোগে ক্ষতিগ্রস্ত মানুষের পাশে দাঁড়াতে আমাদের উন্মুক্ত ক্যাম্পেইনসমূহে নিঃসংকোচে অনুদান প্রদান করুন। লগইন ছাড়াই যে কেউ অনুদান পাঠাতে পারবেন।
           </p>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setIsTrackingModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-emerald-900 hover:bg-emerald-50 active:scale-[0.98] transition-all shadow-md cursor-pointer"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span>রশিদ নম্বর দিয়ে অনুদান ও অগ্রগতি ট্র্যাক করুন</span>
+            </button>
+          </div>
         </div>
 
         {/* Decorative background shapes */}
@@ -305,6 +318,14 @@ export default function PublicCampaignsPage() {
           campaign={donatingCampaign}
           isOpen={Boolean(donatingCampaign)}
           onClose={() => setDonatingCampaign(null)}
+        />
+      )}
+
+      {/* Public Donation Tracking Modal */}
+      {isTrackingModalOpen && (
+        <DonationTrackingModal
+          isOpen={isTrackingModalOpen}
+          onClose={() => setIsTrackingModalOpen(false)}
         />
       )}
     </div>

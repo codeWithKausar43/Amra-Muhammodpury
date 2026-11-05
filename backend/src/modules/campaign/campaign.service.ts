@@ -440,6 +440,65 @@ export class CampaignService {
     });
   }
 
+  public async trackDonationByReceipt(receiptNumber: string) {
+    if (!receiptNumber || receiptNumber.trim().length < 5) {
+      throw new BadRequestError('অনুগ্রহ করে সঠিক রসিদ নম্বর প্রদান করুন');
+    }
+
+    const cleanReceipt = receiptNumber.trim().toUpperCase();
+
+    const donation = await this.prisma.campaignDonation.findFirst({
+      where: {
+        receiptNumber: { equals: cleanReceipt, mode: 'insensitive' },
+      },
+      include: {
+        campaign: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            goalAmount: true,
+            collectedAmount: true,
+            status: true,
+            coverImage: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
+      },
+    });
+
+    if (!donation) {
+      throw new NotFoundError('এই রসিদ নম্বরের বিপরীতে কোনো অনুদানের রেকর্ড পাওয়া যায়নি');
+    }
+
+    const target = Number(donation.campaign.goalAmount) || 1;
+    const collected = Number(donation.campaign.collectedAmount) || 0;
+    const progressPercent = Math.min(100, Math.round((collected / target) * 100));
+
+    return {
+      receiptNumber: donation.receiptNumber,
+      status: donation.status,
+      donorName: donation.donorName,
+      amount: Number(donation.amount),
+      paymentMethod: donation.paymentMethod,
+      senderNumber: donation.senderNumber ? donation.senderNumber.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : null,
+      submittedAt: donation.createdAt,
+      verifiedAt: donation.verifiedAt,
+      rejectionReason: donation.status === 'REJECTED' ? donation.rejectionReason : null,
+      campaign: {
+        id: donation.campaign.id,
+        title: donation.campaign.title,
+        slug: donation.campaign.slug,
+        goalAmount: target,
+        collectedAmount: collected,
+        progressPercent,
+        status: donation.campaign.status,
+        coverImage: donation.campaign.coverImage,
+      },
+    };
+  }
+
   // ==========================================================================
   // ADMIN SECTION
   // ==========================================================================

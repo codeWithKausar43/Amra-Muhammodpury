@@ -137,6 +137,7 @@ export const CampaignAdminManagement: React.FC = () => {
   // Donation Review Notes
   const [rejectNotes, setRejectNotes] = React.useState('');
   const [rejectingDonationId, setRejectingDonationId] = React.useState<string | null>(null);
+  const [approvingDonation, setApprovingDonation] = React.useState<CampaignDonation | null>(null);
 
   const openCreateCampaignModal = () => {
     setEditingCampaign(null);
@@ -216,6 +217,7 @@ export const CampaignAdminManagement: React.FC = () => {
       await mutations.reviewDonation.mutateAsync({ id, status, rejectionReason: reason });
       setViewingDonation(null);
       setRejectingDonationId(null);
+      setApprovingDonation(null);
       setRejectNotes('');
     } catch (err: any) {
       alert(err?.message || 'যাচাই সম্পন্ন করতে সমস্যা হয়েছে');
@@ -843,7 +845,7 @@ export const CampaignAdminManagement: React.FC = () => {
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => handleVerifyDonation(don.id, 'VERIFIED')}
+                                  onClick={() => setApprovingDonation(don)}
                                   disabled={mutations.reviewDonation.isPending}
                                   className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer"
                                   title="অনুমোদন করুন"
@@ -1324,7 +1326,7 @@ export const CampaignAdminManagement: React.FC = () => {
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => handleVerifyDonation(viewingDonation.id, 'VERIFIED')}
+                  onClick={() => setApprovingDonation(viewingDonation)}
                   className="py-2.5 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold text-xs"
                 >
                   অনুমোদন করুন
@@ -1338,6 +1340,72 @@ export const CampaignAdminManagement: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2.5: Approval Confirmation Prompt */}
+      {approvingDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-brand-charcoal p-5 rounded-3xl shadow-xl space-y-4 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-900 dark:text-white">অনুদান অনুমোদন নিশ্চিতকরণ</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">এই অনুদানটি যাচাই করে চূড়ান্ত অনুমোদন করুন</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">দাতার নাম:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{approvingDonation.donorName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">অনুদানের পরিমাণ:</span>
+                <span className="font-black text-brand-emerald text-sm">৳ {toBengaliNumber(approvingDonation.amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">পদ্ধতি ও প্রেরক:</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {approvingDonation.paymentMethod} {approvingDonation.senderNumber ? `(${approvingDonation.senderNumber})` : ''}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">রশিদ নম্বর:</span>
+                <span className="font-mono text-slate-700 dark:text-slate-300">{approvingDonation.receiptNumber}</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 leading-relaxed">
+              💡 অনুমোদন নিশ্চিত করলে এই অনুদানের অর্থ তাৎক্ষণিকভাবে ক্যাম্পেইনের মূল তহবিলে যোগ হবে এবং জনসাধারণের অগ্রগতিতে প্রতিফলিত হবে।
+            </p>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setApprovingDonation(null)}
+                disabled={mutations.reviewDonation.isPending}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 font-medium cursor-pointer"
+              >
+                ফিরে যান
+              </button>
+              <button
+                type="button"
+                onClick={() => handleVerifyDonation(approvingDonation.id, 'VERIFIED')}
+                disabled={mutations.reviewDonation.isPending}
+                className="px-4 py-2 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {mutations.reviewDonation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4 stroke-[3]" />
+                )}
+                <span>হ্যাঁ, অনুমোদন নিশ্চিত করুন</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

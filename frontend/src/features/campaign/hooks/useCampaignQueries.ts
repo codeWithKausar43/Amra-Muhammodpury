@@ -10,6 +10,7 @@ export const campaignQueryKeys = {
   publicDetails: (idOrSlug: string) => ['campaigns', 'publicDetails', idOrSlug] as const,
   publicCategories: ['campaigns', 'publicCategories'] as const,
   publicPaymentMethods: ['campaigns', 'publicPaymentMethods'] as const,
+  track: (receiptNumber: string) => ['campaigns', 'track', receiptNumber] as const,
 
   // Admin Keys
   adminOverview: ['campaigns', 'admin', 'overview'] as const,
@@ -68,6 +69,16 @@ export function usePublicPaymentMethodsQuery() {
     queryKey: campaignQueryKeys.publicPaymentMethods,
     queryFn: () => campaignService.getPublicPaymentMethods(),
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useTrackDonationQuery(receiptNumber: string, enabled = true) {
+  return useQuery({
+    queryKey: campaignQueryKeys.track(receiptNumber),
+    queryFn: () => campaignService.trackDonation(receiptNumber),
+    enabled: enabled && Boolean(receiptNumber && receiptNumber.trim().length >= 5),
+    staleTime: 10 * 1000,
+    retry: 1,
   });
 }
 

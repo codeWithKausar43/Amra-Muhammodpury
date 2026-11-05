@@ -11,11 +11,15 @@ import {
   Loader2,
   Phone,
   User,
-  Hash,
+  Landmark,
   ArrowRight,
+  Download,
+  Search,
 } from 'lucide-react';
 import type { Campaign } from '../types';
 import { usePublicPaymentMethodsQuery, useCampaignMutations } from '../hooks/useCampaignQueries';
+import { downloadCampaignDonationReceipt } from '../utils/receiptGenerator';
+import { DonationTrackingModal } from './DonationTrackingModal';
 
 function toBengaliNumber(num: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -23,6 +27,45 @@ function toBengaliNumber(num: number | string): string {
     .toLocaleString('en-US')
     .replace(/[0-9]/g, (d) => bengaliDigits[+d] || d);
 }
+
+// Authentic brand vector marks (clean, professional, non-AI)
+const BkashLogo: React.FC = () => (
+  <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#E2136E] text-white shadow-xs">
+    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 4.5L7 11.5L12 15L10.5 20L15 16.5L20 20L22.5 6.5L18 4.5ZM13.8 15.5L9.2 12.3L17.5 7.5L13.8 15.5Z" />
+    </svg>
+  </span>
+);
+
+const NagadLogo: React.FC = () => (
+  <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#F7941D] text-white shadow-xs">
+    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C8 6 6 10 6.5 14.5C7.2 18.5 10.2 21.5 12 21.5C13.8 21.5 16.8 18.5 17.5 14.5C18 10 16 6 12 2ZM12 18C10.5 18 8.8 16.2 8.5 13.8C8.2 11.5 10 8.5 12 6C14 8.5 15.8 11.5 15.5 13.8C15.2 16.2 13.5 18 12 18Z" />
+    </svg>
+  </span>
+);
+
+const RocketLogo: React.FC = () => (
+  <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#8C3494] text-white shadow-xs">
+    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3C10.5 5 9 8.5 9 12.5L10.5 14V17L12 15.5L13.5 17V14L15 12.5C15 8.5 13.5 5 12 3Z" />
+      <circle cx="12" cy="19.5" r="1.5" />
+    </svg>
+  </span>
+);
+
+const BankLogo: React.FC = () => (
+  <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0284C7] text-white shadow-xs">
+    <Landmark className="w-4 h-4 stroke-[2.2]" />
+  </span>
+);
+
+const PAYMENT_METHOD_DEFAULTS = [
+  { id: 'BKASH', label: 'বিকাশ', renderIcon: BkashLogo },
+  { id: 'NAGAD', label: 'নগদ', renderIcon: NagadLogo },
+  { id: 'ROCKET', label: 'রকেট', renderIcon: RocketLogo },
+  { id: 'BANK', label: 'ব্যাংক', renderIcon: BankLogo },
+];
 
 interface DonationModalProps {
   campaign: Campaign;
@@ -42,14 +85,26 @@ export const DonationModal: React.FC<DonationModalProps> = ({ campaign, isOpen, 
   const [selectedMethod, setSelectedMethod] = React.useState<string>('BKASH');
   const [donorName, setDonorName] = React.useState('');
   const [donorPhone, setDonorPhone] = React.useState('');
-  const [donorEmail, setDonorEmail] = React.useState('');
-  const [trxId, setTrxId] = React.useState('');
   const [senderNumber, setSenderNumber] = React.useState('');
   const [donorNotes, setDonorNotes] = React.useState('');
-  const [receiptUrl, setReceiptUrl] = React.useState('');
   const [copiedAccount, setCopiedAccount] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successData, setSuccessData] = React.useState<any>(null);
+  const [isTrackingOpen, setIsTrackingOpen] = React.useState(false);
+
+  const handleDownloadReceipt = () => {
+    downloadCampaignDonationReceipt({
+      receiptNumber: successData?.receiptNumber || 'AMP-DON-REC',
+      donorName: successData?.donorName || donorName,
+      donorPhone: donorPhone || undefined,
+      senderNumber: senderNumber || undefined,
+      campaignTitle: campaign.title,
+      amount: Number(customAmount),
+      paymentMethod: selectedMethod,
+      status: 'PENDING',
+      date: successData?.submittedAt || new Date(),
+    });
+  };
 
   React.useEffect(() => {
     if (isOpen) {
@@ -111,12 +166,9 @@ export const DonationModal: React.FC<DonationModalProps> = ({ campaign, isOpen, 
         data: {
           donorName: donorName.trim(),
           donorPhone: donorPhone.trim(),
-          donorEmail: donorEmail.trim() || undefined,
           amount,
           paymentMethod: selectedMethod,
-          trxId: trxId.trim() || undefined,
           senderNumber: senderNumber.trim() || undefined,
-          receiptUrl: receiptUrl.trim() || undefined,
           donorNotes: donorNotes.trim() || undefined,
         },
       });
@@ -213,11 +265,31 @@ export const DonationModal: React.FC<DonationModalProps> = ({ campaign, isOpen, 
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadReceipt}
+                    className="py-2.5 px-3 rounded-xl bg-brand-emerald hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>রশিদ ডাউনলোড করুন (PNG)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsTrackingOpen(true)}
+                    className="py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.99] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Search className="w-4 h-4" />
+                    <span>অগ্রগতি ও অবস্থা ট্র্যাক করুন</span>
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full py-2.5 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold text-sm transition-all shadow-sm cursor-pointer"
+                  className="w-full py-2 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 font-bold text-xs transition-all cursor-pointer"
                 >
                   সম্পন্ন করুন
                 </button>
@@ -272,26 +344,25 @@ export const DonationModal: React.FC<DonationModalProps> = ({ campaign, isOpen, 
                   পেমেন্ট মাধ্যম বেছে নিন <span className="text-rose-500">*</span>
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {[
-                    { id: 'BKASH', label: 'বিকাশ', icon: '📱' },
-                    { id: 'NAGAD', label: 'নগদ', icon: '📲' },
-                    { id: 'ROCKET', label: 'রকেট', icon: '🚀' },
-                    { id: 'BANK', label: 'ব্যাংক', icon: '🏦' },
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setSelectedMethod(m.id)}
-                      className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                        selectedMethod === m.id
-                          ? 'bg-brand-emerald/10 border-brand-emerald text-brand-emerald dark:text-brand-mint ring-1 ring-brand-emerald'
-                          : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="text-sm">{m.icon}</div>
-                      <div className="mt-0.5 text-[11px] truncate">{m.label}</div>
-                    </button>
-                  ))}
+                  {PAYMENT_METHOD_DEFAULTS.map((m) => {
+                    const IconComponent = m.renderIcon;
+                    const isSelected = selectedMethod === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSelectedMethod(m.id)}
+                        className={`py-2.5 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer flex flex-col items-center justify-center ${
+                          isSelected
+                            ? 'bg-brand-emerald/10 border-brand-emerald text-brand-emerald dark:text-brand-mint ring-1 ring-brand-emerald shadow-xs'
+                            : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        <IconComponent />
+                        <span className="mt-1.5 text-[11px] font-bold tracking-tight truncate">{m.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Method Instructions Box */}
@@ -362,64 +433,24 @@ export const DonationModal: React.FC<DonationModalProps> = ({ campaign, isOpen, 
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      ইমেইল ঠিকানা (ঐচ্ছিক)
-                    </label>
-                    <input
-                      type="email"
-                      value={donorEmail}
-                      onChange={(e) => setDonorEmail(e.target.value)}
-                      placeholder="ইমেইলে রশিদ পেতে"
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-emerald"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      পেমেন্ট প্রুফ / স্ক্রিনশট লিংক (ঐচ্ছিক)
-                    </label>
-                    <input
-                      type="url"
-                      value={receiptUrl}
-                      onChange={(e) => setReceiptUrl(e.target.value)}
-                      placeholder="রশিদের ইমেজ লিংক"
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-emerald"
-                    />
-                  </div>
-                </div>
-
-                {/* TrxID & Sender Number */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      ট্রানজেকশন আইডি (TrxID)
-                    </label>
-                    <div className="relative">
-                      <Hash className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={trxId}
-                        onChange={(e) => setTrxId(e.target.value)}
-                        placeholder="পেমেন্টের TrxID"
-                        className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-brand-emerald"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      প্রেরক নম্বর / অ্যাকাউন্ট
-                    </label>
+                {/* Sender Account / Number */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    প্রেরক নম্বর / অ্যাকাউন্ট
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       value={senderNumber}
                       onChange={(e) => setSenderNumber(e.target.value)}
-                      placeholder="যে নম্বর থেকে টাকা পাঠিয়েছেন"
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-emerald"
+                      placeholder="যে নম্বর থেকে টাকা পাঠিয়েছেন (যেমন: ০১XXXXXXXXX)"
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-emerald"
                     />
                   </div>
                 </div>
 
+                {/* Optional Notes */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     মন্তব্য বা প্রার্থনা (ঐচ্ছিক)
@@ -461,6 +492,15 @@ export const DonationModal: React.FC<DonationModalProps> = ({ campaign, isOpen, 
           )}
         </div>
       </div>
+
+      {/* Real-Time Donation Tracking Modal */}
+      {isTrackingOpen && (
+        <DonationTrackingModal
+          isOpen={isTrackingOpen}
+          onClose={() => setIsTrackingOpen(false)}
+          initialReceiptNumber={successData?.receiptNumber || ''}
+        />
+      )}
     </div>
   );
 };
