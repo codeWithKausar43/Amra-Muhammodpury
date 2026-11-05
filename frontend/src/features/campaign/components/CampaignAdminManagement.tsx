@@ -552,9 +552,8 @@ export const CampaignAdminManagement: React.FC = () => {
             </div>
           ) : campaignListData?.items && campaignListData.items.length > 0 ? (
             <>
-              <div className="bg-white dark:bg-brand-charcoal rounded-3xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+              <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[620px]">
                     <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                       <tr>
                         <th className="py-3 px-4">ক্যাম্পেইন</th>
@@ -646,7 +645,6 @@ export const CampaignAdminManagement: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-              </div>
 
               {Boolean(campaignListData?.totalPages && campaignListData.totalPages > 1) && (
                 <div className="flex justify-center items-center gap-2 pt-2">
@@ -673,7 +671,7 @@ export const CampaignAdminManagement: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-white/5 rounded-3xl border border-slate-200/80">
+            <div className="py-12 text-center text-xs text-slate-400">
               কোনো ক্যাম্পেইন পাওয়া যায়নি
             </div>
           )}
@@ -762,7 +760,7 @@ export const CampaignAdminManagement: React.FC = () => {
           ) : donationListData?.items && donationListData.items.length > 0 ? (
             <div className="bg-white dark:bg-brand-charcoal rounded-3xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[620px]">
                   <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="py-3 px-4">দাতা ও যোগাযোগ</th>
@@ -877,7 +875,7 @@ export const CampaignAdminManagement: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-white/5 rounded-3xl border border-slate-200/80">
+            <div className="py-12 text-center text-xs text-slate-400">
               কোনো অনুদান রেকর্ড পাওয়া যায়নি
             </div>
           )}
@@ -914,56 +912,56 @@ export const CampaignAdminManagement: React.FC = () => {
           </div>
 
           {expenses.length > 0 ? (
-            <div className="bg-white dark:bg-brand-charcoal rounded-3xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                    <tr>
-                      <th className="py-3 px-4">উদ্দেশ্য ও ক্যাম্পেইন</th>
-                      <th className="py-3 px-3">পরিমাণ</th>
-                      <th className="py-3 px-3">তারিখ</th>
-                      <th className="py-3 px-3">অনুমোদনকারী ব্যক্তি</th>
-                      <th className="py-3 px-4 text-right">ভাউচার</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[540px]">
+                <thead className="border-b border-slate-200 dark:border-white/10 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="py-3 px-3 min-w-[200px]">উদ্দেশ্য ও ক্যাম্পেইন</th>
+                    <th className="py-3 px-3 whitespace-nowrap">পরিমাণ</th>
+                    <th className="py-3 px-3 whitespace-nowrap">তারিখ</th>
+                    <th className="py-3 px-3 whitespace-nowrap">অনুমোদনকারী ব্যক্তি</th>
+                    <th className="py-3 px-3 text-right whitespace-nowrap">ভাউচার</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-800 dark:text-slate-200">
+                  {expenses.map((exp) => (
+                    <tr key={exp.id} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                      <td className="py-3.5 px-3 align-top">
+                        <div className="font-bold text-slate-900 dark:text-white line-clamp-1">{exp.purpose}</div>
+                        <div className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 max-w-[260px] leading-relaxed" title={exp.campaign?.title}>
+                          {exp.campaign?.title}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-3 align-top font-bold text-rose-600 dark:text-rose-400 text-sm whitespace-nowrap">
+                        - ৳ {toBengaliNumber(exp.amount)}
+                      </td>
+                      <td className="py-3.5 px-3 align-top text-[11px] text-slate-500 whitespace-nowrap">
+                        {formatBengaliDate(exp.expenseDate)}
+                      </td>
+                      <td className="py-3.5 px-3 align-top font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        {exp.performedBy}
+                      </td>
+                      <td className="py-3.5 px-3 align-top text-right whitespace-nowrap">
+                        {exp.voucherUrl ? (
+                          <a
+                            href={exp.voucherUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-brand-emerald font-bold hover:underline"
+                          >
+                            রশিদ দেখুন
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">রশিদ নেই</span>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-800 dark:text-slate-200">
-                    {expenses.map((exp) => (
-                      <tr key={exp.id} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-slate-900 dark:text-white">{exp.purpose}</div>
-                          <div className="text-[11px] text-slate-500">{exp.campaign?.title}</div>
-                        </td>
-                        <td className="py-3 px-3 font-bold text-rose-600 dark:text-rose-400 text-sm whitespace-nowrap">
-                          - ৳ {toBengaliNumber(exp.amount)}
-                        </td>
-                        <td className="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
-                          {formatBengaliDate(exp.expenseDate)}
-                        </td>
-                        <td className="py-3 px-3 font-medium text-slate-700 dark:text-slate-300">
-                          {exp.performedBy}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {exp.voucherUrl ? (
-                            <a
-                              href={exp.voucherUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-brand-emerald font-bold hover:underline"
-                            >
-                              রশিদ দেখুন
-                            </a>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">রশিদ নেই</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-white/5 rounded-3xl border border-slate-200/80">
+            <div className="py-12 text-center text-xs text-slate-400">
               এখনো কোনো ক্যাম্পেইন ব্যয় অন্তর্ভুক্ত হয়নি
             </div>
           )}
