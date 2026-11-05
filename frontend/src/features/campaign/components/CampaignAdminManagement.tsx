@@ -692,7 +692,7 @@ export const CampaignAdminManagement: React.FC = () => {
                   type="text"
                   value={donationSearch}
                   onChange={(e) => setDonationSearch(e.target.value)}
-                  placeholder="দাতার নাম, ফোন বা TrxID..."
+                  placeholder="দাতার নাম, ফোন, প্রেরক নম্বর বা রশিদ..."
                   className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand-emerald"
                 />
               </div>
@@ -768,7 +768,7 @@ export const CampaignAdminManagement: React.FC = () => {
                       <th className="py-3 px-4">দাতা ও যোগাযোগ</th>
                       <th className="py-3 px-3">ক্যাম্পেইন</th>
                       <th className="py-3 px-3">পরিমাণ</th>
-                      <th className="py-3 px-3">মাধ্যম ও TrxID</th>
+                      <th className="py-3 px-3">মাধ্যম ও বিবরণ</th>
                       <th className="py-3 px-3">তারিখ</th>
                       <th className="py-3 px-3">স্ট্যাটাস</th>
                       <th className="py-3 px-4 text-right">যাচাই পদক্ষেপ</th>
@@ -801,12 +801,21 @@ export const CampaignAdminManagement: React.FC = () => {
                           <div className="font-semibold text-slate-800 dark:text-slate-200">
                             {don.paymentMethod}
                           </div>
-                          {don.trxId ? (
-                            <div className="text-[10.5px] font-mono text-slate-500 bg-slate-100 dark:bg-white/10 px-1 py-0.2 rounded inline-block">
-                              Trx: {don.trxId}
+                          {don.status === 'REJECTED' ? (
+                            <div
+                              className="text-[10px] text-rose-600 dark:text-rose-400 font-medium bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded mt-0.5 max-w-[150px] truncate"
+                              title={don.rejectionReason || 'বাতিলের কোনো কারণ উল্লেখ করা হয়নি'}
+                            >
+                              বাতিল: {don.rejectionReason || 'কারণ নেই'}
+                            </div>
+                          ) : don.senderNumber ? (
+                            <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+                              প্রেরক: {don.senderNumber}
                             </div>
                           ) : (
-                            <span className="text-[10px] text-slate-400">TrxID নেই</span>
+                            <div className="text-[10px] font-mono text-slate-400">
+                              রশিদ: {don.receiptNumber}
+                            </div>
                           )}
                         </td>
                         <td className="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
@@ -1302,13 +1311,45 @@ export const CampaignAdminManagement: React.FC = () => {
                 <span className="text-slate-400">পদ্ধতি:</span>
                 <span className="font-medium">{viewingDonation.paymentMethod}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">TrxID:</span>
-                <span className="font-mono font-bold">{viewingDonation.trxId || '—'}</span>
-              </div>
+              {viewingDonation.senderNumber && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">প্রেরক নম্বর:</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                    {viewingDonation.senderNumber}
+                  </span>
+                </div>
+              )}
+              {viewingDonation.rejectionReason && (
+                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 space-y-1">
+                  <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 block">
+                    বাতিলের কারণ:
+                  </span>
+                  <p className="text-xs text-rose-800 dark:text-rose-200 font-medium leading-relaxed">
+                    {viewingDonation.rejectionReason}
+                  </p>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-400">রশিদ নম্বর:</span>
                 <span className="font-mono">{viewingDonation.receiptNumber}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">স্ট্যাটাস:</span>
+                <span
+                  className={`inline-block px-2 py-0.5 rounded text-[10.5px] font-bold ${
+                    viewingDonation.status === 'VERIFIED'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                      : viewingDonation.status === 'PENDING'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                  }`}
+                >
+                  {viewingDonation.status === 'VERIFIED'
+                    ? 'অনুমোদিত'
+                    : viewingDonation.status === 'PENDING'
+                      ? 'যাচাই অপেক্ষমাণ'
+                      : 'বাতিল'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">জমার সময়:</span>
@@ -1388,7 +1429,7 @@ export const CampaignAdminManagement: React.FC = () => {
                 type="button"
                 onClick={() => setApprovingDonation(null)}
                 disabled={mutations.reviewDonation.isPending}
-                className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 font-medium cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 font-bold whitespace-nowrap cursor-pointer transition-colors"
               >
                 ফিরে যান
               </button>
@@ -1396,14 +1437,14 @@ export const CampaignAdminManagement: React.FC = () => {
                 type="button"
                 onClick={() => handleVerifyDonation(approvingDonation.id, 'VERIFIED')}
                 disabled={mutations.reviewDonation.isPending}
-                className="px-4 py-2 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50 whitespace-nowrap transition-colors"
               >
                 {mutations.reviewDonation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Check className="w-4 h-4 stroke-[3]" />
                 )}
-                <span>হ্যাঁ, অনুমোদন নিশ্চিত করুন</span>
+                <span>অনুমোদন করুন</span>
               </button>
             </div>
           </div>
@@ -1419,7 +1460,7 @@ export const CampaignAdminManagement: React.FC = () => {
               rows={3}
               value={rejectNotes}
               onChange={(e) => setRejectNotes(e.target.value)}
-              placeholder="যেমন: ভুল TrxID বা অ্যাকাউন্টে টাকা জমা হয়নি..."
+              placeholder="যেমন: প্রেরক নম্বরে কোনো টাকা জমা হয়নি বা তথ্য ভুল..."
               className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 resize-none"
             />
             <div className="flex justify-end gap-2">

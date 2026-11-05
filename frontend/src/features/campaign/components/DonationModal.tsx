@@ -266,32 +266,22 @@ export const DonationModal: React.FC<DonationModalProps> = ({ campaign, isOpen, 
               </div>
 
               <div className="pt-2 space-y-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadReceipt}
-                    className="py-2.5 px-3 rounded-xl bg-brand-emerald hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>রশিদ ডাউনলোড করুন (PNG)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsTrackingOpen(true)}
-                    className="py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.99] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Search className="w-4 h-4" />
-                    <span>অগ্রগতি ও অবস্থা ট্র্যাক করুন</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadReceipt}
+                  className="w-full py-3 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>রশিদ ডাউনলোড করুন</span>
+                </button>
 
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="w-full py-2 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 font-bold text-xs transition-all cursor-pointer"
+                  onClick={() => setIsTrackingOpen(true)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.99] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  সম্পন্ন করুন
+                  <Search className="w-4 h-4" />
+                  <span>অগ্রগতি ও অবস্থা ট্র্যাক করুন</span>
                 </button>
               </div>
             </div>

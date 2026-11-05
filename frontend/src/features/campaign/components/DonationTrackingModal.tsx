@@ -296,7 +296,7 @@ export const DonationTrackingModal: React.FC<DonationTrackingModalProps> = ({
                   className="flex-1 py-2.5 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                 >
                   <Download className="w-4 h-4" />
-                  <span>অফিসিয়াল রশিদ ডাউনলোড করুন (PNG)</span>
+                  <span>অফিসিয়াল রশিদ ডাউনলোড করুন</span>
                 </button>
               </div>
             </div>

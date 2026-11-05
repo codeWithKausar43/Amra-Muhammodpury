@@ -74,10 +74,10 @@ export default function PublicCampaignsPage() {
             <button
               type="button"
               onClick={() => setIsTrackingModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-emerald-900 hover:bg-emerald-50 active:scale-[0.98] transition-all shadow-md cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-emerald-900 hover:bg-emerald-50 active:scale-[0.98] transition-all shadow-md cursor-pointer whitespace-nowrap"
             >
-              <Search className="w-3.5 h-3.5" />
-              <span>রশিদ নম্বর দিয়ে অনুদান ও অগ্রগতি ট্র্যাক করুন</span>
+              <Search className="w-3.5 h-3.5 shrink-0" />
+              <span>রশিদ দিয়ে অনুদান ট্র্যাক করুন</span>
             </button>
           </div>
         </div>

@@ -858,7 +858,7 @@ export class CampaignService {
             OR: [
               { donorName: { contains: params.search, mode: 'insensitive' } },
               { donorPhone: { contains: params.search, mode: 'insensitive' } },
-              { trxId: { contains: params.search, mode: 'insensitive' } },
+              { senderNumber: { contains: params.search, mode: 'insensitive' } },
               { receiptNumber: { contains: params.search, mode: 'insensitive' } },
             ],
           }
