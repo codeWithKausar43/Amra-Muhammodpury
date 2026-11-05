@@ -19,6 +19,7 @@ import {
   Share2,
   Tag,
   Phone,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   useCampaignAdminOverviewQuery,
@@ -279,7 +280,7 @@ export const CampaignAdminManagement: React.FC = () => {
           { id: 'CAMPAIGNS', label: 'ক্যাম্পেইন তালিকা', icon: Heart },
           {
             id: 'DONATIONS',
-            label: 'দান যাচাই ও তালিকা',
+            label: 'অনুদানের তালিকা ও যাচাই',
             icon: Receipt,
             badge: overview?.counts?.pendingDonations,
           },
@@ -294,19 +295,17 @@ export const CampaignAdminManagement: React.FC = () => {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as any)}
-              className={`py-2 px-3 sm:px-4 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                isActive
+              className={`py-2 px-3 sm:px-4 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${isActive
                   ? 'bg-brand-emerald text-white shadow-xs font-bold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-              }`}
+                }`}
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
               {Boolean(tab.badge && tab.badge > 0) && (
                 <span
-                  className={`px-1.5 py-0.2 text-[10px] rounded-full font-black ${
-                    isActive ? 'bg-white text-brand-emerald' : 'bg-amber-500 text-slate-950'
-                  }`}
+                  className={`px-1.5 py-0.2 text-[10px] rounded-full font-black ${isActive ? 'bg-white text-brand-emerald' : 'bg-amber-500 text-slate-950'
+                    }`}
                 >
                   {toBengaliNumber(tab.badge!)}
                 </span>
@@ -323,139 +322,169 @@ export const CampaignAdminManagement: React.FC = () => {
             <Loader2 className="w-8 h-8 animate-spin text-brand-emerald mx-auto" />
           </div>
         ) : (
-        <div className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <div className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-bold block">মোট ক্যাম্পেইন</span>
-              <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-                {toBengaliNumber(overview?.counts?.totalCampaigns || 0)} টি
+          <div className="space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs">
+                <span className="text-[11px] text-slate-500 font-bold block">মোট ক্যাম্পেইন</span>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {toBengaliNumber(overview?.counts?.totalCampaigns || 0)} টি
+                </div>
+                <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">
+                  সক্রিয়: {toBengaliNumber(overview?.counts?.activeCampaigns || 0)} টি
+                </span>
               </div>
-              <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">
-                সক্রিয়: {toBengaliNumber(overview?.counts?.activeCampaigns || 0)} টি
-              </span>
-            </div>
 
-            <div className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-bold block">মোট যাচাইকৃত দান</span>
-              <div className="text-xl sm:text-2xl font-black text-brand-emerald dark:text-brand-mint mt-1">
-                ৳ {toBengaliNumber(overview?.financials?.totalVerifiedAmount || 0)}
+              <div className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs">
+                <span className="text-[11px] text-slate-500 font-bold block">মোট যাচাইকৃত দান</span>
+                <div className="text-xl sm:text-2xl font-black text-brand-emerald dark:text-brand-mint mt-1">
+                  ৳ {toBengaliNumber(overview?.financials?.totalVerifiedAmount || 0)}
+                </div>
+                <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+                  {toBengaliNumber(overview?.counts?.verifiedDonations || 0)} টি অনুদান
+                </span>
               </div>
-              <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
-                {toBengaliNumber(overview?.counts?.verifiedDonations || 0)} টি অনুদান
-              </span>
-            </div>
 
-            <div className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-bold block">যাচাই অপেক্ষমাণ</span>
-              <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
-                ৳ {toBengaliNumber(overview?.financials?.totalPendingAmount || 0)}
-              </div>
-              <span className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold mt-0.5 block">
-                {toBengaliNumber(overview?.counts?.pendingDonations || 0)} টি রিভিউ বাকি
-              </span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-bold block">ক্যাম্পেইন অবশিষ্ট স্থিতি</span>
-              <div className="text-xl sm:text-2xl font-black text-teal-600 dark:text-teal-400 mt-1">
-                ৳ {toBengaliNumber(overview?.financials?.netCampaignBalance || 0)}
-              </div>
-              <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
-                মোট ব্যয়: ৳ {toBengaliNumber(overview?.financials?.totalExpensesAmount || 0)}
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Actions & Recent Donations */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Quick Actions Panel */}
-            <div className="md:col-span-1 p-5 rounded-3xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3">
-              <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
-                দ্রুত কার্যক্রম
-              </h4>
               <button
                 type="button"
-                onClick={openCreateCampaignModal}
-                className="w-full py-2.5 px-3 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                onClick={() => {
+                  setActiveTab('DONATIONS');
+                  setDonationStatusFilter('PENDING');
+                  setDonationPage(1);
+                }}
+                className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border-2 border-amber-400/80 dark:border-amber-500/50 hover:border-amber-500 dark:hover:border-amber-400 shadow-xs text-left cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.99] group relative overflow-hidden"
+                title="ক্লিক করে অপেক্ষমাণ অনুদান যাচাই করুন"
               >
-                <Plus className="w-4 h-4" />
-                <span>নতুন ক্যাম্পেইন তৈরি করুন</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-amber-700 dark:text-amber-300 font-bold block">যাচাই অপেক্ষমাণ</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                    যাচাই করুন →
+                  </span>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                  ৳ {toBengaliNumber(overview?.financials?.totalPendingAmount || 0)}
+                </div>
+                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold mt-0.5 block">
+                  {toBengaliNumber(overview?.counts?.pendingDonations || 0)} টি রিভিউ বাকি
+                </span>
               </button>
-              <button
-                type="button"
-                onClick={() => setIsExpenseModalOpen(true)}
-                className="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-white/15 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Wallet className="w-4 h-4 text-brand-emerald" />
-                <span>ক্যাম্পেইন ব্যয় অন্তর্ভুক্ত করুন</span>
-              </button>
-              <Link
-                href="/campaigns"
-                target="_blank"
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>পাবলিক ক্যাম্পেইন পেজ দেখুন</span>
-              </Link>
+
+              <div className="p-4 rounded-2xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs">
+                <span className="text-[11px] text-slate-500 font-bold block">ক্যাম্পেইন অবশিষ্ট স্থিতি</span>
+                <div className="text-xl sm:text-2xl font-black text-teal-600 dark:text-teal-400 mt-1">
+                  ৳ {toBengaliNumber(overview?.financials?.netCampaignBalance || 0)}
+                </div>
+                <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+                  মোট ব্যয়: ৳ {toBengaliNumber(overview?.financials?.totalExpensesAmount || 0)}
+                </span>
+              </div>
             </div>
 
-            {/* Recent Donations Activity */}
-            <div className="md:col-span-2 p-5 rounded-3xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
+            {/* Quick Actions & Recent Donations */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Quick Actions Panel */}
+              <div className="md:col-span-1 p-5 rounded-3xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3">
                 <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
-                  সাম্প্রতিক অনুদানসমূহ
+                  দ্রুত কার্যক্রম
                 </h4>
+                {Boolean(overview?.counts?.pendingDonations && overview.counts.pendingDonations > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('DONATIONS');
+                      setDonationStatusFilter('PENDING');
+                      setDonationPage(1);
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>অপেক্ষমাণ অনুদান যাচাই করুন ({toBengaliNumber(overview?.counts?.pendingDonations || 0)} টি)</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setActiveTab('DONATIONS')}
-                  className="text-xs text-brand-emerald font-bold hover:underline"
+                  onClick={openCreateCampaignModal}
+                  className="w-full py-2.5 px-3 rounded-xl bg-brand-emerald hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                 >
-                  সব দেখুন
+                  <Plus className="w-4 h-4" />
+                  <span>নতুন ক্যাম্পেইন তৈরি করুন</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExpenseModalOpen(true)}
+                  className="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-white/15 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Wallet className="w-4 h-4 text-brand-emerald" />
+                  <span>ক্যাম্পেইন ব্যয় অন্তর্ভুক্ত করুন</span>
+                </button>
+                <Link
+                  href="/campaigns"
+                  target="_blank"
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>পাবলিক ক্যাম্পেইন পেজ দেখুন</span>
+                </Link>
               </div>
 
-              {overview?.recentDonations && overview.recentDonations.length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-white/5">
-                  {overview.recentDonations.slice(0, 5).map((don) => (
-                    <div key={don.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                      <div className="min-w-0">
-                        <span className="font-bold text-slate-900 dark:text-white truncate block">
-                          {don.donorName}
-                        </span>
-                        <span className="text-[11px] text-slate-500 truncate block">
-                          {don.campaign?.title} • {don.paymentMethod}
-                        </span>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-bold text-brand-emerald text-sm block">
-                          ৳ {toBengaliNumber(don.amount)}
-                        </span>
-                        <span
-                          className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                            don.status === 'VERIFIED'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                              : don.status === 'PENDING'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                          }`}
-                        >
-                          {don.status === 'VERIFIED'
-                            ? 'অনুমোদিত'
-                            : don.status === 'PENDING'
-                            ? 'অপেক্ষমাণ'
-                            : 'বাতিল'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+              {/* Recent Donations Activity */}
+              <div className="md:col-span-2 p-5 rounded-3xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                    সাম্প্রতিক অনুদানসমূহ
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('DONATIONS')}
+                    className="text-xs text-brand-emerald font-bold hover:underline"
+                  >
+                    সব দেখুন
+                  </button>
                 </div>
-              ) : (
-                <p className="text-xs text-slate-400 py-6 text-center">এখনো কোনো অনুদান জমা পড়েনি</p>
-              )}
+
+                {overview?.recentDonations && overview.recentDonations.length > 0 ? (
+                  <div className="divide-y divide-slate-100 dark:divide-white/5">
+                    {overview.recentDonations.slice(0, 5).map((don) => (
+                      <div key={don.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-900 dark:text-white truncate block">
+                            {don.donorName}
+                          </span>
+                          <span className="text-[11px] text-slate-500 truncate block">
+                            {don.campaign?.title} • {don.paymentMethod}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0 flex items-center gap-2">
+                          <div>
+                            <span className="font-bold text-brand-emerald text-sm block">
+                              ৳ {toBengaliNumber(don.amount)}
+                            </span>
+                            <span
+                              className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold ${don.status === 'VERIFIED'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  : don.status === 'PENDING'
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                                }`}
+                            >
+                              {don.status === 'VERIFIED'
+                                ? 'অনুমোদিত'
+                                : don.status === 'PENDING'
+                                  ? 'অপেক্ষমাণ'
+                                  : 'বাতিল'}
+                            </span>
+                          </div>
+
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 py-6 text-center">এখনো কোনো অনুদান জমা পড়েনি</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
         )
       )}
 
@@ -521,126 +550,125 @@ export const CampaignAdminManagement: React.FC = () => {
             </div>
           ) : campaignListData?.items && campaignListData.items.length > 0 ? (
             <>
-            <div className="bg-white dark:bg-brand-charcoal rounded-3xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                    <tr>
-                      <th className="py-3 px-4">ক্যাম্পেইন</th>
-                      <th className="py-3 px-3">ক্যাটাগরি</th>
-                      <th className="py-3 px-3">লক্ষ্য বনাম সংগ্রহ</th>
-                      <th className="py-3 px-3">মেয়াদ</th>
-                      <th className="py-3 px-3">স্ট্যাটাস</th>
-                      <th className="py-3 px-4 text-right">পদক্ষেপ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-800 dark:text-slate-200">
-                    {campaignListData.items.map((camp) => (
-                      <tr key={camp.id} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl overflow-hidden relative bg-slate-100 shrink-0 border border-slate-200/60 dark:border-white/10">
-                              {camp.coverImage ? (
-                                <Image src={camp.coverImage} alt={camp.title} fill className="object-cover" />
-                              ) : (
-                                <Heart className="w-5 h-5 m-auto text-brand-emerald" />
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <span className="font-bold text-slate-900 dark:text-white line-clamp-1">
-                                {camp.title}
-                              </span>
-                              <span className="text-[10.5px] text-slate-400 line-clamp-1">
-                                {camp.location || 'মোহাম্মদপুর'}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 font-medium text-slate-600 dark:text-slate-300">
-                          {camp.category?.name || camp.categoryName || 'সাধারণ'}
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="font-bold text-brand-emerald">
-                            ৳ {toBengaliNumber(camp.collectedAmount)}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            লক্ষ্য: {camp.goalAmount ? `৳ ${toBengaliNumber(camp.goalAmount)}` : 'উন্মুক্ত'}
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
-                          {formatBengaliDate(camp.endDate)}
-                        </td>
-                        <td className="py-3 px-3">
-                          <select
-                            value={camp.status}
-                            onChange={(e) => handleStatusChange(camp.id, e.target.value)}
-                            className={`py-1 px-2 rounded-lg text-[11px] font-bold border cursor-pointer ${
-                              camp.status === 'ACTIVE'
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/40'
-                                : camp.status === 'DRAFT'
-                                ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-white/5 dark:text-slate-300'
-                                : camp.status === 'PAUSED'
-                                ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300'
-                                : 'bg-slate-100 text-slate-600 border-slate-200'
-                            }`}
-                          >
-                            <option value="ACTIVE">সক্রিয় (Active)</option>
-                            <option value="DRAFT">খসড়া (Draft)</option>
-                            <option value="PAUSED">স্থগিত (Paused)</option>
-                            <option value="COMPLETED">সম্পন্ন (Completed)</option>
-                            <option value="CANCELLED">বাতিল (Cancelled)</option>
-                          </select>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openEditCampaignModal(camp)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-brand-emerald hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
-                              title="সম্পাদনা করুন"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <Link
-                              href={`/campaigns/${camp.slug || camp.id}`}
-                              target="_blank"
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-brand-emerald hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
-                              title="পাবলিক পেজ দেখুন"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Link>
-                          </div>
-                        </td>
+              <div className="bg-white dark:bg-brand-charcoal rounded-3xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="py-3 px-4">ক্যাম্পেইন</th>
+                        <th className="py-3 px-3">ক্যাটাগরি</th>
+                        <th className="py-3 px-3">লক্ষ্য বনাম সংগ্রহ</th>
+                        <th className="py-3 px-3">মেয়াদ</th>
+                        <th className="py-3 px-3">স্ট্যাটাস</th>
+                        <th className="py-3 px-4 text-right">পদক্ষেপ</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-800 dark:text-slate-200">
+                      {campaignListData.items.map((camp) => (
+                        <tr key={camp.id} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl overflow-hidden relative bg-slate-100 shrink-0 border border-slate-200/60 dark:border-white/10">
+                                {camp.coverImage ? (
+                                  <Image src={camp.coverImage} alt={camp.title} fill className="object-cover" />
+                                ) : (
+                                  <Heart className="w-5 h-5 m-auto text-brand-emerald" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-bold text-slate-900 dark:text-white line-clamp-1">
+                                  {camp.title}
+                                </span>
+                                <span className="text-[10.5px] text-slate-400 line-clamp-1">
+                                  {camp.location || 'মোহাম্মদপুর'}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 font-medium text-slate-600 dark:text-slate-300">
+                            {camp.category?.name || camp.categoryName || 'সাধারণ'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-bold text-brand-emerald">
+                              ৳ {toBengaliNumber(camp.collectedAmount)}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              লক্ষ্য: {camp.goalAmount ? `৳ ${toBengaliNumber(camp.goalAmount)}` : 'উন্মুক্ত'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
+                            {formatBengaliDate(camp.endDate)}
+                          </td>
+                          <td className="py-3 px-3">
+                            <select
+                              value={camp.status}
+                              onChange={(e) => handleStatusChange(camp.id, e.target.value)}
+                              className={`py-1 px-2 rounded-lg text-[11px] font-bold border cursor-pointer ${camp.status === 'ACTIVE'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/40'
+                                  : camp.status === 'DRAFT'
+                                    ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-white/5 dark:text-slate-300'
+                                    : camp.status === 'PAUSED'
+                                      ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300'
+                                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                                }`}
+                            >
+                              <option value="ACTIVE">সক্রিয় (Active)</option>
+                              <option value="DRAFT">খসড়া (Draft)</option>
+                              <option value="PAUSED">স্থগিত (Paused)</option>
+                              <option value="COMPLETED">সম্পন্ন (Completed)</option>
+                              <option value="CANCELLED">বাতিল (Cancelled)</option>
+                            </select>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openEditCampaignModal(camp)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-brand-emerald hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                                title="সম্পাদনা করুন"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <Link
+                                href={`/campaigns/${camp.slug || camp.id}`}
+                                target="_blank"
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-brand-emerald hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                                title="পাবলিক পেজ দেখুন"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            {Boolean(campaignListData?.totalPages && campaignListData.totalPages > 1) && (
-              <div className="flex justify-center items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  disabled={campaignPage <= 1}
-                  onClick={() => setCampaignPage((p) => Math.max(1, p - 1))}
-                  className="px-2.5 py-1 rounded-lg border text-xs font-bold disabled:opacity-40"
-                >
-                  পূর্ববর্তী
-                </button>
-                <span className="text-xs text-slate-500 font-medium">
-                  পৃষ্ঠা {toBengaliNumber(campaignPage)} / {toBengaliNumber(campaignListData?.totalPages || 1)}
-                </span>
-                <button
-                  type="button"
-                  disabled={campaignPage >= (campaignListData?.totalPages || 1)}
-                  onClick={() => setCampaignPage((p) => p + 1)}
-                  className="px-2.5 py-1 rounded-lg border text-xs font-bold disabled:opacity-40"
-                >
-                  পরবর্তী
-                </button>
-              </div>
-            )}
+              {Boolean(campaignListData?.totalPages && campaignListData.totalPages > 1) && (
+                <div className="flex justify-center items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    disabled={campaignPage <= 1}
+                    onClick={() => setCampaignPage((p) => Math.max(1, p - 1))}
+                    className="px-2.5 py-1 rounded-lg border text-xs font-bold disabled:opacity-40"
+                  >
+                    পূর্ববর্তী
+                  </button>
+                  <span className="text-xs text-slate-500 font-medium">
+                    পৃষ্ঠা {toBengaliNumber(campaignPage)} / {toBengaliNumber(campaignListData?.totalPages || 1)}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={campaignPage >= (campaignListData?.totalPages || 1)}
+                    onClick={() => setCampaignPage((p) => p + 1)}
+                    className="px-2.5 py-1 rounded-lg border text-xs font-bold disabled:opacity-40"
+                  >
+                    পরবর্তী
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-white/5 rounded-3xl border border-slate-200/80">
@@ -677,19 +705,18 @@ export const CampaignAdminManagement: React.FC = () => {
                       setDonationStatusFilter(st);
                       setDonationPage(1);
                     }}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      donationStatusFilter === st
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${donationStatusFilter === st
                         ? 'bg-white dark:bg-brand-emerald text-brand-emerald dark:text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400'
-                    }`}
+                      }`}
                   >
                     {st === 'PENDING'
                       ? 'অপেক্ষমাণ'
                       : st === 'VERIFIED'
-                      ? 'অনুমোদিত'
-                      : st === 'REJECTED'
-                      ? 'বাতিল'
-                      : 'সকল'}
+                        ? 'অনুমোদিত'
+                        : st === 'REJECTED'
+                          ? 'বাতিল'
+                          : 'সকল'}
                   </button>
                 ))}
               </div>
@@ -785,19 +812,18 @@ export const CampaignAdminManagement: React.FC = () => {
                         </td>
                         <td className="py-3 px-3">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
-                              don.status === 'VERIFIED'
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold ${don.status === 'VERIFIED'
                                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                                 : don.status === 'PENDING'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                            }`}
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                              }`}
                           >
                             {don.status === 'VERIFIED'
                               ? 'অনুমোদিত'
                               : don.status === 'PENDING'
-                              ? 'অপেক্ষমাণ'
-                              : 'বাতিল'}
+                                ? 'অপেক্ষমাণ'
+                                : 'বাতিল'}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -1017,9 +1043,8 @@ export const CampaignAdminManagement: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-slate-900 dark:text-white">{cfg.title}</span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      cfg.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                    }`}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${cfg.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                      }`}
                   >
                     {cfg.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
                   </span>
