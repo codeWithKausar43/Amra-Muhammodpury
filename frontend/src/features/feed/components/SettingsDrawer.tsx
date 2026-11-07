@@ -112,8 +112,14 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-emerald to-emerald-700 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-              ম
+            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-xs border border-emerald-500/20 bg-emerald-50 dark:bg-white/5 p-0.5 shrink-0">
+              <Image
+                src="/logos/logo.png"
+                alt="আমরা মোহাম্মদপুরী লোগো"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain rounded-lg"
+              />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">

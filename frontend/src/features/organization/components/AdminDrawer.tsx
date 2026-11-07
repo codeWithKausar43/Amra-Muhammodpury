@@ -2,17 +2,16 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   X,
   Users,
   FileText,
   CreditCard,
-  Wallet,
   TrendingUp,
   Award,
   Vote,
-  ShieldCheck,
   ChevronRight,
   Settings,
   LayoutDashboard,
@@ -44,7 +43,7 @@ interface NavSection {
 export function AdminDrawer({
   isOpen,
   onClose,
-  fundsCount = 0,
+  fundsCount: _fundsCount = 0,
   noticesCount = 0,
   onOpenGeneralSettings,
 }: AdminDrawerProps) {
@@ -103,13 +102,6 @@ export function AdminDrawer({
           label: 'চাঁদা ট্র্যাকিং ও তাগিদ',
           subtext: 'মাসিক চাঁদা যাচাই ও বকেয়া তাগিদ',
           icon: CreditCard,
-        },
-        {
-          href: '/organization/admin/funds',
-          label: 'তহবিল ও বাজেট',
-          subtext: 'কল্যাণ তহবিল ব্যালেন্স ও হিসেব',
-          icon: Wallet,
-          badge: fundsCount > 0 ? fundsCount : undefined,
         },
         {
           href: '/organization/admin/transactions',
@@ -179,8 +171,14 @@ export function AdminDrawer({
         {/* Drawer Header */}
         <div className="px-5 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/20 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-emerald to-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-emerald-500/20 bg-white dark:bg-white/5 p-0.5 shrink-0">
+              <Image
+                src="/logos/logo.png"
+                alt="আমরা মোহাম্মদপুরী লোগো"
+                width={36}
+                height={36}
+                className="w-full h-full object-contain rounded-lg"
+              />
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight flex items-center gap-1.5">

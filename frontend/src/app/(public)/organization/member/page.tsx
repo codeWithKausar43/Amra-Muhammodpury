@@ -91,30 +91,41 @@ function downloadReceiptCanvas(receipt: any, membership: any) {
   }
   ctx.restore();
 
+  // Try to load cached or preload logo for watermark and header
+  const logoImg = typeof window !== 'undefined' ? new (window as any).Image() : null;
+  if (logoImg) {
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = '/logos/logo.png';
+  }
+
   // Watermark Seal in the Center
   ctx.save();
   ctx.beginPath();
   ctx.arc(canvas.width / 2, canvas.height / 2 + 30, 160, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(5, 150, 105, 0.06)';
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(5, 150, 105, 0.05)';
+  ctx.lineWidth = 3;
   ctx.stroke();
   ctx.restore();
 
-  // Top Organization Branding: Monogram Badge
-  ctx.fillStyle = '#059669';
-  ctx.beginPath();
-  ctx.arc(canvas.width / 2, 75, 26, 0, Math.PI * 2);
-  ctx.fill();
+  // Top Organization Branding: Logo / Monogram Badge
+  if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+    ctx.drawImage(logoImg, canvas.width / 2 - 32, 40, 64, 64);
+  } else {
+    ctx.fillStyle = '#059669';
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, 75, 26, 0, Math.PI * 2);
+    ctx.fill();
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 26px ${fontSans}`;
-  ctx.textAlign = 'center';
-  ctx.fillText('ম', canvas.width / 2, 84);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold 26px ${fontSans}`;
+    ctx.textAlign = 'center';
+    ctx.fillText('ম', canvas.width / 2, 84);
+  }
 
   // Organization Title
   ctx.fillStyle = '#064e3b';
   ctx.font = `bold 30px ${fontSans}`;
-  ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা', canvas.width / 2, 132);
+  ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা', canvas.width / 2, 134);
 
   ctx.fillStyle = '#475569';
   ctx.font = `bold 15px ${fontSans}`;
@@ -1476,7 +1487,7 @@ export default function MemberDashboardPage() {
               >
                 {/* Official Security Diagonal Repeating Watermark */}
                 <div
-                  className="absolute inset-0 pointer-events-none select-none flex items-center justify-center overflow-hidden opacity-[0.06] rotate-[-24deg]"
+                  className="absolute inset-0 pointer-events-none select-none flex items-center justify-center overflow-hidden opacity-[0.04] rotate-[-24deg]"
                   aria-hidden="true"
                 >
                   <div className="text-center font-black text-xl sm:text-2xl leading-loose text-emerald-900 tracking-wider">
@@ -1489,8 +1500,14 @@ export default function MemberDashboardPage() {
 
                 {/* Organization Header */}
                 <div className="relative z-10 text-center space-y-1 pb-3 border-b border-slate-200">
-                  <div className="w-11 h-11 rounded-full bg-brand-emerald text-white font-black text-xl flex items-center justify-center mx-auto shadow-sm">
-                    ম
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto shadow-sm border border-emerald-500/20 bg-emerald-50/50 p-0.5">
+                    <Image
+                      src="/logos/logo.png"
+                      alt="আমরা মোহাম্মদপুরী লোগো"
+                      width={56}
+                      height={56}
+                      className="w-full h-full object-contain rounded-xl"
+                    />
                   </div>
                   <h2 className="text-base sm:text-xl font-black text-emerald-950 tracking-tight">
                     আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা

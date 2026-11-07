@@ -2,12 +2,12 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Award,
   Vote,
   CheckCircle2,
   Clock,
-  TrendingUp,
   FileText,
   CreditCard,
   Settings,
@@ -51,9 +51,21 @@ export default function OrganizationPage() {
         <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-white/5 blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-              আমরা মোহাম্মদপুরী
-            </h1>
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden shadow-xl shrink-0 border border-white/20 bg-emerald-950/40 p-0.5">
+                <Image
+                  src="/logos/logo.png"
+                  alt="আমরা মোহাম্মদপুরী লোগো"
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-contain rounded-xl"
+                  priority
+                />
+              </div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+                আমরা মোহাম্মদপুরী
+              </h1>
+            </div>
             <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed font-normal">
               মোহাম্মদপুরের নাগরিক উন্নয়ন, নিরাপত্তা, সামাজিক ঐক্য ও জবাবদিহিতা নিশ্চিতকরণে স্থানীয় বাসিন্দাদের প্রাতিষ্ঠানিক সংগঠন।
             </p>
@@ -306,51 +318,8 @@ export default function OrganizationPage() {
         </div>
       )}
 
-      {/* 5. Organization Financial Funds & Treasury (Protected: ONLY visible when connected as an Active Member) */}
-      {isActiveMember ? (
-        <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 space-y-4 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-brand-emerald" />
-                <span>স্বচ্ছ আর্থিক তহবিল ও নাগরিক হিসাবরক্ষণ</span>
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                সদস্যদের অবদানে গঠিত তহবিলের লাইভ হিসাবরক্ষণ ও স্বচ্ছ ব্যালেন্স
-              </p>
-            </div>
-            <Link
-              href="/organization/member"
-              className="text-xs font-semibold text-brand-emerald hover:underline hidden sm:inline"
-            >
-              সদস্য লেজার দেখুন →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">সাধারণ পরিচালন তহবিল</span>
-              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳১,৫০,০০০</div>
-              <span className="text-[10px] text-brand-emerald font-semibold">কার্যক্রম সক্রিয়</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">শিক্ষা ও মেধা সহায়তা</span>
-              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৬৫,০০০</div>
-              <span className="text-[10px] text-blue-500 font-semibold">স্কলারশিপ ফান্ড</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">চিকিৎসা সহায়তা তহবিল</span>
-              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৮০,০০০</div>
-              <span className="text-[10px] text-rose-500 font-semibold">স্বাস্থ্যসেবা ফান্ড</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">জরুরি ত্রাণ ও দুর্যোগ</span>
-              <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">৳৪০,০০০</div>
-              <span className="text-[10px] text-amber-500 font-semibold">রিজার্ভ ফান্ড</span>
-            </div>
-          </div>
-        </div>
-      ) : (
+      {/* 5. Organization Member Services & Institutional Access */}
+      {!isActiveMember && (
         /* Modern, Non-Boxy Left-Aligned Preview Banner */
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 shadow-md">
           <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
@@ -362,10 +331,10 @@ export default function OrganizationPage() {
                 <span>সদস্যদের জন্য সংরক্ষিত</span>
               </div>
               <h3 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white">
-                অভ্যন্তরীণ তহবিল হিসাবরক্ষণ ও প্রাতিষ্ঠানিক সুযোগ
+                অভ্যন্তরীণ প্রাতিষ্ঠানিক সুযোগ ও জবাবদিহিতা
               </h3>
               <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed font-normal">
-                সংগঠনের ৪টি বিশেষায়িত কল্যাণ তহবিল, আয়-ব্যয় অডিট লেজার, অভ্যন্তরীণ নোটিশ ও ডিজিটাল নির্বাচন শুধুমাত্র অনুমোদিত সক্রিয় সদস্যদের জন্য সংরক্ষিত। মোহাম্মদপুরের নাগরিক উন্নয়ন ও নীতি-নির্ধারণে ভোটাধিকার পেতে সদস্যপদ গ্রহণ করুন।
+                সংগঠনের অভ্যন্তরীণ আয়-ব্যয় অডিট লেজার, অভ্যন্তরীণ নোটিশ ও ডিজিটাল নির্বাচন শুধুমাত্র অনুমোদিত সক্রিয় সদস্যদের জন্য সংরক্ষিত। মোহাম্মদপুরের নাগরিক উন্নয়ন ও নীতি-নির্ধারণে ভোটাধিকার পেতে সদস্যপদ গ্রহণ করুন।
               </p>
             </div>
 

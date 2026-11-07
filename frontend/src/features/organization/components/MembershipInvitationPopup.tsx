@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { X, Users, HeartHandshake, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 interface MembershipInvitationPopupProps {
@@ -40,8 +41,14 @@ export const MembershipInvitationPopup: React.FC<MembershipInvitationPopupProps>
           <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
 
           {/* Org Logo / Icon Badge */}
-          <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white shadow-lg mb-3">
-            <span className="text-2xl sm:text-3xl font-black tracking-tight">ম</span>
+          <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-xl mb-3 border border-white/30 bg-emerald-950/40 p-0.5">
+            <Image
+              src="/logos/logo.png"
+              alt="আমরা মোহাম্মদপুরী লোগো"
+              width={80}
+              height={80}
+              className="w-full h-full object-contain rounded-xl"
+            />
           </div>
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/20 backdrop-blur-md mb-2 text-emerald-100">

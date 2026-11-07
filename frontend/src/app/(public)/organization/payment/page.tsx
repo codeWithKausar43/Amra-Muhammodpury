@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   CreditCard,
   CheckCircle2,
@@ -174,14 +175,28 @@ export default function OrganizationPaymentPage() {
       </div>
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-brand-emerald/10 via-brand-gold/10 to-transparent rounded-2xl p-5 sm:p-6 border border-brand-emerald/20 text-left space-y-2">
-        <div className="flex items-center gap-2 text-brand-emerald font-bold text-sm">
-          <CreditCard className="w-5 h-5 text-brand-emerald" />
-          <span>নিরাপদ চাঁদা ও অনুদান পরিশোধ</span>
+      <div className="bg-gradient-to-br from-brand-emerald/10 via-brand-gold/10 to-transparent rounded-2xl p-5 sm:p-6 border border-brand-emerald/20 text-left space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-xs border border-brand-emerald/30 bg-white dark:bg-white/5 p-0.5 shrink-0">
+            <Image
+              src="/logos/logo.png"
+              alt="আমরা মোহাম্মদপুরী লোগো"
+              width={48}
+              height={48}
+              className="w-full h-full object-contain rounded-xl"
+              priority
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5 text-brand-emerald font-bold text-xs">
+              <CreditCard className="w-4 h-4 text-brand-emerald" />
+              <span>নিরাপদ চাঁদা ও অনুদান পরিশোধ</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+              প্রারম্ভিক কিস্তি পরিশোধ
+            </h1>
+          </div>
         </div>
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-          প্রারম্ভিক কিস্তি পরিশোধ
-        </h1>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
           আপনার অনুমোদিত মাসিক অনুদান: <strong>৳{agreementAmount}</strong>। নিচের যে কোনো মাধ্যমে পরিশোধ করে প্রেরক নম্বর প্রদান করুন।
         </p>

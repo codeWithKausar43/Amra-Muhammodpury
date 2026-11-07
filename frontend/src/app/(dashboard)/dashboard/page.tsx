@@ -361,10 +361,17 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-emerald to-emerald-800 flex items-center justify-center text-white font-bold text-lg shadow-glow shrink-0 hover:opacity-90 transition-opacity"
+            className="w-10 h-10 rounded-2xl overflow-hidden shadow-sm shrink-0 hover:scale-105 transition-transform border border-emerald-500/20 bg-emerald-50 dark:bg-white/5 p-0.5"
             title="হোমে ফিরে যান"
           >
-            <span>ম</span>
+            <Image
+              src="/logos/logo.png"
+              alt="আমরা মোহাম্মদপুরী লোগো"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain rounded-xl"
+              priority
+            />
           </Link>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">

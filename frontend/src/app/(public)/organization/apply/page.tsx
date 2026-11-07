@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   CheckCircle2,
   AlertCircle,
@@ -130,10 +131,22 @@ export default function MembershipApplyPage() {
       </div>
 
       {/* Header Card */}
-      <div className="bg-gradient-to-br from-brand-emerald/10 via-brand-mint/15 to-transparent rounded-2xl p-5 sm:p-6 border border-brand-emerald/20 text-left space-y-2">
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white text-balance">
-          সংগঠনের সম্মানিত সদস্য হোন
-        </h1>
+      <div className="bg-gradient-to-br from-brand-emerald/10 via-brand-mint/15 to-transparent rounded-2xl p-5 sm:p-6 border border-brand-emerald/20 text-left space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-xs border border-brand-emerald/30 bg-white dark:bg-white/5 p-0.5 shrink-0">
+            <Image
+              src="/logos/logo.png"
+              alt="আমরা মোহাম্মদপুরী লোগো"
+              width={48}
+              height={48}
+              className="w-full h-full object-contain rounded-xl"
+              priority
+            />
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white text-balance">
+            সংগঠনের সম্মানিত সদস্য হোন
+          </h1>
+        </div>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed text-balance">
           মোহাম্মদপুরের টেকসই উন্নয়ন ও সেবামূলক কার্যক্রমে অংশ নিতে এবং নির্বাচনে ভোটাধিকার প্রয়োগ করতে প্রাতিষ্ঠানিক সদস্যপদ গ্রহণ করুন।
         </p>

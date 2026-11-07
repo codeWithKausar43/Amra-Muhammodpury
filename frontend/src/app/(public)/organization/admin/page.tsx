@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useSession } from '@/lib/auth/auth-client';
 import {
   ShieldCheck,
-  Wallet,
   ArrowUpRight,
   ArrowDownRight,
   Users,
@@ -207,14 +206,6 @@ export default function OrganizationAdminPage() {
       icon: CreditCard,
       badge: 'মাসিক কিস্তি',
       badgeColor: 'bg-emerald-50 text-brand-emerald dark:bg-emerald-950/40 dark:text-emerald-300',
-    },
-    {
-      href: '/organization/admin/funds',
-      title: 'তহবিল ও বাজেট',
-      description: 'কল্যাণ তহবিল ব্যালেন্স, বাজেট ও হিসেব',
-      icon: Wallet,
-      badge: `${toBengaliNumber(funds.length)} টি সক্রিয় তহবিল`,
-      badgeColor: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300',
     },
     {
       href: '/organization/admin/transactions',

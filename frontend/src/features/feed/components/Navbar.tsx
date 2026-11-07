@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminNav } from '@/features/organization/context/AdminNavContext';
 import { AdminDrawer } from '@/features/organization/components/AdminDrawer';
@@ -106,9 +107,16 @@ export function Navbar({ onSearch }: NavbarProps) {
       <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-brand-charcoal-dark/90 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 transition-colors">
         <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-3">
           {/* Brand Logo & Name */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 select-none min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-emerald to-emerald-800 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-glow shrink-0">
-              <span>ম</span>
+          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 select-none min-w-0 group">
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+              <Image
+                src="/logos/logo.png"
+                alt="আমরা মোহাম্মদপুরী লোগো"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
             <div className="flex flex-col text-left min-w-0">
               <span className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate max-w-[125px] min-[360px]:max-w-[165px] sm:max-w-none">

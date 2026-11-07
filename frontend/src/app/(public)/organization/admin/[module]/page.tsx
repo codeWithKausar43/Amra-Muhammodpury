@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   ShieldCheck,
   Wallet,
@@ -120,9 +120,16 @@ const MODULE_META: Record<
 };
 
 export default function AdminModulePage() {
+  const router = useRouter();
   const params = useParams();
   const rawModule = params?.module;
   const moduleKey = (Array.isArray(rawModule) ? rawModule[0] : rawModule)?.toLowerCase() || '';
+
+  React.useEffect(() => {
+    if (moduleKey === 'funds') {
+      router.replace('/organization/admin/contributions');
+    }
+  }, [moduleKey, router]);
 
   const { setBadgeCounts } = useAdminNav();
   const [committeeSubView, setCommitteeSubView] = React.useState<'COMMITTEES' | 'DESIGNATIONS'>('COMMITTEES');
@@ -132,7 +139,7 @@ export default function AdminModulePage() {
   const [searchQuery, setSearchQuery] = React.useState('');
 
   // Transactions Sub-filter
-  const [trxView, setTrxView] = React.useState<'FUNDS' | 'PAYMENTS'>('FUNDS');
+  const [trxView, setTrxView] = React.useState<'FUNDS' | 'PAYMENTS'>('PAYMENTS');
 
   // Queries
   const { data: stats } = useOrgAdminStatsQuery();
@@ -883,105 +890,9 @@ export default function AdminModulePage() {
       )}
 
       {/* =========================================================================
-          MODULE 4: FUNDS
+          MODULE 4: FUNDS (Removed per organization policy)
          ========================================================================= */}
-      {moduleKey === 'funds' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 pb-1">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              কল্যাণ তহবিল ({toBengaliNumber(funds.length)}টি)
-            </h2>
-
-            <button
-              type="button"
-              onClick={() => {
-                setTrxType('INCOME');
-                setTrxModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow-xs hover:bg-brand-emerald-hover cursor-pointer transition-all active:scale-95 shrink-0 whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>লেনদেন যুক্ত করুন</span>
-            </button>
-          </div>
-
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-left border-collapse min-w-[580px]">
-              <thead>
-                <tr className="border-b border-slate-200/60 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="py-2.5 px-3 min-w-[240px] whitespace-nowrap">তহবিল বিবরণ ও কোড</th>
-                  <th className="py-2.5 px-3 min-w-[110px] whitespace-nowrap">মোট লেনদেন</th>
-                  <th className="py-2.5 px-3 min-w-[120px] whitespace-nowrap">বর্তমান ব্যালেন্স</th>
-                  <th className="py-2.5 px-3 text-right min-w-[60px] whitespace-nowrap">অ্যাকশন</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
-                {funds.map((fund) => {
-                  const bal = fund.balance ?? fund.currentBalance ?? 0;
-                  return (
-                    <tr
-                      key={fund.id}
-                      className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group"
-                    >
-                      <td className="py-2.5 sm:py-3 px-3 min-w-[240px]">
-                        <div className="flex items-start gap-2.5">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-brand-emerald/10 text-brand-emerald flex items-center justify-center shrink-0 mt-0.5">
-                            <Wallet className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white group-hover:text-brand-emerald transition-colors">
-                                {fund.name}
-                              </span>
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-emerald bg-brand-emerald/10 px-1.5 py-0.5 rounded">
-                                {fund.code}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                              {fund.description || 'সংগঠনের নির্ধারিত সামাজিক ও নাগরিক কল্যাণ তহবিল।'}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-2.5 sm:py-3 px-3 min-w-[110px] whitespace-nowrap text-slate-600 dark:text-slate-400">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium">
-                          {toBengaliNumber(fund._count?.transactions || 0)} টি লেনদেন
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 sm:py-3 px-3 min-w-[120px] whitespace-nowrap">
-                        <div className="flex items-baseline gap-1 font-mono">
-                          <span className="text-[11px] font-bold text-brand-emerald">৳</span>
-                          <span className="text-xs sm:text-sm font-bold text-brand-emerald dark:text-brand-mint">
-                            {toBengaliNumber(bal)}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="py-2.5 sm:py-3 px-3 text-right min-w-[60px] whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTrxFundId(fund.id);
-                            setTrxType('INCOME');
-                            setTrxModalOpen(true);
-                          }}
-                          className="text-brand-emerald hover:text-brand-emerald-hover hover:scale-125 active:scale-75 transition-transform p-1 cursor-pointer inline-flex items-center justify-end"
-                          title="এই তহবিলে লেনদেন এন্ট্রি দিন"
-                          aria-label="লেনদেন এন্ট্রি দিন"
-                        >
-                          <Plus className="w-5 h-5 stroke-[2.5]" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {moduleKey === 'funds' && null}
 
       {/* =========================================================================
           MODULE 5: TRANSACTIONS
