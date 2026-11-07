@@ -14,14 +14,16 @@ import {
   BellRing,
   AlertTriangle,
   Calendar,
+  Settings,
 } from 'lucide-react';
 import {
   useContributionTrackingQuery,
   useAdminMemberDetailsQuery,
+  useOrgAdminPaymentConfigsQuery,
   useOrgMutations,
 } from '../hooks/useOrganizationQueries';
 import { toast } from '@/components/feedback/Toast';
-import type { ContributionTrackingCategoryItem } from '../types';
+import type { ContributionTrackingCategoryItem, OrgPaymentConfig } from '../types';
 
 function toBengaliNumber(num: number | string | undefined | null): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -89,6 +91,14 @@ export function MonthlyContributionTracking() {
     remindersSent: number;
     skippedCooldownCount: number;
   } | null>(null);
+
+  // Sub-tab Navigation (Tracking vs Payment Configs)
+  const [mainTab, setMainTab] = React.useState<'TRACKING' | 'CONFIGS'>('TRACKING');
+  const [editingConfig, setEditingConfig] = React.useState<OrgPaymentConfig | null>(null);
+
+  const { data: adminPaymentConfigs = [], isLoading: isConfigsLoading } = useOrgAdminPaymentConfigsQuery(
+    mainTab === 'CONFIGS'
+  );
 
   const { data, isLoading } = useContributionTrackingQuery({
     year: selectedYear,
@@ -260,8 +270,93 @@ export function MonthlyContributionTracking() {
 
   return (
     <div className="space-y-4">
-      {/* 1. Header & Month/Year Selector */}
-      <div className="space-y-3.5 pb-1">
+      {/* 0. Top Sub-tab Navigation */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-slate-200/60 dark:border-white/10">
+        <button
+          type="button"
+          onClick={() => setMainTab('TRACKING')}
+          className={`py-2 px-3 sm:px-4 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer text-xs ${
+            mainTab === 'TRACKING'
+              ? 'bg-brand-emerald text-white shadow-xs font-bold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 font-semibold'
+          }`}
+        >
+          <CreditCard className="w-3.5 h-3.5" />
+          <span>চাঁদা ট্র্যাকিং ও নিরীক্ষণ</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainTab('CONFIGS')}
+          className={`py-2 px-3 sm:px-4 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer text-xs ${
+            mainTab === 'CONFIGS'
+              ? 'bg-brand-emerald text-white shadow-xs font-bold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 font-semibold'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>পেমেন্ট নির্দেশিকা ও অ্যাকাউন্ট নম্বর</span>
+        </button>
+      </div>
+
+      {mainTab === 'CONFIGS' ? (
+        <div className="space-y-4 pt-1">
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              মাসিক চাঁদা পরিশোধের অ্যাকাউন্ট নম্বর ও নির্দেশনাবলী
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              সদস্যদের ড্যাশবোর্ড ও প্রারম্ভিক কিস্তি পরিশোধ পেজে প্রদর্শিত পেমেন্ট অ্যাকাউন্ট নম্বর কনফিগার করুন। কোড পরিবর্তন করার কোনো প্রয়োজন নেই।
+            </p>
+          </div>
+
+          {isConfigsLoading ? (
+            <div className="py-12 flex justify-center items-center">
+              <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {adminPaymentConfigs.map((cfg) => (
+                <div
+                  key={cfg.id}
+                  className="p-5 rounded-3xl bg-white dark:bg-brand-charcoal border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">{cfg.title}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        cfg.isActive
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          : 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-400'
+                      }`}
+                    >
+                      {cfg.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-2xl space-y-1">
+                    <div className="text-xs text-slate-400 font-medium">{cfg.accountType}</div>
+                    <div className="font-mono font-bold text-base text-brand-emerald">{cfg.accountNumber}</div>
+                  </div>
+                  {cfg.instructions && (
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      {cfg.instructions}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditingConfig(cfg)}
+                    className="w-full py-2 rounded-xl border border-slate-200 dark:border-white/15 hover:bg-slate-50 dark:hover:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    নির্দেশিকা সম্পাদনা করুন
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* 1. Header & Month/Year Selector */}
+          <div className="space-y-3.5 pb-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1163,6 +1258,118 @@ export function MonthlyContributionTracking() {
                 className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition-colors cursor-pointer"
               >
                 হ্যাঁ, প্রত্যাখ্যান করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Org Payment Config Edit Modal */}
+      {editingConfig && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-brand-charcoal p-5 sm:p-6 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/10 space-y-4 text-xs">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/10 pb-3">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                {editingConfig.title} কনফিগারেশন
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingConfig(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  অ্যাকাউন্ট নম্বর
+                </label>
+                <input
+                  type="text"
+                  value={editingConfig.accountNumber}
+                  onChange={(e) =>
+                    setEditingConfig({ ...editingConfig, accountNumber: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-brand-emerald"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  অ্যাকাউন্ট টাইপ
+                </label>
+                <input
+                  type="text"
+                  value={editingConfig.accountType}
+                  onChange={(e) =>
+                    setEditingConfig({ ...editingConfig, accountType: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 font-medium text-slate-900 dark:text-white focus:outline-none focus:border-brand-emerald"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  পেমেন্ট নির্দেশিকা
+                </label>
+                <textarea
+                  rows={3}
+                  value={editingConfig.instructions || ''}
+                  onChange={(e) =>
+                    setEditingConfig({ ...editingConfig, instructions: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 font-medium text-slate-900 dark:text-white focus:outline-none focus:border-brand-emerald resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isOrgConfigActive"
+                  checked={editingConfig.isActive}
+                  onChange={(e) =>
+                    setEditingConfig({ ...editingConfig, isActive: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-brand-emerald focus:ring-brand-emerald cursor-pointer"
+                />
+                <label
+                  htmlFor="isOrgConfigActive"
+                  className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  পেমেন্ট মাধ্যমটি সক্রিয় রাখুন
+                </label>
+              </div>
+
+              <button
+                type="button"
+                disabled={mutations.updatePaymentConfig.isPending}
+                onClick={async () => {
+                  try {
+                    await mutations.updatePaymentConfig.mutateAsync({
+                      ...editingConfig,
+                      qrCodeUrl: editingConfig.qrCodeUrl || null,
+                      instructions: editingConfig.instructions || null,
+                    });
+                    toast.success('পেমেন্ট কনফিগারেশন সফলভাবে হালনাগাদ হয়েছে');
+                    setEditingConfig(null);
+                  } catch (err: any) {
+                    toast.error(err.message || 'কনফিগারেশন হালনাগাদ ব্যর্থ হয়েছে');
+                  }
+                }}
+                className="w-full py-2.5 rounded-xl bg-brand-emerald hover:bg-emerald-600 disabled:opacity-50 text-white font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                {mutations.updatePaymentConfig.isPending && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                <span>
+                  {mutations.updatePaymentConfig.isPending
+                    ? 'হালনাগাদ হচ্ছে...'
+                    : 'হালনাগাদ নিশ্চিত করুন'}
+                </span>
               </button>
             </div>
           </div>

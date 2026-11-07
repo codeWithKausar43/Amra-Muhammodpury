@@ -85,6 +85,8 @@ export interface ContributionPayment {
   notes?: string | null;
   status: 'COMPLETED' | 'PENDING' | 'FAILED' | 'VERIFIED' | string;
   paidAt: string;
+  createdAt?: string;
+  updatedAt?: string;
   fund?: {
     name: string;
     code: string;
@@ -103,6 +105,14 @@ export interface OrgMemberDashboardData {
   agreement: ContributionAgreement | null;
   totalContributed: number;
   pendingDueCount: number;
+  totalDueAmount?: number;
+  dueBreakdown?: Array<{
+    year: number;
+    month: number;
+    monthName: string;
+    amount: number;
+    status: 'DUE' | 'PENDING';
+  }>;
   pendingReviewCount?: number;
   payments: ContributionPayment[];
   calendar: Array<{
@@ -110,7 +120,8 @@ export interface OrgMemberDashboardData {
     year: number;
     isPaid: boolean;
     isPending?: boolean;
-    status?: string;
+    isEligible?: boolean;
+    status?: 'VERIFIED' | 'PENDING' | 'DUE' | 'NOT_APPLICABLE' | string;
     amount: number;
     paidAt?: string;
   }>;
@@ -638,6 +649,19 @@ export interface AdminDesignationItem {
   description: string | null;
   isActive: boolean;
   memberCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgPaymentConfig {
+  id: string;
+  method: string;
+  title: string;
+  accountNumber: string;
+  accountType: string;
+  instructions: string | null;
+  qrCodeUrl?: string | null;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }

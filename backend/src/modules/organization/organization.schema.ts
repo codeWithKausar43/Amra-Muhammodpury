@@ -293,3 +293,13 @@ export const UpdateDesignationSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+export const UpdateOrgPaymentConfigSchema = z.object({
+  method: z.string().min(2).max(50),
+  title: z.string().min(2).max(100),
+  accountNumber: z.string().min(2).max(100),
+  accountType: z.string().min(2).max(50),
+  instructions: z.string().max(1000).nullable().optional().or(z.literal('')),
+  qrCodeUrl: z.string().max(1000).nullable().optional().or(z.literal('')),
+  isActive: z.boolean().default(true),
+});
+

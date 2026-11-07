@@ -17,6 +17,8 @@ export const orgQueryKeys = {
   funds: ['org', 'funds'] as const,
   meetings: ['org', 'meetings'] as const,
   documents: ['org', 'documents'] as const,
+  paymentConfigs: ['org', 'paymentConfigs'] as const,
+  adminPaymentConfigs: ['org', 'admin', 'paymentConfigs'] as const,
   votingConfig: ['org', 'voting', 'config'] as const,
   elections: {
     all: ['org', 'elections'] as const,
@@ -212,6 +214,24 @@ export function useOrgDocumentsQuery() {
     queryKey: orgQueryKeys.documents,
     queryFn: () => organizationService.getDocuments(),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useOrgPaymentConfigsQuery(enabled = true) {
+  return useQuery({
+    queryKey: orgQueryKeys.paymentConfigs,
+    queryFn: () => organizationService.getPaymentConfigs(),
+    enabled,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useOrgAdminPaymentConfigsQuery(enabled = true) {
+  return useQuery({
+    queryKey: orgQueryKeys.adminPaymentConfigs,
+    queryFn: () => organizationService.getAdminPaymentConfigs(),
+    enabled,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -631,12 +651,22 @@ export function useOrgMutations() {
     },
   });
 
+  const updatePaymentConfig = useMutation({
+    mutationFn: (data: Parameters<typeof organizationService.updatePaymentConfig>[0]) =>
+      organizationService.updatePaymentConfig(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.paymentConfigs });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.adminPaymentConfigs });
+    },
+  });
+
   return {
     applyMembership,
     submitInitialPayment,
     payMonthlyContribution,
     reviewApplication,
     reviewPayment,
+    updatePaymentConfig,
     createFund,
     recordTransaction,
     createCommittee,

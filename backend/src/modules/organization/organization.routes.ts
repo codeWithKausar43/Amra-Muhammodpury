@@ -32,6 +32,7 @@ import {
   BulkContributionReminderSchema,
   CreateDesignationSchema,
   UpdateDesignationSchema,
+  UpdateOrgPaymentConfigSchema,
 } from './organization.schema.js';
 import { successResponse } from '../../utils/api-response.js';
 
@@ -541,6 +542,27 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const validatedData = UpdateDesignationSchema.parse(request.body);
     const result = await service.updateDesignation(session.user.id, id, validatedData);
     return reply.send(successResponse(result, 'পদবি সফলভাবে আপডেট করা হয়েছে'));
+  });
+
+  // --------------------------------------------------------------------------
+  // Monthly Contribution Payment Configs (Public & Admin)
+  // --------------------------------------------------------------------------
+  fastify.get('/payment-configs', async (_request, reply) => {
+    const configs = await service.getPublicOrgPaymentConfigs();
+    return reply.send(successResponse(configs, 'মাসিক চাঁদা পেমেন্ট কনফিগারেশন তালিকা পাওয়া গেছে'));
+  });
+
+  fastify.get('/admin/payment-configs', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const configs = await service.getAdminOrgPaymentConfigs(session.user.id);
+    return reply.send(successResponse(configs, 'অ্যাডমিন মাসিক চাঁদা কনফিগারেশন তালিকা পাওয়া গেছে'));
+  });
+
+  fastify.put('/admin/payment-configs', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = UpdateOrgPaymentConfigSchema.parse(request.body);
+    const result = await service.updateOrgPaymentConfig(session.user.id, validatedData);
+    return reply.send(successResponse(result, 'মাসিক চাঁদা পেমেন্ট তথ্য সফলভাবে হালনাগাদ হয়েছে'));
   });
 
 };

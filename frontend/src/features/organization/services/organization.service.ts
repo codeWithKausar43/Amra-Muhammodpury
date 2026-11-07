@@ -27,6 +27,7 @@ import {
   AdminMemberDetails,
   ContributionTrackingResult,
   AdminDesignationItem,
+  OrgPaymentConfig,
 } from '../types';
 
 export const organizationService = {
@@ -630,6 +631,25 @@ export const organizationService = {
         body: JSON.stringify(data),
       }
     );
+    return res.data!;
+  },
+
+  // Monthly Contribution Payment Configs
+  async getPaymentConfigs(): Promise<OrgPaymentConfig[]> {
+    const res = await apiClient<ApiResponse<OrgPaymentConfig[]>>('/org/payment-configs');
+    return res.data || [];
+  },
+
+  async getAdminPaymentConfigs(): Promise<OrgPaymentConfig[]> {
+    const res = await apiClient<ApiResponse<OrgPaymentConfig[]>>('/org/admin/payment-configs');
+    return res.data || [];
+  },
+
+  async updatePaymentConfig(data: Partial<OrgPaymentConfig>): Promise<OrgPaymentConfig> {
+    const res = await apiClient<ApiResponse<OrgPaymentConfig>>('/org/admin/payment-configs', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
     return res.data!;
   },
 

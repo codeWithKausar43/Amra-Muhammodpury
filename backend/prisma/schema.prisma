@@ -913,3 +913,18 @@ model CampaignPaymentConfig {
 
   @@map("campaign_payment_config")
 }
+
+model OrgPaymentConfig {
+  id            String   @id @default(uuid())
+  method        String   @unique // BKASH, NAGAD, ROCKET, BANK, CASH, OTHER
+  title         String   // বিকাশ, নগদ, রকেট, ব্যাংক, ক্যাশ...
+  accountNumber String   // 01XXXXXXXXX / A/C Number / তাজমহল রোড
+  accountType   String   // মার্চেন্ট, সেন্ড মানি, ব্যক্তিগত, ব্যাংক একাউন্ট, কোষাধ্যক্ষ দপ্তর
+  instructions  String?  @db.Text // Payment instructions for members
+  qrCodeUrl     String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("org_payment_config")
+}

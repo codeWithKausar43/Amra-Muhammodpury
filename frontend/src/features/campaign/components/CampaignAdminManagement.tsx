@@ -37,6 +37,7 @@ import type {
   CampaignPaymentConfig,
 } from '../types';
 import { CampaignCoverUploader } from './CampaignCoverUploader';
+import { toast } from '@/components/feedback/Toast';
 
 function toBengaliNumber(num: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -1651,13 +1652,23 @@ export const CampaignAdminManagement: React.FC = () => {
               </div>
               <button
                 type="button"
+                disabled={mutations.updatePaymentConfig.isPending}
                 onClick={async () => {
-                  await mutations.updatePaymentConfig.mutateAsync(editingConfig);
-                  setEditingConfig(null);
+                  try {
+                    await mutations.updatePaymentConfig.mutateAsync({
+                      ...editingConfig,
+                      qrCodeUrl: editingConfig.qrCodeUrl || null,
+                      instructions: editingConfig.instructions || null,
+                    });
+                    toast.success('পেমেন্ট কনফিগারেশন সফলভাবে হালনাগাদ হয়েছে');
+                    setEditingConfig(null);
+                  } catch (err: any) {
+                    toast.error(err.message || 'কনফিগারেশন হালনাগাদ ব্যর্থ হয়েছে');
+                  }
                 }}
-                className="w-full py-2.5 rounded-xl bg-brand-emerald text-white font-bold"
+                className="w-full py-2.5 rounded-xl bg-brand-emerald hover:bg-emerald-600 disabled:opacity-50 text-white font-bold transition-colors cursor-pointer"
               >
-                হালনাগাদ নিশ্চিত করুন
+                {mutations.updatePaymentConfig.isPending ? 'হালনাগাদ হচ্ছে...' : 'হালনাগাদ নিশ্চিত করুন'}
               </button>
             </div>
           </div>

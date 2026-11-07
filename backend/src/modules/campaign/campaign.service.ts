@@ -1137,8 +1137,8 @@ export class CampaignService {
       title: string;
       accountNumber: string;
       accountType: string;
-      instructions?: string;
-      qrCodeUrl?: string;
+      instructions?: string | null;
+      qrCodeUrl?: string | null;
       isActive: boolean;
     },
   ) {

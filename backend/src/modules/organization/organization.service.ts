@@ -51,11 +51,55 @@ const MONTH_NAMES_BN = [
   'ডিসেম্বর',
 ];
 
+export const INITIAL_ORG_PAYMENT_CONFIGS = [
+  {
+    method: 'BKASH',
+    title: 'bKash (বিকাশ)',
+    accountNumber: '০১৭৫০০০০০০০',
+    accountType: 'মার্চেন্ট / সেন্ড মানি',
+    instructions: 'বিকাশ অ্যাপ থেকে "Send Money" অথবা "Payment" করুন। রেফারেন্স হিসেবে আপনার মোবাইল নম্বর লিখুন।',
+    isActive: true,
+  },
+  {
+    method: 'NAGAD',
+    title: 'Nagad (নগদ)',
+    accountNumber: '০১৮৫০০০০০০০',
+    accountType: 'মার্চেন্ট একাউন্ট',
+    instructions: 'নগদ অ্যাপে গিয়ে উল্লেখিত নম্বরে সেন্ড মানি করুন।',
+    isActive: true,
+  },
+  {
+    method: 'ROCKET',
+    title: 'Rocket (রকেট)',
+    accountNumber: '০১835234869-9',
+    accountType: 'ব্যক্তিগত একাউন্ট',
+    instructions: 'রকেট অ্যাকাউন্টে উল্লেখিত নম্বরে পে করুন।',
+    isActive: true,
+  },
+  {
+    method: 'BANK',
+    title: 'ব্যাংক ট্রান্সফার',
+    accountNumber: '১২৩.১০১.৪৫৬৭৮ (Meghna ব্যাংক)',
+    accountType: 'কর্পোরেট একাউন্ট',
+    instructions: 'অ্যাকাউন্টের নাম: "আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা"। জমার স্লিপ সংরক্ষণ করুন।',
+    isActive: true,
+  },
+  {
+    method: 'CASH',
+    title: 'সরাসরি নগদ (ক্যাশ)',
+    accountNumber: 'সংগঠনের কার্যালয়, তাজমহল রোড',
+    accountType: 'কোষাধ্যক্ষ দপ্তর',
+    instructions: 'দাপ্তরিক সময়ে কোষাধ্যক্ষের নিকট সরাসরি নগদ চাঁদা জমা দিয়ে রসিদ গ্রহণ করুন।',
+    isActive: true,
+  },
+];
+
 export class OrganizationService {
   private notificationService: NotificationService;
 
   constructor(private readonly prisma: PrismaClient) {
     this.notificationService = new NotificationService(prisma);
+    this.seedOrgPaymentConfigsIfNeeded().catch(() => {});
   }
 
   // --------------------------------------------------------------------------
@@ -531,9 +575,15 @@ export class OrganizationService {
     }
 
     // 2. Due-first check: no unpaid month earlier than targetMonths[0] in the applicable period
-    const joinedYear = membership.joinedAt ? new Date(membership.joinedAt).getFullYear() : data.periodYear;
-    const joinedMonth = membership.joinedAt ? new Date(membership.joinedAt).getMonth() + 1 : 1;
+    const joinedDate = membership.joinedAt ? new Date(membership.joinedAt) : new Date(membership.createdAt);
+    const joinedYear = joinedDate.getFullYear();
+    const joinedMonth = joinedDate.getMonth() + 1;
     const startMonth = data.periodYear === joinedYear ? joinedMonth : 1;
+
+    // Disallow paying for months before membership effective month
+    if (data.periodYear < joinedYear || (data.periodYear === joinedYear && targetMonths.some((m) => m < joinedMonth))) {
+      throw new BadRequestError('সংগঠনে যোগদানের পূর্ববর্তী মাসের চাঁদা পরিশোধ প্রযোজ্য নয়');
+    }
 
     for (let m = startMonth; m < firstSelectedMonth; m++) {
       if (!paidMonthSet.has(m)) {
@@ -636,13 +686,13 @@ export class OrganizationService {
       if (found.length > 0) siblingPayments = found;
     } else {
       // Group by 60-second creation window
-      const windowStart = new Date(new Date(payment.createdAt).getTime() - 30000);
-      const windowEnd = new Date(new Date(payment.createdAt).getTime() + 30000);
+      const windowStart = new Date(new Date(payment.createdAt).getTime() - 60000);
+      const windowEnd = new Date(new Date(payment.createdAt).getTime() + 60000);
       const found = await this.prisma.contributionPayment.findMany({
         where: {
           userId: payment.userId,
-          trxId: null,
           status: 'PENDING',
+          paymentMethod: payment.paymentMethod,
           createdAt: { gte: windowStart, lte: windowEnd },
         },
         include: { user: { select: { id: true, name: true, email: true } } },
@@ -820,6 +870,11 @@ export class OrganizationService {
 
     const pendingThisYear = pendingPayments.filter((p) => p.periodYear === currentYear);
 
+    // Membership effective date
+    const joinedDate = membership.joinedAt ? new Date(membership.joinedAt) : new Date(membership.createdAt);
+    const joinedYear = joinedDate.getFullYear();
+    const joinedMonth = joinedDate.getMonth() + 1;
+
     // Build 12-month calendar for current year
     const calendar = Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
@@ -827,30 +882,64 @@ export class OrganizationService {
       const pendingPayment = pendingThisYear.find((p) => p.periodMonth === month);
       const isPaid = Boolean(verifiedPayment);
       const isPending = Boolean(pendingPayment);
+
+      // Eligibility: Only months on or after joining month are eligible
+      const isEligible = currentYear > joinedYear || (currentYear === joinedYear && month >= joinedMonth);
+
+      let status: 'VERIFIED' | 'PENDING' | 'DUE' | 'NOT_APPLICABLE' = 'DUE';
+      if (isPaid) {
+        status = 'VERIFIED';
+      } else if (isPending) {
+        status = 'PENDING';
+      } else if (!isEligible) {
+        status = 'NOT_APPLICABLE';
+      } else {
+        status = 'DUE';
+      }
+
       return {
         month,
         year: currentYear,
         isPaid,
         isPending,
-        status: isPaid ? 'VERIFIED' : isPending ? 'PENDING' : 'DUE',
-        amount: verifiedPayment?.amount || pendingPayment?.amount || membership.monthlyContribution,
+        isEligible,
+        status,
+        amount: verifiedPayment?.amount || pendingPayment?.amount || (isEligible ? membership.monthlyContribution : 0),
         paidAt: (verifiedPayment || pendingPayment)?.paidAt ? (verifiedPayment || pendingPayment)!.paidAt.toISOString() : undefined,
       };
     });
 
-    // Calculate pending dues up to the current month in current year (ONLY verified payments count as cleared)
-    const joinedYear = membership.joinedAt ? new Date(membership.joinedAt).getFullYear() : currentYear;
-    const joinedMonth = membership.joinedAt ? new Date(membership.joinedAt).getMonth() + 1 : 1;
-    const startMonth = currentYear === joinedYear ? joinedMonth : 1;
+    // Calculate pending dues up to the current month across eligible periods (ONLY verified payments count as cleared)
+    const dueBreakdown: Array<{
+      year: number;
+      month: number;
+      monthName: string;
+      amount: number;
+      status: 'DUE' | 'PENDING';
+    }> = [];
 
     let pendingDueCount = 0;
-    if (currentYear >= joinedYear) {
-      for (let m = startMonth; m <= currentMonth; m++) {
-        if (!paidMonthSet.has(m)) {
+    const evalStartYear = Math.max(joinedYear, currentYear - 1);
+    for (let y = evalStartYear; y <= currentYear; y++) {
+      const startM = y === joinedYear ? joinedMonth : 1;
+      const endM = y === currentYear ? currentMonth : 12;
+      for (let m = startM; m <= endM; m++) {
+        const isVerified = allVerifiedPayments.some((p) => p.periodYear === y && p.periodMonth === m);
+        if (!isVerified) {
           pendingDueCount++;
+          const pendingPay = pendingPayments.find((p) => p.periodYear === y && p.periodMonth === m);
+          dueBreakdown.push({
+            year: y,
+            month: m,
+            monthName: MONTH_NAMES_BN[m - 1] || `${m} তম মাস`,
+            amount: membership.monthlyContribution,
+            status: pendingPay ? 'PENDING' : 'DUE',
+          });
         }
       }
     }
+
+    const totalDueAmount = dueBreakdown.reduce((sum, d) => sum + d.amount, 0);
 
     const agreement = {
       id: `agr-${membership.id}`,
@@ -865,6 +954,8 @@ export class OrganizationService {
       agreement,
       totalContributed,
       pendingDueCount,
+      totalDueAmount,
+      dueBreakdown,
       pendingReviewCount: pendingThisYear.length,
       calendar,
       currentYear,
@@ -2466,9 +2557,18 @@ export class OrganizationService {
     });
     const activeUserIds = activeMembers.map((m) => m.userId);
 
+    // Only active members whose joining month is on or before target period are eligible
+    const eligibleTargetMembers = activeMembers.filter((m) => {
+      const jDate = m.joinedAt ? new Date(m.joinedAt) : new Date(m.createdAt);
+      const jYear = jDate.getFullYear();
+      const jMonth = jDate.getMonth() + 1;
+      return jYear < targetYear || (jYear === targetYear && jMonth <= targetMonth);
+    });
+    const eligibleTargetUserIds = eligibleTargetMembers.map((m) => m.userId);
+
     const verifiedPaymentsTargetMonth = await this.prisma.contributionPayment.findMany({
       where: {
-        userId: { in: activeUserIds },
+        userId: { in: eligibleTargetUserIds },
         periodYear: targetYear,
         periodMonth: targetMonth,
         status: 'VERIFIED',
@@ -2477,7 +2577,7 @@ export class OrganizationService {
     });
     const paidUserIdSet = new Set(verifiedPaymentsTargetMonth.map((p) => p.userId));
     const paidThisMonthCount = paidUserIdSet.size;
-    const unpaidThisMonthCount = Math.max(0, activeUserIds.length - paidThisMonthCount);
+    const unpaidThisMonthCount = Math.max(0, eligibleTargetUserIds.length - paidThisMonthCount);
 
     // Overdue count: active members who have not paid past due months
     let overdueCount = 0;
@@ -2554,7 +2654,8 @@ export class OrganizationService {
       if (query.paymentStatus === 'PAID') {
         whereCondition.userId = { in: Array.from(paidUserIdSet) };
       } else if (query.paymentStatus === 'UNPAID') {
-        whereCondition.userId = { notIn: Array.from(paidUserIdSet) };
+        const unpaidEligibleUserIds = eligibleTargetUserIds.filter((id) => !paidUserIdSet.has(id));
+        whereCondition.userId = { in: unpaidEligibleUserIds };
       } else if (query.paymentStatus === 'PENDING') {
         const pendingPayments = await this.prisma.contributionPayment.findMany({
           where: {
@@ -2622,8 +2723,15 @@ export class OrganizationService {
 
     const members = memberships.map((m) => {
       const payment = paymentMap.get(m.userId);
+      const jDate = m.joinedAt ? new Date(m.joinedAt) : new Date(m.createdAt);
+      const jYear = jDate.getFullYear();
+      const jMonth = jDate.getMonth() + 1;
+      const isEligibleForTarget = jYear < targetYear || (jYear === targetYear && jMonth <= targetMonth);
+
       let monthStatus = 'UNPAID';
-      if (payment) {
+      if (!isEligibleForTarget) {
+        monthStatus = 'NOT_APPLICABLE';
+      } else if (payment) {
         if (payment.status === 'VERIFIED') monthStatus = 'PAID';
         else if (payment.status === 'PENDING') monthStatus = 'PENDING';
         else if (payment.status === 'REJECTED') monthStatus = 'REJECTED';
@@ -2769,7 +2877,7 @@ export class OrganizationService {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth() + 1;
-    const joinedDate = membership.joinedAt ? new Date(membership.joinedAt) : new Date(currentYear, 0, 1);
+    const joinedDate = membership.joinedAt ? new Date(membership.joinedAt) : new Date(membership.createdAt);
     const joinedYear = joinedDate.getFullYear();
     const joinedMonth = joinedDate.getMonth() + 1;
 
@@ -2847,6 +2955,7 @@ export class OrganizationService {
       where: { id: memberId },
       data: {
         status,
+        joinedAt: status === 'ACTIVE' && !membership.joinedAt ? new Date() : membership.joinedAt,
         notes: notes
           ? membership.notes
             ? `${membership.notes}\n[${new Date().toISOString()}] ${notes}`
@@ -3016,9 +3125,11 @@ export class OrganizationService {
         !lastReminder || Date.now() - new Date(lastReminder).getTime() > 60 * 60 * 1000;
 
       const memberPaymentsMap = userPaymentStatusMap.get(member.userId) || new Map();
-      const joinedDate = member.joinedAt ? new Date(member.joinedAt) : new Date(currentYear, 0, 1);
+      const joinedDate = member.joinedAt ? new Date(member.joinedAt) : new Date(member.createdAt);
       const joinedYear = joinedDate.getFullYear();
       const joinedMonth = joinedDate.getMonth() + 1;
+      const isEligibleForTargetMonth =
+        targetYear > joinedYear || (targetYear === joinedYear && targetMonth >= joinedMonth);
 
       const overdueMonths: Array<{
         year: number;
@@ -3049,7 +3160,7 @@ export class OrganizationService {
         }
       }
 
-      if (isMonthOverdue && !overdueMonths.some((om) => om.year === targetYear && om.month === targetMonth) && !verified) {
+      if (isMonthOverdue && isEligibleForTargetMonth && !overdueMonths.some((om) => om.year === targetYear && om.month === targetMonth) && !verified) {
         const monthName = MONTH_NAMES_BN[targetMonth - 1] || `${targetMonth} তম মাস`;
         overdueMonths.push({
           year: targetYear,
@@ -3112,7 +3223,7 @@ export class OrganizationService {
           periodLabel: `${monthName} ${pending.periodYear}`,
           status: 'PENDING',
         });
-      } else {
+      } else if (isEligibleForTargetMonth) {
         const isMultipleMonthsOverdue = overdueMonthsCount > 1;
 
         if (isMultipleMonthsOverdue) {
@@ -3289,6 +3400,14 @@ export class OrganizationService {
 
     const actualUserId = membership.userId;
 
+    // Check joining date eligibility
+    const joinedDate = membership.joinedAt ? new Date(membership.joinedAt) : new Date(membership.createdAt);
+    const joinedYear = joinedDate.getFullYear();
+    const joinedMonth = joinedDate.getMonth() + 1;
+    if (periodYear < joinedYear || (periodYear === joinedYear && periodMonth < joinedMonth)) {
+      throw new BadRequestError('সদস্যপদ শুরুর পূর্ববর্তী মাসের জন্য চাঁদার তাগিদ পাঠানো প্রযোজ্য নয়');
+    }
+
     // Check if already paid
     const existingVerified = await this.prisma.contributionPayment.findFirst({
       where: {
@@ -3398,13 +3517,20 @@ export class OrganizationService {
         });
         targetUserIds = members.map((m) => m.userId);
       } else {
-        // Find all active members
+        // Find all active members who are eligible for this target period
         const activeMembers = await this.prisma.orgMembership.findMany({
           where: { status: 'ACTIVE' },
-          select: { userId: true, joinedAt: true },
+          select: { userId: true, joinedAt: true, createdAt: true },
         });
 
-        const activeIds = activeMembers.map((m) => m.userId);
+        const eligibleActive = activeMembers.filter((m) => {
+          const jd = m.joinedAt ? new Date(m.joinedAt) : new Date(m.createdAt);
+          const jy = jd.getFullYear();
+          const jm = jd.getMonth() + 1;
+          return jy < periodYear || (jy === periodYear && jm <= periodMonth);
+        });
+
+        const activeIds = eligibleActive.map((m) => m.userId);
         const verifiedPaid = await this.prisma.contributionPayment.findMany({
           where: {
             userId: { in: activeIds },
@@ -3549,4 +3675,75 @@ export class OrganizationService {
     });
   }
 
+  // --------------------------------------------------------------------------
+  // Monthly Contribution Payment Configs (Admin & Public)
+  // --------------------------------------------------------------------------
+  public async seedOrgPaymentConfigsIfNeeded() {
+    try {
+      const count = await this.prisma.orgPaymentConfig.count();
+      if (count === 0) {
+        for (const cfg of INITIAL_ORG_PAYMENT_CONFIGS) {
+          await this.prisma.orgPaymentConfig.create({
+            data: cfg,
+          });
+        }
+      }
+    } catch {
+      // Ignore background seeding errors
+    }
+  }
+
+  public async getPublicOrgPaymentConfigs() {
+    await this.seedOrgPaymentConfigsIfNeeded();
+    return this.prisma.orgPaymentConfig.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  public async getAdminOrgPaymentConfigs(userId: string) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'ADMIN', 'MODERATOR']);
+    await this.seedOrgPaymentConfigsIfNeeded();
+    return this.prisma.orgPaymentConfig.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  public async updateOrgPaymentConfig(
+    userId: string,
+    data: {
+      method: string;
+      title: string;
+      accountNumber: string;
+      accountType: string;
+      instructions?: string | null;
+      qrCodeUrl?: string | null;
+      isActive: boolean;
+    },
+  ) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'ADMIN']);
+
+    return this.prisma.orgPaymentConfig.upsert({
+      where: { method: data.method },
+      create: {
+        method: data.method,
+        title: data.title.trim(),
+        accountNumber: data.accountNumber.trim(),
+        accountType: data.accountType.trim(),
+        instructions: data.instructions?.trim() || null,
+        qrCodeUrl: data.qrCodeUrl || null,
+        isActive: data.isActive,
+      },
+      update: {
+        title: data.title.trim(),
+        accountNumber: data.accountNumber.trim(),
+        accountType: data.accountType.trim(),
+        instructions: data.instructions?.trim() || null,
+        qrCodeUrl: data.qrCodeUrl || null,
+        isActive: data.isActive,
+      },
+    });
+  }
 }

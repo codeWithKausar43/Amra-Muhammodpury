@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import {
   useOrgMembershipStatusQuery,
+  useOrgPaymentConfigsQuery,
   useOrgMutations,
 } from '@/features/organization/hooks/useOrganizationQueries';
 
@@ -29,17 +30,17 @@ const PAYMENT_INFO: Record<PaymentMethod, { title: string; number: string; type:
     title: 'Nagad (নগদ)',
     number: '০১৮৫০০০০০০০',
     type: 'মার্চেন্ট একাউন্ট',
-    instructions: 'নগদ অ্যাপে গিয়ে উল্লেখিত নম্বরে সেন্ড মানি করুন। এরপর প্রাপ্ত TrxID নিচে লিখুন।',
+    instructions: 'নগদ অ্যাপে গিয়ে উল্লেখিত নম্বরে সেন্ড মানি করুন।',
   },
   ROCKET: {
     title: 'Rocket (রকেট)',
-    number: '০১৯৫০০০০০০০-৮',
+    number: '০১835234869-9',
     type: 'ব্যক্তিগত একাউন্ট',
     instructions: 'রকেট অ্যাকাউন্টে উল্লেখিত নম্বরে পে করুন।',
   },
   BANK: {
     title: 'ব্যাংক ট্রান্সফার',
-    number: '১২৩.১০১.৪৫৬৭৮ (ইসলামী ব্যাংক বাংলাদেশ, মোহাম্মদপুর শাখা)',
+    number: '১২৩.১০১.৪৫৬৭৮ (Meghna ব্যাংক)',
     type: 'কর্পোরেট একাউন্ট',
     instructions: 'অ্যাকাউন্টের নাম: "আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা"। জমার স্লিপ সংরক্ষণ করুন।',
   },
@@ -53,20 +54,58 @@ const PAYMENT_INFO: Record<PaymentMethod, { title: string; number: string; type:
 
 export default function OrganizationPaymentPage() {
   const { data: membershipData } = useOrgMembershipStatusQuery();
+  const { data: dbPaymentConfigs } = useOrgPaymentConfigsQuery();
   const mutations = useOrgMutations();
 
   const [selectedMethod, setSelectedMethod] = React.useState<PaymentMethod>('BKASH');
-  const [trxId, setTrxId] = React.useState('');
   const [senderNumber, setSenderNumber] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [copied, setCopied] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [isSuccess, setIsSuccess] = React.useState(false);
 
+  // Dynamic payment config lookup merging DB records with fallback defaults
+  const activeConfigs = React.useMemo(() => {
+    const map: Record<string, { title: string; number: string; type: string; instructions: string }> = { ...PAYMENT_INFO };
+    if (dbPaymentConfigs && dbPaymentConfigs.length > 0) {
+      dbPaymentConfigs.forEach((cfg) => {
+        if (cfg.isActive) {
+          map[cfg.method] = {
+            title: cfg.title,
+            number: cfg.accountNumber,
+            type: cfg.accountType,
+            instructions: cfg.instructions || '',
+          };
+        } else {
+          delete map[cfg.method];
+        }
+      });
+    }
+    return map;
+  }, [dbPaymentConfigs]);
+
+  const availableMethods = React.useMemo(() => {
+    return Object.keys(activeConfigs) as PaymentMethod[];
+  }, [activeConfigs]);
+
+  // Ensure current selection is valid
+  React.useEffect(() => {
+    if (availableMethods.length > 0 && !activeConfigs[selectedMethod] && availableMethods[0]) {
+      setSelectedMethod(availableMethods[0]);
+    }
+  }, [availableMethods, activeConfigs, selectedMethod]);
+
   const agreementAmount =
     membershipData?.currentAgreement?.agreedAmount ||
     membershipData?.latestApplication?.monthlyContribution ||
     100;
+
+  const currentMethodInfo = activeConfigs[selectedMethod] || PAYMENT_INFO[selectedMethod] || {
+    title: selectedMethod,
+    number: '',
+    type: 'অ্যাকাউন্ট',
+    instructions: '',
+  };
 
   const handleCopyNumber = (num: string) => {
     navigator.clipboard.writeText(num);
@@ -78,21 +117,20 @@ export default function OrganizationPaymentPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (selectedMethod !== 'CASH' && !trxId.trim()) {
-      setErrorMsg('লেনদেনের TrxID বা ট্রানজেকশন নম্বর প্রদান করুন');
+    if (selectedMethod !== 'CASH' && !senderNumber.trim()) {
+      setErrorMsg('অনুগ্রহ করে যে নম্বর থেকে টাকা পাঠিয়েছেন তা উল্লেখ করুন');
       return;
     }
 
     try {
       await mutations.submitInitialPayment.mutateAsync({
         paymentMethod: selectedMethod,
-        trxId: trxId.trim() || undefined,
         senderNumber: senderNumber.trim() || undefined,
         notes: notes.trim() || undefined,
       });
       setIsSuccess(true);
     } catch (err: any) {
-      setErrorMsg(err.message || 'পেমেন্ট যাচাইয়ে সমস্যা হয়েছে। অনুগ্রহ করে সঠিক TrxID দিন।');
+      setErrorMsg(err.message || 'পেমেন্ট জমা দিতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
     }
   };
 
@@ -145,7 +183,7 @@ export default function OrganizationPaymentPage() {
           প্রারম্ভিক কিস্তি পরিশোধ
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          আপনার অনুমোদিত মাসিক অনুদান: <strong>৳{agreementAmount}</strong>। নিচের যে কোনো মাধ্যমে পরিশোধ করে ট্রানজেকশন আইডি প্রদান করুন।
+          আপনার অনুমোদিত মাসিক অনুদান: <strong>৳{agreementAmount}</strong>। নিচের যে কোনো মাধ্যমে পরিশোধ করে প্রেরক নম্বর প্রদান করুন।
         </p>
       </div>
 
@@ -155,18 +193,17 @@ export default function OrganizationPaymentPage() {
           পেমেন্ট মাধ্যম নির্বাচন করুন:
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {(Object.keys(PAYMENT_INFO) as PaymentMethod[]).map((method) => (
+          {availableMethods.map((method) => (
             <button
               key={method}
               type="button"
               onClick={() => setSelectedMethod(method)}
-              className={`p-3 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
-                selectedMethod === method
+              className={`p-3 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${selectedMethod === method
                   ? 'border-brand-emerald bg-brand-emerald/10 text-brand-emerald dark:text-brand-mint ring-1 ring-brand-emerald'
                   : 'border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
-              }`}
+                }`}
             >
-              {PAYMENT_INFO[method].title}
+              {activeConfigs[method]?.title || method}
             </button>
           ))}
         </div>
@@ -175,11 +212,11 @@ export default function OrganizationPaymentPage() {
         <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 space-y-2 text-left">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              {PAYMENT_INFO[selectedMethod].type}:
+              {currentMethodInfo.type}:
             </span>
             <button
               type="button"
-              onClick={() => handleCopyNumber(PAYMENT_INFO[selectedMethod].number)}
+              onClick={() => handleCopyNumber(currentMethodInfo.number)}
               className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-emerald hover:underline cursor-pointer"
             >
               <Copy className="w-3 h-3" />
@@ -187,11 +224,13 @@ export default function OrganizationPaymentPage() {
             </button>
           </div>
           <p className="text-sm font-black text-brand-emerald select-all tracking-wider">
-            {PAYMENT_INFO[selectedMethod].number}
+            {currentMethodInfo.number}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            {PAYMENT_INFO[selectedMethod].instructions}
-          </p>
+          {currentMethodInfo.instructions && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {currentMethodInfo.instructions}
+            </p>
+          )}
         </div>
       </div>
 
@@ -201,7 +240,7 @@ export default function OrganizationPaymentPage() {
         className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/10 shadow-soft space-y-4 text-left"
       >
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-          ট্রানজেকশন তথ্য প্রদান করুন
+          পেমেন্টের তথ্য প্রদান করুন
         </h3>
 
         {errorMsg && (
@@ -211,31 +250,16 @@ export default function OrganizationPaymentPage() {
           </div>
         )}
 
-        {selectedMethod !== 'CASH' && (
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              ট্রানজেকশন আইডি (TrxID) *
-            </label>
-            <input
-              type="text"
-              required
-              value={trxId}
-              onChange={(e) => setTrxId(e.target.value)}
-              placeholder="যেমন: 9J28DA71KP"
-              className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 focus:border-brand-emerald focus:ring-1 focus:ring-brand-emerald outline-none transition-all uppercase"
-            />
-          </div>
-        )}
-
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
-            প্রেরক মোবাইল নম্বর (যে নম্বর থেকে টাকা পাঠিয়েছেন)
+            প্রেরক মোবাইল নম্বর (যে নম্বর থেকে টাকা পাঠিয়েছেন) {selectedMethod !== 'CASH' && <span className="text-rose-500">*</span>}
           </label>
           <input
             type="tel"
+            required={selectedMethod !== 'CASH'}
             value={senderNumber}
             onChange={(e) => setSenderNumber(e.target.value)}
-            placeholder="০১৭xxxxxxxx"
+            placeholder="যেমন: ০১৭xxxxxxxx"
             className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 focus:border-brand-emerald focus:ring-1 focus:ring-brand-emerald outline-none transition-all"
           />
         </div>

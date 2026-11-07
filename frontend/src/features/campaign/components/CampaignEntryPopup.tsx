@@ -14,10 +14,18 @@ function toBengaliNumber(num: number | string): string {
     .replace(/[0-9]/g, (d) => bengaliDigits[+d] || d);
 }
 
-export const CampaignEntryPopup: React.FC = () => {
+export interface CampaignEntryPopupProps {
+  onVisibilityChange?: (isVisible: boolean) => void;
+}
+
+export const CampaignEntryPopup: React.FC<CampaignEntryPopupProps> = ({ onVisibilityChange }) => {
   const { data: campaign, isLoading } = useActivePopupCampaignQuery();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isDonateOpen, setIsDonateOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    onVisibilityChange?.(isOpen || isDonateOpen);
+  }, [isOpen, isDonateOpen, onVisibilityChange]);
 
   React.useEffect(() => {
     // Only check sessionStorage on the client

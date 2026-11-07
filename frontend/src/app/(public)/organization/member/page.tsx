@@ -22,6 +22,7 @@ import {
 import {
   useOrgMemberDashboardQuery,
   useOrgElectionsQuery,
+  useOrgPaymentConfigsQuery,
   useOrgMutations,
 } from '@/features/organization/hooks/useOrganizationQueries';
 import { cleanImageUrl } from '@/features/organization/components/CandidateAvatar';
@@ -55,7 +56,7 @@ function toBengaliDigits(num: number | string): string {
 }
 
 // Function to generate and trigger instant high-resolution PNG download with official watermark
-function downloadReceiptCanvas(receipt: ContributionPayment, membership: any) {
+function downloadReceiptCanvas(receipt: any, membership: any) {
   const canvas = document.createElement('canvas');
   canvas.width = 1200;
   canvas.height = 840;
@@ -165,7 +166,10 @@ function downloadReceiptCanvas(receipt: ContributionPayment, membership: any) {
       : `#${membership.memberId}`
     : '#AMP-2026-0042';
   const designation = `${membership?.designation?.title || 'সাধারণ সদস্য'} • ${membership?.orgRole || 'MEMBER'}`;
-  const purpose = `${MONTH_NAMES_BN[receipt.periodMonth - 1]} ${toBengaliDigits(receipt.periodYear)} এর মাসিক অনুদান`;
+  const purpose = receipt.title || `${MONTH_NAMES_BN[receipt.periodMonth - 1]} ${toBengaliDigits(receipt.periodYear)} এর মাসিক অনুদান`;
+  const trxDisplay = receipt.senderNumber
+    ? `মোবাইল: ${receipt.senderNumber}`
+    : receipt.trxId || 'TRX-AUTO';
 
   let currentY = 300;
   const rowGap = 38;
@@ -205,7 +209,7 @@ function downloadReceiptCanvas(receipt: ContributionPayment, membership: any) {
 
   renderRow('সদস্যের নাম:', memberName, 'অনুদানের খাত:', purpose);
   renderRow('সদস্য আইডি:', memberId, 'পেমেন্ট মাধ্যম:', receipt.paymentMethod || 'BKASH');
-  renderRow('পদবী ও দায়িত্ব:', designation, 'ট্রানজেকশন ID:', receipt.trxId || 'TRX-AUTO');
+  renderRow('পদবী ও দায়িত্ব:', designation, 'ট্রানজেকশন / প্রেরক:', trxDisplay);
   renderRow('পরিশোধের তারিখ:', issueDateStr, 'অনুমোদনের স্ট্যাটাস:', receipt.status === 'PENDING' ? 'যাচাই প্রক্রিয়াধীন (PENDING)' : receipt.status === 'REJECTED' ? 'বাতিলকৃত (REJECTED)' : 'অনুমোদিত ও সংরক্ষিত (VERIFIED)');
 
   // Amount Highlight Box
@@ -320,14 +324,14 @@ export default function MemberDashboardPage() {
 
   // Unpaid months of current year
   const unpaidMonths = React.useMemo(() => {
-    return calendar.filter((c) => !c.isPaid).map((c) => c.month);
+    return calendar.filter((c) => !c.isPaid && c.status !== 'NOT_APPLICABLE').map((c) => c.month);
   }, [calendar]);
 
   // Due months up to current month of this year
   const dueMonths = React.useMemo(() => {
     const currentMonthNum = new Date().getMonth() + 1;
     return calendar
-      .filter((c) => !c.isPaid && c.month <= currentMonthNum)
+      .filter((c) => !c.isPaid && c.status !== 'NOT_APPLICABLE' && c.month <= currentMonthNum)
       .map((c) => c.month);
   }, [calendar]);
 
@@ -336,9 +340,48 @@ export default function MemberDashboardPage() {
   const [payYear, setPayYear] = React.useState(currentYear);
   const [selectedMonths, setSelectedMonths] = React.useState<number[]>([]);
   const [payMethod, setPayMethod] = React.useState<'BKASH' | 'NAGAD' | 'ROCKET' | 'BANK' | 'CASH'>('BKASH');
-  const [payTrxId, setPayTrxId] = React.useState('');
+  const [paySenderNumber, setPaySenderNumber] = React.useState('');
   const [payError, setPayError] = React.useState<string | null>(null);
   const [paySuccessMsg, setPaySuccessMsg] = React.useState<string | null>(null);
+  const [isNumberCopied, setIsNumberCopied] = React.useState(false);
+
+  // Dynamic payment config lookup merging DB records with fallback defaults
+  const { data: dbPaymentConfigs } = useOrgPaymentConfigsQuery();
+  const paymentConfigMap = React.useMemo(() => {
+    const fallback: Record<string, { title: string; accountNumber: string; accountType: string; instructions: string }> = {
+      BKASH: { title: 'bKash (বিকাশ)', accountNumber: '০১৭৫০০০০০০০', accountType: 'মার্চেন্ট / সেন্ড মানি', instructions: 'বিকাশ অ্যাপ থেকে Send Money অথবা Payment করুন।' },
+      NAGAD: { title: 'Nagad (নগদ)', accountNumber: '০১৮৫০০০০০০০', accountType: 'মার্চেন্ট একাউন্ট', instructions: 'নগদ অ্যাপে গিয়ে উল্লেখিত নম্বরে সেন্ড মানি করুন।' },
+      ROCKET: { title: 'Rocket (রকেট)', accountNumber: '০১835234869-9', accountType: 'ব্যক্তিগত একাউন্ট', instructions: 'রকেট অ্যাকাউন্টে উল্লেখিত নম্বরে পে করুন।' },
+      BANK: { title: 'ব্যাংক ট্রান্সফার', accountNumber: '১২৩.১০১.৪৫৬৭৮ (Meghna ব্যাংক)', accountType: 'কর্পোরেট একাউন্ট', instructions: 'সংগঠনের ব্যাংক অ্যাকাউন্টে জমা দিন।' },
+      CASH: { title: 'সরাসরি নগদ (ক্যাশ)', accountNumber: 'সংগঠনের কার্যালয়', accountType: 'কোষাধ্যক্ষ দপ্তর', instructions: 'দাপ্তরিক সময়ে কোষাধ্যক্ষের নিকট সরাসরি নগদ চাঁদা জমা দিন।' },
+    };
+
+    if (dbPaymentConfigs && dbPaymentConfigs.length > 0) {
+      dbPaymentConfigs.forEach((c) => {
+        if (c.isActive) {
+          fallback[c.method] = {
+            title: c.title,
+            accountNumber: c.accountNumber,
+            accountType: c.accountType,
+            instructions: c.instructions || '',
+          };
+        } else {
+          delete fallback[c.method];
+        }
+      });
+    }
+    return fallback;
+  }, [dbPaymentConfigs]);
+
+  const activeMethodKeys = React.useMemo(() => Object.keys(paymentConfigMap), [paymentConfigMap]);
+  const currentConfig = paymentConfigMap[payMethod];
+
+  // Auto-switch payMethod if currently deactivated
+  React.useEffect(() => {
+    if (activeMethodKeys.length > 0 && !paymentConfigMap[payMethod]) {
+      setPayMethod(activeMethodKeys[0] as any);
+    }
+  }, [activeMethodKeys, paymentConfigMap, payMethod]);
 
   // Dynamic 12-month calendar state based on selected payYear
   const yearCalendar = React.useMemo(() => {
@@ -346,8 +389,14 @@ export default function MemberDashboardPage() {
     const curY = now.getFullYear();
     const curM = now.getMonth() + 1;
 
+    const joinedDate = dashboard?.membership?.joinedAt ? new Date(dashboard.membership.joinedAt) : null;
+    const joinedYear = joinedDate ? joinedDate.getFullYear() : curY;
+    const joinedMonth = joinedDate ? joinedDate.getMonth() + 1 : 1;
+
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
+      const isEligible = payYear > joinedYear || (payYear === joinedYear && m >= joinedMonth);
+
       // Check if verified paid for this specific payYear
       const isPaid =
         payments.some(
@@ -370,7 +419,7 @@ export default function MemberDashboardPage() {
 
       // Calculate overdue / due status based on year & current month
       let isDue = false;
-      if (!isPaid && !isPending) {
+      if (isEligible && !isPaid && !isPending) {
         if (payYear < curY) {
           isDue = true; // All past unpaid months in previous years are due
         } else if (payYear === curY) {
@@ -385,14 +434,15 @@ export default function MemberDashboardPage() {
         year: payYear,
         isPaid,
         isPending,
+        isEligible,
         isDue,
       };
     });
-  }, [payYear, payments, calendar, currentYear]);
+  }, [payYear, payments, calendar, currentYear, dashboard?.membership?.joinedAt]);
 
-  // Unpaid months of the currently selected payYear (excluding paid and pending)
+  // Unpaid months of the currently selected payYear (excluding paid, pending, and non-eligible)
   const unpaidMonthsForYear = React.useMemo(() => {
-    return yearCalendar.filter((c) => !c.isPaid && !c.isPending).map((c) => c.month);
+    return yearCalendar.filter((c) => c.isEligible && !c.isPaid && !c.isPending).map((c) => c.month);
   }, [yearCalendar]);
 
   // Due months of the currently selected payYear
@@ -406,30 +456,127 @@ export default function MemberDashboardPage() {
     setPayError(null);
   };
 
+  // Group payments into consolidated receipts (multi-month submissions grouped as 1 receipt)
+  const groupedReceipts = React.useMemo(() => {
+    if (!payments || payments.length === 0) return [];
+
+    const batchMap = new Map<string, ContributionPayment[]>();
+
+    for (const p of payments) {
+      let batchKey: string;
+      const cleanTrx = p.trxId && p.trxId.trim();
+      if (cleanTrx) {
+        batchKey = `${p.status}_trx_${cleanTrx}`;
+      } else {
+        const timeMs = new Date(p.createdAt || p.paidAt).getTime();
+        const timeKey = Math.floor(timeMs / (2 * 60 * 1000));
+        const cleanSender = p.senderNumber && p.senderNumber.trim();
+        if (cleanSender) {
+          batchKey = `${p.status}_sender_${cleanSender}_${p.paymentMethod}_${timeKey}`;
+        } else {
+          batchKey = `${p.status}_method_${p.paymentMethod}_${timeKey}`;
+        }
+      }
+
+      if (!batchMap.has(batchKey)) {
+        batchMap.set(batchKey, []);
+      }
+      batchMap.get(batchKey)!.push(p);
+    }
+
+    const result: Array<
+      ContributionPayment & {
+        allPaymentIds: string[];
+        periodYears: number[];
+        periodMonths: number[];
+        monthsCount: number;
+        title: string;
+        periodLabel: string;
+        rawPayments: ContributionPayment[];
+      }
+    > = [];
+
+    for (const [, batch] of batchMap) {
+      batch.sort((a, b) => {
+        if (a.periodYear !== b.periodYear) return a.periodYear - b.periodYear;
+        return a.periodMonth - b.periodMonth;
+      });
+
+      const first = batch[0]!;
+      const last = batch[batch.length - 1]!;
+      const count = batch.length;
+      const totalAmount = batch.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const months = batch.map((p) => p.periodMonth);
+      const years = Array.from(new Set(batch.map((p) => p.periodYear)));
+
+      let title: string;
+      let periodLabel: string;
+
+      if (count === 1) {
+        const mn = MONTH_NAMES_BN[first.periodMonth - 1] || `${first.periodMonth} তম মাস`;
+        title = `${mn} ${toBengaliDigits(first.periodYear)} এর মাসিক অনুদান`;
+        periodLabel = `${mn} ${toBengaliDigits(first.periodYear)}`;
+      } else {
+        const firstMn = MONTH_NAMES_BN[first.periodMonth - 1] || `${first.periodMonth} তম`;
+        const lastMn = MONTH_NAMES_BN[last.periodMonth - 1] || `${last.periodMonth} তম`;
+
+        if (first.periodYear === last.periodYear) {
+          title = `${firstMn} - ${lastMn} ${toBengaliDigits(first.periodYear)} এর মাসিক অনুদান (${toBengaliDigits(count)} মাস)`;
+          periodLabel = `${firstMn} - ${lastMn} ${toBengaliDigits(first.periodYear)} (${toBengaliDigits(count)} মাস)`;
+        } else {
+          title = `${firstMn} ${toBengaliDigits(first.periodYear)} - ${lastMn} ${toBengaliDigits(last.periodYear)} এর মাসিক অনুদান (${toBengaliDigits(count)} মাস)`;
+          periodLabel = `${firstMn} ${toBengaliDigits(first.periodYear)} - ${lastMn} ${toBengaliDigits(last.periodYear)} (${toBengaliDigits(count)} মাস)`;
+        }
+      }
+
+      result.push({
+        ...first,
+        amount: totalAmount,
+        allPaymentIds: batch.map((p) => p.id),
+        periodYears: years,
+        periodMonths: months,
+        monthsCount: count,
+        title,
+        periodLabel,
+        rawPayments: batch,
+      });
+    }
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.paidAt || (a as any).createdAt || 0).getTime();
+      const timeB = new Date(b.paidAt || (b as any).createdAt || 0).getTime();
+      if (timeA !== timeB) return timeB - timeA;
+      if (a.periodYear !== b.periodYear) return b.periodYear - a.periodYear;
+      return b.periodMonth - a.periodMonth;
+    });
+
+    return result;
+  }, [payments]);
+
   // Download / View Receipt Modal State
-  const [selectedReceipt, setSelectedReceipt] = React.useState<ContributionPayment | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = React.useState<any | null>(null);
 
   // Receipt filtering state (by Year and Month)
   const [receiptFilterYear, setReceiptFilterYear] = React.useState<string>('ALL');
   const [receiptFilterMonth, setReceiptFilterMonth] = React.useState<string>('ALL');
 
   const availableReceiptYears = React.useMemo(() => {
-    const years = Array.from(new Set(payments.map((p) => p.periodYear)));
+    const years = Array.from(new Set(groupedReceipts.flatMap((r) => r.periodYears)));
     if (!years.includes(currentYear)) years.push(currentYear);
     return years.sort((a, b) => b - a);
-  }, [payments, currentYear]);
+  }, [groupedReceipts, currentYear]);
 
   const filteredReceipts = React.useMemo(() => {
-    return payments.filter((p) => {
-      if (receiptFilterYear !== 'ALL' && p.periodYear !== Number(receiptFilterYear)) {
+    return groupedReceipts.filter((r) => {
+      if (receiptFilterYear !== 'ALL' && !r.periodYears.includes(Number(receiptFilterYear))) {
         return false;
       }
-      if (receiptFilterMonth !== 'ALL' && p.periodMonth !== Number(receiptFilterMonth)) {
+      if (receiptFilterMonth !== 'ALL' && !r.periodMonths.includes(Number(receiptFilterMonth))) {
         return false;
       }
       return true;
     });
-  }, [payments, receiptFilterYear, receiptFilterMonth]);
+  }, [groupedReceipts, receiptFilterYear, receiptFilterMonth]);
 
   // Initialize or reset selected months when opening modal
   const openPaymentModal = React.useCallback(
@@ -487,13 +634,13 @@ export default function MemberDashboardPage() {
         periodYear: payYear,
         amount: totalPayableAmount,
         paymentMethod: payMethod,
-        trxId: payTrxId.trim() || undefined,
+        senderNumber: paySenderNumber.trim() || undefined,
       });
       setPaySuccessMsg('মাসিক অনুদানের তথ্য জমা দেওয়া হয়েছে! অ্যাডমিন যাচাইয়ের পর এটি অনুমোদিত হবে।');
       setTimeout(() => {
         setPayModalOpen(false);
         setPaySuccessMsg(null);
-        setPayTrxId('');
+        setPaySenderNumber('');
       }, 1500);
     } catch (err: any) {
       setPayError(err.message || 'পরিশোধ সম্পন্ন হয়নি। পুনরায় চেষ্টা করুন।');
@@ -716,13 +863,16 @@ export default function MemberDashboardPage() {
         {/* 12-Month Calendar Chips (4 Per Row, Clean Open Layout) */}
         <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 gap-1.5 sm:gap-2 pt-0.5">
           {calendar.map((item) => {
-            const isDue = !item.isPaid && !item.isPending && item.month <= new Date().getMonth() + 1;
+            const isNotApplicable = item.status === 'NOT_APPLICABLE' || item.isEligible === false;
+            const isDue = !isNotApplicable && !item.isPaid && !item.isPending && item.month <= new Date().getMonth() + 1;
 
             return (
               <div
                 key={item.month}
                 className={`py-2 px-1 sm:py-2.5 sm:px-2 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 transition-all ${
-                  item.isPaid
+                  isNotApplicable
+                    ? 'bg-slate-100/50 dark:bg-white/[0.02] border border-dashed border-slate-200/80 dark:border-white/5 opacity-60 text-slate-400'
+                    : item.isPaid
                     ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 dark:border-emerald-500/20 text-brand-emerald dark:text-emerald-400'
                     : item.isPending
                     ? 'bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/25 dark:border-amber-500/20 text-amber-600 dark:text-amber-400'
@@ -732,7 +882,9 @@ export default function MemberDashboardPage() {
                 }`}
               >
                 <div className="text-[9px] sm:text-[10px] font-bold flex items-center justify-center gap-0.5 leading-none">
-                  {item.isPaid ? (
+                  {isNotApplicable ? (
+                    <span className="text-slate-400 dark:text-slate-500 whitespace-nowrap text-[9px]">প্রযোজ্য নয়</span>
+                  ) : item.isPaid ? (
                     <span className="text-brand-emerald dark:text-emerald-400 flex items-center justify-center gap-0.5 whitespace-nowrap">
                       <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
                       <span>পরিশোধিত</span>
@@ -750,7 +902,9 @@ export default function MemberDashboardPage() {
                 </div>
                 <span
                   className={`text-[11px] sm:text-xs font-bold leading-tight mt-0.5 truncate max-w-full ${
-                    item.isPaid
+                    isNotApplicable
+                      ? 'text-slate-400 dark:text-slate-500'
+                      : item.isPaid
                       ? 'text-slate-900 dark:text-white'
                       : item.isPending
                       ? 'text-amber-900 dark:text-amber-200'
@@ -782,9 +936,9 @@ export default function MemberDashboardPage() {
             </h3>
           </div>
           <span className="text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 shrink-0 whitespace-nowrap">
-            {filteredReceipts.length === payments.length
-              ? `মোট ${toBengaliDigits(payments.length)} টি রসিদ`
-              : `${toBengaliDigits(filteredReceipts.length)} / ${toBengaliDigits(payments.length)} টি রসিদ`}
+            {filteredReceipts.length === groupedReceipts.length
+              ? `মোট ${toBengaliDigits(groupedReceipts.length)} টি রসিদ`
+              : `${toBengaliDigits(filteredReceipts.length)} / ${toBengaliDigits(groupedReceipts.length)} টি রসিদ`}
           </span>
         </div>
 
@@ -885,7 +1039,7 @@ export default function MemberDashboardPage() {
                     {/* Left: Title & Date (stacked with breathing space) */}
                     <div className="space-y-1 shrink-0">
                       <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                        {MONTH_NAMES_BN[p.periodMonth - 1]} {toBengaliDigits(p.periodYear)} এর মাসিক অনুদান
+                        {p.title || `${MONTH_NAMES_BN[p.periodMonth - 1]} ${toBengaliDigits(p.periodYear)} এর মাসিক অনুদান`}
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {formattedDate}
@@ -1094,6 +1248,22 @@ export default function MemberDashboardPage() {
                     const isDue = item.isDue;
                     const isSelected = selectedMonths.includes(m);
 
+                    if (item.isEligible === false) {
+                      return (
+                        <div
+                          key={m}
+                          className="p-2 rounded-xl text-center bg-slate-100/40 dark:bg-white/[0.02] border border-dashed border-slate-200/50 dark:border-white/5 opacity-40 cursor-not-allowed select-none"
+                        >
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                            প্রযোজ্য নয়
+                          </div>
+                          <div className="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-0.5">
+                            {MONTH_NAMES_BN[m - 1]}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     if (isPaid) {
                       return (
                         <div
@@ -1197,37 +1367,60 @@ export default function MemberDashboardPage() {
                   onChange={(e) => setPayMethod(e.target.value as any)}
                   className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none text-slate-900 dark:text-white cursor-pointer"
                 >
-                  <option value="BKASH" className="bg-white dark:bg-slate-900">
-                    bKash (০১৭৫০০০০০০০)
-                  </option>
-                  <option value="NAGAD" className="bg-white dark:bg-slate-900">
-                    Nagad (০১৮৫০০০০০০০)
-                  </option>
-                  <option value="ROCKET" className="bg-white dark:bg-slate-900">
-                    Rocket (০১৯৫০০০০০০০)
-                  </option>
-                  <option value="BANK" className="bg-white dark:bg-slate-900">
-                    Bank Transfer
-                  </option>
-                  <option value="CASH" className="bg-white dark:bg-slate-900">
-                    Cash (কোষাধ্যক্ষ অফিস)
-                  </option>
+                  {activeMethodKeys.map((key) => {
+                    const item = paymentConfigMap[key];
+                    if (!item) return null;
+                    return (
+                      <option key={key} value={key} className="bg-white dark:bg-slate-900">
+                        {item.title} ({item.accountNumber})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
-              {/* TrxID Field */}
+              {/* Dynamic Payment Method Details Box */}
+              {currentConfig && (
+                <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-500/20 space-y-1 text-left">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">
+                      {currentConfig.accountType}:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentConfig.accountNumber);
+                        setIsNumberCopied(true);
+                        setTimeout(() => setIsNumberCopied(false), 2000);
+                      }}
+                      className="text-brand-emerald font-bold hover:underline cursor-pointer"
+                    >
+                      {isNumberCopied ? 'কপি হয়েছে!' : 'নম্বর কপি করুন'}
+                    </button>
+                  </div>
+                  <div className="font-mono font-bold text-sm text-brand-emerald">
+                    {currentConfig.accountNumber}
+                  </div>
+                  {currentConfig.instructions && (
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {currentConfig.instructions}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Sender Number Field */}
               {payMethod !== 'CASH' && (
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
-                    ট্রানজেকশন আইডি (TrxID)
+                    প্রেরক মোবাইল নম্বর (যে নম্বর থেকে টাকা পাঠিয়েছেন)
                   </label>
                   <input
-                    type="text"
-                    required
-                    value={payTrxId}
-                    onChange={(e) => setPayTrxId(e.target.value)}
-                    placeholder="TrxID লিখুন (যেমন: 8N2K9L3M)"
-                    className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none uppercase text-slate-900 dark:text-white font-mono"
+                    type="tel"
+                    value={paySenderNumber}
+                    onChange={(e) => setPaySenderNumber(e.target.value)}
+                    placeholder="যেমন: ০১৭xxxxxxxx"
+                    className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none text-slate-900 dark:text-white"
                   />
                 </div>
               )}
@@ -1342,9 +1535,14 @@ export default function MemberDashboardPage() {
                   <div>
                     <span className="text-[11px] text-slate-500 block">অনুদানের খাত:</span>
                     <span className="font-bold text-slate-900 text-sm">
-                      {MONTH_NAMES_BN[selectedReceipt.periodMonth - 1]}{' '}
-                      {toBengaliDigits(selectedReceipt.periodYear)} এর মাসিক অনুদান
+                      {selectedReceipt.title ||
+                        `${MONTH_NAMES_BN[selectedReceipt.periodMonth - 1]} ${toBengaliDigits(selectedReceipt.periodYear)} এর মাসিক অনুদান`}
                     </span>
+                    {selectedReceipt.monthsCount > 1 && selectedReceipt.periodMonths && (
+                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium block mt-0.5">
+                        অন্তর্ভুক্ত: {selectedReceipt.periodMonths.map((m: number) => MONTH_NAMES_BN[m - 1]).join(', ')} ({toBengaliDigits(selectedReceipt.monthsCount)} মাস)
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 block">সদস্য আইডি:</span>
@@ -1365,9 +1563,11 @@ export default function MemberDashboardPage() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-slate-500 block">ট্রানজেকশন ID:</span>
+                    <span className="text-[11px] text-slate-500 block">
+                      {selectedReceipt.senderNumber ? 'প্রেরক নম্বর / Trx ID:' : 'ট্রানজেকশন ID:'}
+                    </span>
                     <span className="font-mono font-bold text-slate-900">
-                      {selectedReceipt.trxId || 'TRX-AUTO'}
+                      {selectedReceipt.senderNumber || selectedReceipt.trxId || 'TRX-AUTO'}
                     </span>
                   </div>
                 </div>

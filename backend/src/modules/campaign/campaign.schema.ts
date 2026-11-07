@@ -129,8 +129,8 @@ export const UpdatePaymentConfigSchema = z.object({
   title: z.string().min(2).max(100),
   accountNumber: z.string().min(4).max(100),
   accountType: z.string().min(2).max(50),
-  instructions: z.string().max(1000).optional(),
-  qrCodeUrl: z.string().url().optional().or(z.literal('')),
+  instructions: z.string().max(1000).nullable().optional().or(z.literal('')),
+  qrCodeUrl: z.string().max(1000).nullable().optional().or(z.literal('')),
   isActive: z.boolean().default(true),
 });
 
