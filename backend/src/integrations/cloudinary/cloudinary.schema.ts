@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const uploadSignatureSchema = z.object({
   resourceType: z.enum(['image', 'video']).default('image'),
-  folder: z.enum(['profiles', 'posts', 'media', 'elections']).default('profiles'),
+  folder: z.enum(['profiles', 'posts', 'media', 'elections', 'campaigns', 'organization']).default('profiles'),
   isRegistration: z.boolean().optional().default(false),
   tempToken: z.string().optional(),
 });

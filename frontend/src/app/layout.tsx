@@ -29,6 +29,36 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
+                  // Suppress external browser extension runtime crashes (e.g. Urban VPN, AdBlockers, password managers)
+                  // preventing them from triggering the Next.js development error modal.
+                  window.addEventListener('error', function(event) {
+                    var fn = event.filename || '';
+                    var msg = event.message || '';
+                    if (
+                      fn.indexOf('chrome-extension://') !== -1 ||
+                      fn.indexOf('moz-extension://') !== -1 ||
+                      msg.indexOf('M_ID') !== -1 ||
+                      msg.indexOf('executors/200.js') !== -1
+                    ) {
+                      event.stopImmediatePropagation();
+                      event.preventDefault();
+                      return true;
+                    }
+                  }, true);
+
+                  window.addEventListener('unhandledrejection', function(event) {
+                    var stack = (event.reason && (event.reason.stack || event.reason.message)) || '';
+                    if (
+                      stack.indexOf('chrome-extension://') !== -1 ||
+                      stack.indexOf('moz-extension://') !== -1 ||
+                      stack.indexOf('M_ID') !== -1 ||
+                      stack.indexOf('executors/200.js') !== -1
+                    ) {
+                      event.stopImmediatePropagation();
+                      event.preventDefault();
+                    }
+                  }, true);
+
                   var badAttrs = ['bis_skin_checked', 'bis_register', 'data-gr-ext-installed', 'data-new-gr-c-s-check-loaded', 'cz-shortcut-listen'];
                   var origSet = Element.prototype.setAttribute;
                   Element.prototype.setAttribute = function(name, val) {

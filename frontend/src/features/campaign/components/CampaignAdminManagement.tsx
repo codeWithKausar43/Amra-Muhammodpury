@@ -36,6 +36,7 @@ import type {
   CampaignCategory,
   CampaignPaymentConfig,
 } from '../types';
+import { CampaignCoverUploader } from './CampaignCoverUploader';
 
 function toBengaliNumber(num: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -143,7 +144,7 @@ export const CampaignAdminManagement: React.FC = () => {
     setEditingCampaign(null);
     setCampTitle('');
     setCampCategory(categories[0]?.id || '');
-    setCampCoverImage('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80');
+    setCampCoverImage('');
     setCampShortDesc('');
     setCampFullDesc('');
     setCampGoal('');
@@ -177,6 +178,10 @@ export const CampaignAdminManagement: React.FC = () => {
 
   const handleSaveCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!campCoverImage || !campCoverImage.trim()) {
+      alert('ক্যাম্পেইনের জন্য কভার ছবি নির্বাচন বা আপলোড করা আবশ্যক');
+      return;
+    }
     try {
       const payload = {
         title: campTitle,
@@ -1142,15 +1147,11 @@ export const CampaignAdminManagement: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  কভার ছবির লিংক (URL) <span className="text-rose-500">*</span>
+                  কভার ছবি <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="url"
+                <CampaignCoverUploader
                   value={campCoverImage}
-                  onChange={(e) => setCampCoverImage(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 font-medium"
-                  required
+                  onChange={(url) => setCampCoverImage(url)}
                 />
               </div>
 
