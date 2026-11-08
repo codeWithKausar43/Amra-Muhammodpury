@@ -73,8 +73,9 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // 3. Public / Org Projects
-  fastify.get('/projects', async (_request, reply) => {
-    const projects = await service.getProjects();
+  fastify.get('/projects', async (request, reply) => {
+    const query = request.query as { category?: string };
+    const projects = await service.getProjects(query?.category);
     return reply.send(successResponse(projects, 'প্রকল্পসমূহ সফলভাবে পাওয়া গেছে'));
   });
 
@@ -141,6 +142,19 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const session = await fastify.authenticate(request, reply);
     const dashboard = await service.getMemberDashboard(session.user.id);
     return reply.send(successResponse(dashboard, 'সদস্য ড্যাশবোর্ড তথ্য সফলভাবে পাওয়া গেছে'));
+  });
+
+  // Organization Financial Transparency & Complete Accounts Ledger (Public & Members)
+  fastify.get('/transparency', async (request, reply) => {
+    let currentUserId: string | undefined;
+    try {
+      const session = await fastify.authenticate(request, reply);
+      currentUserId = session.user.id;
+    } catch {
+      // Unauthenticated visitor
+    }
+    const data = await service.getTransparencyOverview(currentUserId);
+    return reply.send(successResponse(data, 'সংগঠনের পূর্ণাঙ্গ আর্থিক স্বচ্ছতা ও হিসাব-নিকাশ তথ্য'));
   });
 
   // Meetings (Member only)

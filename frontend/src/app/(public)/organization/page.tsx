@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   Award,
   Vote,
@@ -14,6 +13,7 @@ import {
   Sparkles,
   Lock,
   HeartHandshake,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   useOrgOverviewQuery,
@@ -21,6 +21,7 @@ import {
   useOrgElectionsQuery,
 } from '@/features/organization/hooks/useOrganizationQueries';
 import { useSession } from '@/lib/auth/auth-client';
+import { MemberFinancialTransparency } from '@/features/organization/components/MemberFinancialTransparency';
 
 export default function OrganizationPage() {
   const { data: session } = useSession();
@@ -50,22 +51,10 @@ export default function OrganizationPage() {
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-emerald via-emerald-800 to-brand-charcoal text-white p-6 sm:p-8 shadow-xl">
         <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-white/5 blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-2xl">
-            <div className="flex items-center gap-3.5 sm:gap-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden shadow-xl shrink-0 border border-white/20 bg-emerald-950/40 p-0.5">
-                <Image
-                  src="/logos/logo.png"
-                  alt="আমরা মোহাম্মদপুরী লোগো"
-                  width={80}
-                  height={80}
-                  className="w-full h-full object-contain rounded-xl"
-                  priority
-                />
-              </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-                আমরা মোহাম্মদপুরী
-              </h1>
-            </div>
+          <div className="space-y-2.5 max-w-2xl">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+              আমরা মোহাম্মদপুরী
+            </h1>
             <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed font-normal">
               মোহাম্মদপুরের নাগরিক উন্নয়ন, নিরাপত্তা, সামাজিক ঐক্য ও জবাবদিহিতা নিশ্চিতকরণে স্থানীয় বাসিন্দাদের প্রাতিষ্ঠানিক সংগঠন।
             </p>
@@ -127,6 +116,25 @@ export default function OrganizationPage() {
                 <span>ডিজিটাল নির্বাচন কেন্দ্র</span>
               </Link>
             )}
+
+            {/* Jump Link: Financial transparency for members, About organization for general users */}
+            {isActiveMember || isOfficer ? (
+              <a
+                href="#transparency"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md border border-white/15 transition-all cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                <span>আর্থিক স্বচ্ছতা ও হিসাব</span>
+              </a>
+            ) : (
+              <a
+                href="#about"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md border border-white/15 transition-all cursor-pointer"
+              >
+                <HeartHandshake className="w-3.5 h-3.5 text-emerald-300" />
+                <span>সংগঠন সম্পর্কে জানুন</span>
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -162,9 +170,46 @@ export default function OrganizationPage() {
         </div>
       )}
 
-      {/* 4. Why Join & Membership Benefits (Visible ONLY to Non-Members / New Users) */}
+      {/* 3. Organization Financial Transparency & Complete Accounts Ledger (Protected: Visible ONLY to Active Members & Officers) */}
+      {isActiveMember || isOfficer ? (
+        <section id="transparency" className="pt-2 animate-in fade-in">
+          <MemberFinancialTransparency />
+        </section>
+      ) : (
+        /* For General / Non-member Users: Preview Banner explaining accounts are for members, and directing to membership */
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 shadow-md animate-in fade-in">
+          <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 text-left">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-emerald-300 text-xs font-semibold backdrop-blur-sm">
+                <Lock className="w-3.5 h-3.5" />
+                <span>সদস্যদের জন্য সংরক্ষিত</span>
+              </div>
+              <h3 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white">
+                অভ্যন্তরীণ তহবিল হিসাবরক্ষণ ও প্রাতিষ্ঠানিক সুযোগ
+              </h3>
+              <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed font-normal">
+                সংগঠনের বিস্তারিত আয়-ব্যয় অডিট লেজার, মানবিক সহায়তা ও বৃক্ষরোপণ খতিয়ান শুধুমাত্র অনুমোদিত প্রাতিষ্ঠানিক সদস্যদের জন্য সংরক্ষিত। মোহাম্মদপুরের নাগরিক উন্নয়ন ও স্বচ্ছ কার্যক্রমে সরাসরি অংশীদার হতে সদস্যপদ গ্রহণ করুন।
+              </p>
+            </div>
+
+            <div className="shrink-0 pt-1 md:pt-0">
+              <Link
+                href="/organization/apply"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-emerald-950 font-bold text-xs sm:text-sm hover:bg-emerald-50 shadow-md active:scale-95 transition-all"
+              >
+                <span>সদস্য হতে আবেদন করুন</span>
+                <span className="text-emerald-700">→</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Why Join & Membership Benefits (Visible to Non-Members so general visitors learn all about the organization) */}
       {!isActiveMember && !(session?.user && isMembershipLoading) && (
-        <div className="py-4 sm:py-6 space-y-6 animate-in fade-in">
+        <section id="about" className="py-4 sm:py-6 space-y-6 animate-in fade-in">
           <div className="text-left space-y-1.5 max-w-3xl">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug">
               কেন আমরা সংগঠনে যুক্ত হবো?
@@ -315,40 +360,7 @@ export default function OrganizationPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 5. Organization Member Services & Institutional Access */}
-      {!isActiveMember && (
-        /* Modern, Non-Boxy Left-Aligned Preview Banner */
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 shadow-md">
-          <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 text-left">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-emerald-300 text-xs font-semibold backdrop-blur-sm">
-                <Lock className="w-3.5 h-3.5" />
-                <span>সদস্যদের জন্য সংরক্ষিত</span>
-              </div>
-              <h3 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white">
-                অভ্যন্তরীণ প্রাতিষ্ঠানিক সুযোগ ও জবাবদিহিতা
-              </h3>
-              <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed font-normal">
-                সংগঠনের অভ্যন্তরীণ আয়-ব্যয় অডিট লেজার, অভ্যন্তরীণ নোটিশ ও ডিজিটাল নির্বাচন শুধুমাত্র অনুমোদিত সক্রিয় সদস্যদের জন্য সংরক্ষিত। মোহাম্মদপুরের নাগরিক উন্নয়ন ও নীতি-নির্ধারণে ভোটাধিকার পেতে সদস্যপদ গ্রহণ করুন।
-              </p>
-            </div>
-
-            <div className="shrink-0 pt-1 md:pt-0">
-              <Link
-                href="/organization/apply"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-emerald-950 font-bold text-xs sm:text-sm hover:bg-emerald-50 shadow-md active:scale-95 transition-all"
-              >
-                <span>সদস্য হতে আবেদন করুন</span>
-                <span className="text-emerald-700">→</span>
-              </Link>
-            </div>
-          </div>
-        </div>
+        </section>
       )}
 
       {/* 6. Organizational Notices (Protected: ONLY visible to Active Members) */}

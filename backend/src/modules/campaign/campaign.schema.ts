@@ -114,6 +114,16 @@ export const UpdateCategorySchema = CreateCategorySchema.partial().extend({
   isArchived: z.boolean().optional(),
 });
 
+export const ExpenseItemInputSchema = z.object({
+  itemName: z.string().min(1, 'আইটেম নাম আবশ্যক'),
+  amount: z.coerce.number().positive('পরিমাণ অবশ্যই ধনাত্মক সংখ্যা হতে হবে'),
+  category: z.string().optional(),
+  description: z.string().optional(),
+  expenseDate: z.string().optional(),
+  responsiblePerson: z.string().optional(),
+  receiptUrl: z.string().optional(),
+});
+
 export const CreateExpenseSchema = z.object({
   campaignId: z.string().uuid('সঠিক ক্যাম্পেইন নির্বাচন করুন'),
   amount: z.coerce.number().min(1, 'খরচের পরিমাণ দিন'),
@@ -122,6 +132,7 @@ export const CreateExpenseSchema = z.object({
   expenseDate: z.string().optional(),
   voucherUrl: z.string().url('ভাউচারের সঠিক লিংক দিন').optional().or(z.literal('')),
   performedBy: z.string().min(2, 'অনুমোদনকারী/ব্যক্তি লিখুন').max(100),
+  items: z.array(ExpenseItemInputSchema).optional(),
 });
 
 export const UpdatePaymentConfigSchema = z.object({

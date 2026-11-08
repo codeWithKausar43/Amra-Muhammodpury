@@ -18,6 +18,7 @@ export const orgQueryKeys = {
   meetings: ['org', 'meetings'] as const,
   documents: ['org', 'documents'] as const,
   paymentConfigs: ['org', 'paymentConfigs'] as const,
+  transparency: ['org', 'transparency'] as const,
   adminPaymentConfigs: ['org', 'admin', 'paymentConfigs'] as const,
   votingConfig: ['org', 'voting', 'config'] as const,
   elections: {
@@ -166,6 +167,15 @@ export function useOrgFundsQuery() {
     queryKey: orgQueryKeys.funds,
     queryFn: () => organizationService.getFunds(),
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useOrgTransparencyQuery(enabled = true) {
+  return useQuery({
+    queryKey: orgQueryKeys.transparency,
+    queryFn: () => organizationService.getTransparency(),
+    enabled,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -365,6 +375,7 @@ export function useOrgMutations() {
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDashboard });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.membershipStatus });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.transparency });
     },
   });
 
@@ -373,6 +384,7 @@ export function useOrgMutations() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.funds });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.transparency });
     },
   });
 
@@ -381,6 +393,9 @@ export function useOrgMutations() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.funds });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.transparency });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.projects });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
     },
   });
 
@@ -436,6 +451,9 @@ export function useOrgMutations() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.projects });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.transparency });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.funds });
     },
   });
 

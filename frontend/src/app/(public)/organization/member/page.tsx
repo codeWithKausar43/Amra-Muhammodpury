@@ -18,6 +18,7 @@ import {
   FileText,
   SlidersHorizontal,
   RotateCcw,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   useOrgMemberDashboardQuery,
@@ -779,6 +780,23 @@ export default function MemberDashboardPage() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Link to Organization Financial Transparency at /organization#transparency */}
+      <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-500/20 text-xs">
+        <div className="flex items-center gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-brand-emerald shrink-0" />
+          <span className="text-slate-700 dark:text-slate-300 font-medium">
+            সংগঠনের আর্থিক হিসাব, আয়-ব্যয় ও খতিয়ান উন্মুক্ত
+          </span>
+        </div>
+        <Link
+          href="/organization#transparency"
+          className="font-bold text-brand-emerald hover:text-emerald-700 dark:hover:text-brand-mint shrink-0 flex items-center gap-1"
+        >
+          <span>স্বচ্ছতা খতিয়ান দেখুন</span>
+          <span>→</span>
+        </Link>
       </div>
 
       {/* =========================================================================

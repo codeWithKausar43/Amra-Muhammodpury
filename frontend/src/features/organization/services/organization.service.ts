@@ -28,6 +28,7 @@ import {
   ContributionTrackingResult,
   AdminDesignationItem,
   OrgPaymentConfig,
+  FinancialTransparencyData,
 } from '../types';
 
 export const organizationService = {
@@ -250,11 +251,27 @@ export const organizationService = {
     category?: string;
     receiptUrl?: string;
     toFundId?: string;
+    projectId?: string;
+    campaignId?: string;
+    items?: Array<{
+      itemName: string;
+      amount: number;
+      category?: string;
+      description?: string;
+      expenseDate?: string;
+      responsiblePerson?: string;
+      receiptUrl?: string;
+    }>;
   }): Promise<OrgTransaction> {
     const res = await apiClient<ApiResponse<OrgTransaction>>('/org/admin/transactions', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    return res.data!;
+  },
+
+  async getTransparency(): Promise<FinancialTransparencyData> {
+    const res = await apiClient<ApiResponse<FinancialTransparencyData>>('/org/transparency');
     return res.data!;
   },
 
@@ -341,10 +358,25 @@ export const organizationService = {
     title: string;
     description: string;
     budget?: number;
+    spent?: number;
     progress?: number;
     status?: string;
     isPublic?: boolean;
     images?: string[];
+    category?: 'GENERAL' | 'HUMANITARIAN' | 'TREE_PLANTATION';
+    beneficiaryName?: string;
+    beneficiaryPhone?: string;
+    beneficiaryAddress?: string;
+    assistanceType?: string;
+    consentGiven?: boolean;
+    childName?: string;
+    fatherName?: string;
+    birthPlace?: string;
+    treesPlanted?: string;
+    plantationLocation?: string;
+    plantationDate?: string;
+    fundId?: string;
+    items?: Array<{ itemName: string; amount: number; category?: string; description?: string }>;
   }): Promise<OrgProject> {
     const res = await apiClient<ApiResponse<OrgProject>>('/org/admin/projects', {
       method: 'POST',

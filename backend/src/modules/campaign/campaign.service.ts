@@ -1010,6 +1010,15 @@ export class CampaignService {
       expenseDate?: string;
       voucherUrl?: string;
       performedBy: string;
+      items?: Array<{
+        itemName: string;
+        amount: number;
+        category?: string;
+        description?: string;
+        expenseDate?: string;
+        responsiblePerson?: string;
+        receiptUrl?: string;
+      }>;
     },
   ) {
     const role = await this.getOfficerRole(userId);
@@ -1022,19 +1031,44 @@ export class CampaignService {
       throw new NotFoundError('ক্যাম্পেইন রেকর্ড পাওয়া যায়নি');
     }
 
-    const expense = await this.prisma.campaignExpense.create({
-      data: {
-        campaignId: data.campaignId,
-        amount: data.amount,
-        purpose: data.purpose.trim(),
-        description: data.description?.trim() || null,
-        expenseDate: data.expenseDate ? new Date(data.expenseDate) : new Date(),
-        voucherUrl: data.voucherUrl || null,
-        performedBy: data.performedBy.trim(),
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const expense = await tx.campaignExpense.create({
+        data: {
+          campaignId: data.campaignId,
+          amount: data.amount,
+          purpose: data.purpose.trim(),
+          description: data.description?.trim() || null,
+          expenseDate: data.expenseDate ? new Date(data.expenseDate) : new Date(),
+          voucherUrl: data.voucherUrl || null,
+          performedBy: data.performedBy.trim(),
+        },
+      });
 
-    return expense;
+      if (data.items && data.items.length > 0) {
+        await tx.expenseItem.createMany({
+          data: data.items.map((it) => ({
+            campaignExpenseId: expense.id,
+            itemName: it.itemName.trim(),
+            amount: it.amount,
+            category: it.category?.trim() || null,
+            description: it.description?.trim() || null,
+            expenseDate: it.expenseDate ? new Date(it.expenseDate) : (data.expenseDate ? new Date(data.expenseDate) : new Date()),
+            responsiblePerson: it.responsiblePerson?.trim() || data.performedBy.trim(),
+            receiptUrl: it.receiptUrl || data.voucherUrl || null,
+          })),
+        });
+      }
+
+      if (typeof tx.campaignExpense?.findUnique === 'function') {
+        const fullExpense = await tx.campaignExpense.findUnique({
+          where: { id: expense.id },
+          include: { items: true, campaign: { select: { id: true, title: true } } },
+        });
+        if (fullExpense) return fullExpense;
+      }
+
+      return expense;
+    });
   }
 
   public async getExpenses(userId: string, campaignId?: string) {
@@ -1045,6 +1079,7 @@ export class CampaignService {
       where: campaignId ? { campaignId } : undefined,
       include: {
         campaign: { select: { id: true, title: true } },
+        items: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { expenseDate: 'desc' },
     });

@@ -1,3 +1,5 @@
+import type { ExpenseItem } from '@/features/organization/types';
+
 export interface CampaignCategory {
   id: string;
   name: string;
@@ -100,6 +102,7 @@ export interface CampaignExpense {
   expenseDate: string;
   voucherUrl?: string | null;
   performedBy: string;
+  items?: ExpenseItem[];
   createdAt: string;
 }
 

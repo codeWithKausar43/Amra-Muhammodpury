@@ -223,6 +223,15 @@ export const campaignService = {
     expenseDate?: string;
     voucherUrl?: string;
     performedBy: string;
+    items?: Array<{
+      itemName: string;
+      amount: number;
+      category?: string;
+      description?: string;
+      expenseDate?: string;
+      responsiblePerson?: string;
+      receiptUrl?: string;
+    }>;
   }) {
     const res = await apiClient<ApiResponse<CampaignExpense>>('/campaigns/admin/expenses', {
       method: 'POST',

@@ -55,6 +55,16 @@ export const CreateFundSchema = z.object({
   openingBalance: z.coerce.number().min(0).default(0),
 });
 
+export const ExpenseItemInputSchema = z.object({
+  itemName: z.string().min(1, 'আইটেম নাম আবশ্যক'),
+  amount: z.coerce.number().positive('পরিমাণ অবশ্যই ধনাত্মক সংখ্যা হতে হবে'),
+  category: z.string().optional(),
+  description: z.string().optional(),
+  expenseDate: z.string().optional(),
+  responsiblePerson: z.string().optional(),
+  receiptUrl: z.string().optional(),
+});
+
 export const FundTransactionSchema = z.object({
   fundId: z.string().uuid(),
   type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER', 'CONTRIBUTION']),
@@ -64,6 +74,9 @@ export const FundTransactionSchema = z.object({
   category: z.string().optional(),
   receiptUrl: z.string().optional(),
   toFundId: z.string().uuid().optional(), // For fund transfer
+  projectId: z.string().uuid().optional(),
+  campaignId: z.string().uuid().optional(),
+  items: z.array(ExpenseItemInputSchema).optional(),
 });
 
 export const CreateCommitteeSchema = z.object({
@@ -121,12 +134,34 @@ export const CreateProjectSchema = z.object({
   title: z.string().min(2, 'প্রকল্পের নাম আবশ্যক'),
   description: z.string().min(5, 'প্রকল্পের বিবরণ আবশ্যক'),
   budget: z.coerce.number().min(0).default(0),
+  spent: z.coerce.number().min(0).default(0),
   progress: z.coerce.number().min(0).max(100).default(0),
   status: z.enum(['PLANNING', 'ACTIVE', 'COMPLETED', 'ON_HOLD']).default('ACTIVE'),
   isPublic: z.boolean().default(true),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   images: z.array(z.string()).default([]),
+  category: z.enum(['GENERAL', 'HUMANITARIAN', 'TREE_PLANTATION']).default('GENERAL'),
+  
+  // Humanitarian Aid
+  beneficiaryName: z.string().optional(),
+  beneficiaryPhone: z.string().optional(),
+  beneficiaryAddress: z.string().optional(),
+  assistanceType: z.string().optional(),
+  consentGiven: z.boolean().default(true),
+  
+  // Tree Plantation for Newborn initiative
+  childName: z.string().optional(),
+  fatherName: z.string().optional(),
+  motherName: z.string().optional(),
+  birthDate: z.string().optional(),
+  birthPlace: z.string().optional(),
+  treesPlanted: z.string().optional(),
+  plantationLocation: z.string().optional(),
+  plantationDate: z.string().optional(),
+
+  fundId: z.string().uuid().optional(),
+  items: z.array(ExpenseItemInputSchema).optional(),
 });
 
 export const CreateDocumentSchema = z.object({

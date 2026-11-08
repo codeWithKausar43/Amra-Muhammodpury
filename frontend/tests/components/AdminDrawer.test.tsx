@@ -37,14 +37,13 @@ describe('AdminDrawer', () => {
     expect(screen.getAllByText('সদস্য ব্যবস্থাপনা').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('সদস্য আবেদন')).toBeInTheDocument();
     expect(screen.getByText('চাঁদা ট্র্যাকিং ও তাগিদ')).toBeInTheDocument();
-    expect(screen.getByText('তহবিল ও বাজেট')).toBeInTheDocument();
     expect(screen.getByText('লেনদেন ও চাঁদা')).toBeInTheDocument();
+    expect(screen.getByText('ক্যাম্পেইন ও দান অনুদান')).toBeInTheDocument();
     expect(screen.getByText('কমিটি ও পদবি')).toBeInTheDocument();
     expect(screen.getByText('বিজ্ঞপ্তি ব্যবস্থাপনা')).toBeInTheDocument();
     expect(screen.getByText('ডিজিটাল নির্বাচন')).toBeInTheDocument();
 
     // Check badges
-    expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 

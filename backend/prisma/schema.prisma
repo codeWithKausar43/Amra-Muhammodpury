@@ -518,6 +518,7 @@ model OrgFund {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   transactions FundTransaction[]
+  projects     OrgProject[]
 
   @@map("org_fund")
 }
@@ -558,8 +559,17 @@ model FundTransaction {
   receiptUrl  String?
   createdAt   DateTime @default(now())
 
+  // Transparency links & breakdown
+  projectId   String?
+  project     OrgProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  campaignId  String?
+  campaign    Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  items       ExpenseItem[]
+
   @@index([fundId])
   @@index([type])
+  @@index([projectId])
+  @@index([campaignId])
   @@map("fund_transaction")
 }
 
@@ -660,20 +670,46 @@ model OrgNotice {
 }
 
 model OrgProject {
-  id          String    @id @default(uuid())
-  title       String
-  description String    @db.Text
-  budget      Float     @default(0.0)
-  spent       Float     @default(0.0)
-  progress    Int       @default(0) // 0 to 100
-  status      String    @default("ACTIVE") // PLANNING, ACTIVE, COMPLETED, ON_HOLD
-  isPublic    Boolean   @default(true)
-  startDate   DateTime?
-  endDate     DateTime?
-  images      String[]  @default([])
-  createdAt   DateTime  @default(now())
+  id                  String            @id @default(uuid())
+  title               String
+  description         String            @db.Text
+  budget              Float             @default(0.0)
+  spent               Float             @default(0.0)
+  progress            Int               @default(0) // 0 to 100
+  status              String            @default("ACTIVE") // PLANNING, ACTIVE, COMPLETED, ON_HOLD
+  isPublic            Boolean           @default(true)
+  startDate           DateTime?
+  endDate             DateTime?
+  images              String[]          @default([])
+  category            String            @default("GENERAL") // GENERAL, HUMANITARIAN, TREE_PLANTATION
+  
+  // Humanitarian Aid specific details (Privacy safe)
+  beneficiaryName     String?
+  beneficiaryPhone    String?
+  beneficiaryAddress  String?
+  assistanceType      String?           // খাদ্য সহায়তা, চিকিৎসা অনুদান, ইত্যাদি
+  consentGiven        Boolean           @default(true)
+  
+  // Tree Plantation for Newborn initiative
+  childName           String?
+  fatherName          String?
+  motherName          String?
+  birthDate           DateTime?
+  birthPlace          String?
+  treesPlanted        String?           // e.g. "আম ও নিম"
+  plantationLocation  String?
+  plantationDate      DateTime?
+
+  fundId              String?
+  fund                OrgFund?          @relation(fields: [fundId], references: [id], onDelete: SetNull)
+  transactions        FundTransaction[]
+  items               ExpenseItem[]
+
+  createdAt           DateTime          @default(now())
 
   @@index([status])
+  @@index([category])
+  @@index([fundId])
   @@map("org_project")
 }
 
@@ -844,6 +880,7 @@ model Campaign {
   updatedAt        DateTime          @updatedAt
   donations        CampaignDonation[]
   expenses         CampaignExpense[]
+  transactions     FundTransaction[]
 
   @@index([status])
   @@index([categoryId])
@@ -895,8 +932,34 @@ model CampaignExpense {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  items       ExpenseItem[]
+
   @@index([campaignId])
   @@map("campaign_expense")
+}
+
+model ExpenseItem {
+  id                 String           @id @default(uuid())
+  transactionId      String?
+  transaction        FundTransaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  campaignExpenseId  String?
+  campaignExpense    CampaignExpense? @relation(fields: [campaignExpenseId], references: [id], onDelete: Cascade)
+  projectId          String?
+  project            OrgProject?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  itemName           String           // e.g. চাল, ডাল, তেল, যাতায়াত
+  amount             Float
+  category           String?          // e.g. খাদ্য সামগ্রী, পরিবহন, চিকিৎসা, উপহার
+  description        String?          @db.Text
+  expenseDate        DateTime         @default(now())
+  responsiblePerson  String?
+  receiptUrl         String?          // ভাউচার/রশিদ প্রমাণ ছবি
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([transactionId])
+  @@index([campaignExpenseId])
+  @@index([projectId])
+  @@map("expense_item")
 }
 
 model CampaignPaymentConfig {

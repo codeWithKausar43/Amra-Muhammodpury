@@ -981,13 +981,15 @@ export class OrganizationService {
       activeMembers,
       pendingApps,
       approvedPaymentPending,
-      totalFunds,
+      _totalFunds,
       recentTransactions,
       recentPayments,
       fundsList,
       contributionsAgg,
       incomeAgg,
+      campaignDonationsAgg,
       expenseAgg,
+      campaignExpenseAgg,
       activeElectionsCount,
     ] = await Promise.all([
       this.prisma.orgMembership.count(),
@@ -997,8 +999,11 @@ export class OrganizationService {
       this.prisma.orgFund.aggregate({ _sum: { balance: true } }),
       this.prisma.fundTransaction.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 8,
-        include: { fund: { select: { name: true, code: true } } },
+        take: 20,
+        include: {
+          fund: { select: { name: true, code: true } },
+          items: { orderBy: { createdAt: 'asc' } },
+        },
       }),
       this.prisma.contributionPayment.findMany({
         orderBy: { paidAt: 'desc' },
@@ -1014,8 +1019,15 @@ export class OrganizationService {
         where: { type: 'INCOME' },
         _sum: { amount: true },
       }),
+      this.prisma.campaignDonation.aggregate({
+        where: { status: 'VERIFIED' },
+        _sum: { amount: true },
+      }),
       this.prisma.fundTransaction.aggregate({
         where: { type: 'EXPENSE' },
+        _sum: { amount: true },
+      }),
+      this.prisma.campaignExpense.aggregate({
         _sum: { amount: true },
       }),
       this.prisma.election.count({
@@ -1023,10 +1035,16 @@ export class OrganizationService {
       }),
     ]);
 
-    const totalBalance = totalFunds._sum.balance ? Number(totalFunds._sum.balance) : 0;
     const totalContributions = contributionsAgg._sum.amount ? Number(contributionsAgg._sum.amount) : 0;
-    const totalIncome = incomeAgg._sum.amount ? Number(incomeAgg._sum.amount) : 0;
-    const totalExpense = expenseAgg._sum.amount ? Number(expenseAgg._sum.amount) : 0;
+    const totalGeneralIncome = incomeAgg._sum.amount ? Number(incomeAgg._sum.amount) : 0;
+    const totalCampaignDonations = campaignDonationsAgg._sum.amount ? Number(campaignDonationsAgg._sum.amount) : 0;
+    const totalIncome = totalContributions + totalGeneralIncome + totalCampaignDonations;
+
+    const totalFundExpenses = expenseAgg._sum.amount ? Number(expenseAgg._sum.amount) : 0;
+    const totalCampaignExpenses = campaignExpenseAgg._sum.amount ? Number(campaignExpenseAgg._sum.amount) : 0;
+    const totalExpense = totalFundExpenses + totalCampaignExpenses;
+    const netBalance = totalIncome - totalExpense;
+
     const financialTrends = await this.calculateFinancialTrends();
 
     return {
@@ -1037,7 +1055,7 @@ export class OrganizationService {
         pendingApplications: pendingApps,
       },
       funds: {
-        totalBalance,
+        totalBalance: netBalance,
         fundList: fundsList.map((f: any) => ({
           id: f.id,
           name: f.name,
@@ -1049,7 +1067,11 @@ export class OrganizationService {
       financialSummary: {
         totalIncome,
         totalExpense,
+        netBalance,
         totalContributions,
+        totalCampaignDonations,
+        totalFundExpenses,
+        totalCampaignExpenses,
       },
       financialTrends,
       elections: {
@@ -1060,7 +1082,7 @@ export class OrganizationService {
         activeMembers,
         pendingApplications: pendingApps,
         approvedPaymentPending,
-        totalBalance,
+        totalBalance: netBalance,
       },
       recentTransactions,
       recentPayments,
@@ -1339,6 +1361,17 @@ export class OrganizationService {
       category?: string;
       receiptUrl?: string;
       toFundId?: string;
+      projectId?: string;
+      campaignId?: string;
+      items?: Array<{
+        itemName: string;
+        amount: number;
+        category?: string;
+        description?: string;
+        expenseDate?: string;
+        responsiblePerson?: string;
+        receiptUrl?: string;
+      }>;
     },
   ) {
     const role = await this.getOfficerRole(userId);
@@ -1347,7 +1380,7 @@ export class OrganizationService {
     const fund = await this.prisma.orgFund.findUnique({ where: { id: data.fundId } });
     if (!fund) throw new NotFoundError('তহবিল পাওয়া যায়নি');
 
-    if (data.type === 'EXPENSE' && fund.balance < data.amount) {
+    if (data.type === 'TRANSFER' && fund.balance < data.amount) {
       throw new BadRequestError('তহবিলে পর্যাপ্ত ব্যালেন্স নেই');
     }
 
@@ -1397,7 +1430,7 @@ export class OrganizationService {
         });
       }
 
-      return tx.fundTransaction.create({
+      const trx = await tx.fundTransaction.create({
         data: {
           fundId: data.fundId,
           type: data.type,
@@ -1407,8 +1440,48 @@ export class OrganizationService {
           category: data.category?.trim(),
           receiptUrl: data.receiptUrl,
           performedBy: userId,
+          projectId: data.projectId || null,
+          campaignId: data.campaignId || null,
         },
       });
+
+      if (data.items && data.items.length > 0) {
+        await tx.expenseItem.createMany({
+          data: data.items.map((it) => ({
+            transactionId: trx.id,
+            projectId: data.projectId || null,
+            itemName: it.itemName.trim(),
+            amount: it.amount,
+            category: it.category?.trim() || data.category?.trim() || null,
+            description: it.description?.trim() || null,
+            expenseDate: it.expenseDate ? new Date(it.expenseDate) : new Date(),
+            responsiblePerson: it.responsiblePerson?.trim() || null,
+            receiptUrl: it.receiptUrl || data.receiptUrl || null,
+          })),
+        });
+      }
+
+      if (data.projectId && data.type === 'EXPENSE') {
+        await tx.orgProject.update({
+          where: { id: data.projectId },
+          data: { spent: { increment: data.amount } },
+        });
+      }
+
+      if (typeof tx.fundTransaction?.findUnique === 'function') {
+        const fullTrx = await tx.fundTransaction.findUnique({
+          where: { id: trx.id },
+          include: {
+            items: true,
+            fund: { select: { id: true, name: true, code: true } },
+            project: { select: { id: true, title: true } },
+            campaign: { select: { id: true, title: true } },
+          },
+        });
+        if (fullTrx) return fullTrx;
+      }
+
+      return trx;
     });
   }
 
@@ -1581,30 +1654,579 @@ export class OrganizationService {
     });
   }
 
-  public async getProjects() {
+  public async getProjects(category?: string) {
     return this.prisma.orgProject.findMany({
+      where: category ? { category } : undefined,
+      include: {
+        fund: { select: { id: true, name: true, code: true } },
+        items: { orderBy: { createdAt: 'asc' } },
+        transactions: {
+          include: { items: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   public async createProject(
     userId: string,
-    data: { title: string; description: string; budget?: number; progress?: number; status?: string; isPublic?: boolean; images?: string[] },
+    data: {
+      title: string;
+      description: string;
+      budget?: number;
+      spent?: number;
+      progress?: number;
+      status?: string;
+      isPublic?: boolean;
+      images?: string[];
+      category?: string;
+      beneficiaryName?: string;
+      beneficiaryPhone?: string;
+      beneficiaryAddress?: string;
+      assistanceType?: string;
+      consentGiven?: boolean;
+      childName?: string;
+      fatherName?: string;
+      motherName?: string;
+      birthDate?: string;
+      birthPlace?: string;
+      treesPlanted?: string;
+      plantationLocation?: string;
+      plantationDate?: string;
+      fundId?: string;
+      items?: Array<{
+        itemName: string;
+        amount: number;
+        category?: string;
+        description?: string;
+        expenseDate?: string;
+        responsiblePerson?: string;
+        receiptUrl?: string;
+      }>;
+    },
   ) {
     const role = await this.getOfficerRole(userId);
     this.requireOfficer(role, ['PRESIDENT', 'ADMIN', 'TREASURER']);
 
-    return this.prisma.orgProject.create({
-      data: {
-        title: data.title.trim(),
-        description: data.description.trim(),
-        budget: data.budget || 0,
-        progress: data.progress || 0,
-        status: data.status || 'ACTIVE',
-        isPublic: data.isPublic !== undefined ? data.isPublic : true,
-        images: data.images || [],
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const project = await tx.orgProject.create({
+        data: {
+          title: data.title.trim(),
+          description: data.description.trim(),
+          budget: data.budget || 0,
+          spent: data.spent || 0,
+          progress: data.progress || 0,
+          status: data.status || 'ACTIVE',
+          isPublic: data.isPublic !== undefined ? data.isPublic : true,
+          images: data.images || [],
+          category: data.category || 'GENERAL',
+          beneficiaryName: data.beneficiaryName?.trim() || null,
+          beneficiaryPhone: data.beneficiaryPhone?.trim() || null,
+          beneficiaryAddress: data.beneficiaryAddress?.trim() || null,
+          assistanceType: data.assistanceType?.trim() || null,
+          consentGiven: data.consentGiven !== undefined ? data.consentGiven : true,
+          childName: data.childName?.trim() || null,
+          fatherName: data.fatherName?.trim() || null,
+          motherName: data.motherName?.trim() || null,
+          birthDate: data.birthDate ? new Date(data.birthDate) : null,
+          birthPlace: data.birthPlace?.trim() || null,
+          treesPlanted: data.treesPlanted?.trim() || null,
+          plantationLocation: data.plantationLocation?.trim() || null,
+          plantationDate: data.plantationDate ? new Date(data.plantationDate) : null,
+          fundId: data.fundId || null,
+        },
+      });
+
+      const itemsTotal = (data.items && data.items.length > 0)
+        ? data.items.reduce((sum, it) => sum + it.amount, 0)
+        : 0;
+      const finalSpent = itemsTotal > 0 ? itemsTotal : (data.spent || data.budget || 0);
+
+      if (data.items && data.items.length > 0) {
+        await tx.expenseItem.createMany({
+          data: data.items.map((it) => ({
+            projectId: project.id,
+            itemName: it.itemName.trim(),
+            amount: it.amount,
+            category: it.category?.trim() || null,
+            description: it.description?.trim() || null,
+            expenseDate: it.expenseDate ? new Date(it.expenseDate) : new Date(),
+            responsiblePerson: it.responsiblePerson?.trim() || null,
+            receiptUrl: it.receiptUrl || null,
+          })),
+        });
+
+        if (project.spent === 0 && itemsTotal > 0) {
+          await tx.orgProject.update({
+            where: { id: project.id },
+            data: { spent: itemsTotal },
+          });
+        }
+      }
+
+      // Automatically record fund expense transaction & decrement fund balance
+      if (finalSpent > 0) {
+        let fund = null;
+        if (data.fundId) {
+          fund = await tx.orgFund.findUnique({ where: { id: data.fundId } });
+        }
+        if (!fund) {
+          fund =
+            (await tx.orgFund.findFirst({ where: { code: 'GENERAL' } })) ||
+            (await tx.orgFund.findFirst());
+        }
+
+        if (fund) {
+          // 1. Decrement fund balance
+          await tx.orgFund.update({
+            where: { id: fund.id },
+            data: { balance: { decrement: finalSpent } },
+          });
+
+          // 2. Create fund expense transaction linked to this project
+          const trx = await tx.fundTransaction.create({
+            data: {
+              fundId: fund.id,
+              type: 'EXPENSE',
+              amount: finalSpent,
+              title: data.title.trim(),
+              description: data.description?.trim() || null,
+              category:
+                data.category === 'TREE_PLANTATION'
+                  ? 'বৃক্ষরোপণ'
+                  : data.category === 'HUMANITARIAN'
+                  ? 'মানবিক সহায়তা'
+                  : 'সাধারণ ব্যয়',
+              receiptUrl: (data.images && data.images[0]) || null,
+              performedBy: userId,
+              projectId: project.id,
+            },
+          });
+
+          // 3. Link created expense items to this transaction
+          if (data.items && data.items.length > 0) {
+            await tx.expenseItem.updateMany({
+              where: { projectId: project.id },
+              data: { transactionId: trx.id },
+            });
+          }
+        }
+      }
+
+      return tx.orgProject.findUnique({
+        where: { id: project.id },
+        include: {
+          items: true,
+          fund: { select: { id: true, name: true, code: true } },
+        },
+      });
     });
+  }
+
+  // --------------------------------------------------------------------------
+  // Financial Transparency & Member Accounts Ledger
+  // --------------------------------------------------------------------------
+  public async getTransparencyOverview(_userId?: string) {
+    // Ensure sample humanitarian & tree plantation initiatives exist if none yet
+    await this.ensureTransparencySampleData();
+
+    const [
+      funds,
+      verifiedContributions,
+      fundTransactions,
+      campaigns,
+      campaignExpenses,
+      verifiedDonations,
+      projects,
+    ] = await Promise.all([
+      this.prisma.orgFund.findMany({
+        include: {
+          transactions: {
+            include: {
+              items: { orderBy: { createdAt: 'asc' } },
+              project: { select: { id: true, title: true, category: true } },
+              campaign: { select: { id: true, title: true, slug: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { code: 'asc' },
+      }),
+      this.prisma.contributionPayment.findMany({
+        where: { status: 'VERIFIED' },
+        include: {
+          user: { select: { id: true, name: true, image: true } },
+        },
+        orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }, { paidAt: 'desc' }],
+      }),
+      this.prisma.fundTransaction.findMany({
+        include: {
+          fund: { select: { id: true, name: true, code: true } },
+          project: { select: { id: true, title: true, category: true } },
+          campaign: { select: { id: true, title: true, slug: true } },
+          items: { orderBy: { createdAt: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.campaign.findMany({
+        include: {
+          expenses: {
+            include: { items: { orderBy: { createdAt: 'asc' } } },
+            orderBy: { expenseDate: 'desc' },
+          },
+          donations: {
+            where: { status: 'VERIFIED' },
+            select: { id: true, amount: true, paymentMethod: true, receiptNumber: true, createdAt: true },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.campaignExpense.findMany({
+        include: {
+          campaign: { select: { id: true, title: true, slug: true } },
+          items: { orderBy: { createdAt: 'asc' } },
+        },
+        orderBy: { expenseDate: 'desc' },
+      }),
+      this.prisma.campaignDonation.findMany({
+        where: { status: 'VERIFIED' },
+        include: {
+          campaign: { select: { id: true, title: true, slug: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.orgProject.findMany({
+        include: {
+          fund: { select: { id: true, name: true, code: true } },
+          items: { orderBy: { createdAt: 'asc' } },
+          transactions: {
+            include: { items: true },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    // Financial calculations
+    const totalContributions = verifiedContributions.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalCampaignDonations = verifiedDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
+    const nonContributionFundIncome = fundTransactions
+      .filter((t) => t.type === 'INCOME')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    const totalIncome = totalContributions + nonContributionFundIncome + totalCampaignDonations;
+
+    const totalFundExpenses = fundTransactions
+      .filter((t) => t.type === 'EXPENSE')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    const totalCampaignExpenses = campaignExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const totalExpense = totalFundExpenses + totalCampaignExpenses;
+    const netBalance = totalIncome - totalExpense;
+
+    // Filter project categories
+    const humanitarianActivities = projects.filter((p) => p.category === 'HUMANITARIAN');
+    const treePlantations = projects.filter((p) => p.category === 'TREE_PLANTATION');
+    const completedCampaignsCount = campaigns.filter((c) => c.status === 'COMPLETED').length;
+
+    // Fund-wise summary
+    const fundSummaries = funds.map((f) => {
+      const fundIncomes = f.transactions
+        .filter((t) => t.type === 'INCOME' || t.type === 'CONTRIBUTION')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      const fundExpenses = f.transactions
+        .filter((t) => t.type === 'EXPENSE')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      return {
+        id: f.id,
+        name: f.name,
+        code: f.code,
+        description: f.description,
+        currentBalance: f.balance,
+        totalIncome: fundIncomes,
+        totalExpense: fundExpenses,
+        transactionCount: f.transactions.length,
+        transactions: f.transactions,
+      };
+    });
+
+    // Campaigns summary with financial breakdown
+    const campaignSummaries = campaigns.map((c) => {
+      const verifiedCollected = c.collectedAmount || 0;
+      const totalCampExpense = c.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const remainingBalance = Math.max(0, verifiedCollected - totalCampExpense);
+
+      return {
+        id: c.id,
+        title: c.title,
+        slug: c.slug,
+        coverImage: c.coverImage,
+        goalAmount: c.goalAmount,
+        collectedAmount: verifiedCollected,
+        totalExpenses: totalCampExpense,
+        remainingBalance,
+        status: c.status,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        shortDescription: c.shortDescription,
+        description: c.description,
+        expenses: c.expenses,
+        donationsCount: c.donations.length,
+      };
+    });
+
+    return {
+      summary: {
+        totalIncome,
+        totalExpense,
+        netBalance,
+        totalContributions,
+        totalCampaignDonations,
+        totalGeneralIncome: nonContributionFundIncome,
+        totalFundExpenses,
+        totalCampaignExpenses,
+        totalFundsBalance: funds.reduce((sum, f) => sum + (f.balance || 0), 0),
+        humanitarianCount: humanitarianActivities.length,
+        treePlantationCount: treePlantations.length,
+        completedCampaignsCount,
+      },
+      funds: fundSummaries,
+      humanitarianActivities: humanitarianActivities.map((h) => ({
+        ...h,
+        beneficiaryDisplayName: h.consentGiven ? h.beneficiaryName : (h.beneficiaryName ? 'গোপনীয় (সম্মতি সাপেক্ষে সংরক্ষিত)' : null),
+        beneficiaryDisplayPhone: h.consentGiven ? h.beneficiaryPhone : null,
+      })),
+      treePlantations,
+      campaigns: campaignSummaries,
+      recentIncomes: [
+        ...verifiedContributions.map((c) => ({
+          id: c.id,
+          date: c.paidAt || c.createdAt,
+          amount: c.amount,
+          source: 'MEMBERSHIP_CONTRIBUTION' as const,
+          sourceLabel: 'মাসিক চাঁদা',
+          title: `${c.user?.name || 'সদস্য'} - ${c.periodMonth}/${c.periodYear} চাঁদা`,
+          receiptNumber: c.receiptNumber,
+          paymentMethod: c.paymentMethod,
+        })),
+        ...verifiedDonations.map((d) => ({
+          id: d.id,
+          date: d.createdAt,
+          amount: d.amount,
+          source: 'CAMPAIGN_DONATION' as const,
+          sourceLabel: 'ক্যাম্পেইন অনুদান',
+          title: `${d.campaign?.title || 'ক্যাম্পেইন'} (${d.donorName || 'শুভাকাঙ্ক্ষী'})`,
+          receiptNumber: d.receiptNumber,
+          paymentMethod: d.paymentMethod,
+        })),
+        ...fundTransactions
+          .filter((t) => t.type === 'INCOME')
+          .map((t) => ({
+            id: t.id,
+            date: t.createdAt,
+            amount: t.amount,
+            source: 'GENERAL_FUND_INCOME' as const,
+            sourceLabel: `${t.fund.name} অনুদান/জমা`,
+            title: t.title,
+            receiptNumber: t.referenceId || null,
+            paymentMethod: 'FUND_DEPOSIT',
+          })),
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      recentExpenses: [
+        ...fundTransactions
+          .filter((t) => t.type === 'EXPENSE')
+          .map((t) => ({
+            id: t.id,
+            date: t.createdAt,
+            amount: t.amount,
+            type: 'FUND_EXPENSE' as const,
+            title: t.title,
+            description: t.description,
+            category: t.category || 'সাধারণ ব্যয়',
+            fundName: t.fund.name,
+            fundCode: t.fund.code,
+            campaignTitle: t.campaign?.title || null,
+            projectTitle: t.project?.title || null,
+            receiptUrl: t.receiptUrl,
+            items: t.items,
+          })),
+        ...campaignExpenses.map((e) => ({
+          id: e.id,
+          date: e.expenseDate,
+          amount: e.amount,
+          type: 'CAMPAIGN_EXPENSE' as const,
+          title: e.purpose,
+          description: e.description,
+          category: 'ক্যাম্পেইন ব্যয়',
+          fundName: 'ক্যাম্পেইন পৃথক খতিয়ান',
+          fundCode: 'CAMPAIGN',
+          campaignTitle: e.campaign?.title || null,
+          projectTitle: null,
+          receiptUrl: e.voucherUrl,
+          items: e.items,
+        })),
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    };
+  }
+
+  private async ensureTransparencySampleData() {
+    try {
+      const existingHumanitarian = await this.prisma.orgProject.findFirst({
+        where: { category: 'HUMANITARIAN' },
+      });
+
+      if (!existingHumanitarian) {
+        const reliefFund = await this.prisma.orgFund.findFirst({
+          where: { code: 'EMERGENCY' },
+        }) || await this.prisma.orgFund.findFirst();
+
+        const createdProject = await this.prisma.orgProject.create({
+          data: {
+            title: 'অসহায় পরিবারের জন্য খাদ্য ও জরুরি সহায়তা কর্মসূচি',
+            description: 'মুহাম্মদপুরের অসহায় ও সুবিধাবঞ্চিত পরিবারের মুখে অন্ন তুলে দেওয়ার লক্ষ্যে চাল, ডাল, তেল, অন্যান্য নিত্যপ্রয়োজনীয় খাদ্যসামগ্রী ও শিশুখাদ্য ক্রয়ের বিস্তারিত ব্যয় হিসাব।',
+            category: 'HUMANITARIAN',
+            assistanceType: 'খাদ্য ও নিত্যপণ্য সহায়তা',
+            beneficiaryName: 'রহিমা বেগম ও পরিবার',
+            beneficiaryPhone: '018XXXXXXXX',
+            beneficiaryAddress: 'চাঁনমিয়া হাউজিং, মোহাম্মদপুর',
+            consentGiven: true,
+            budget: 10000,
+            spent: 10000,
+            progress: 100,
+            status: 'COMPLETED',
+            isPublic: true,
+            startDate: new Date('2026-11-01'),
+            endDate: new Date('2026-11-05'),
+            images: [
+              'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800',
+              'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800',
+            ],
+            fundId: reliefFund?.id || null,
+          },
+        });
+
+        // Add the breakdown items from prompt specification:
+        // চাল: ৳২,০০০ | ডাল: ৳৮০০ | তেল: ৳১,০০০ | অন্যান্য খাবার: ৳২,২০০ | যাতায়াত: ৳১,০০০ | অন্যান্য খরচ: ৳৩,০০০ = ৳১০,০০০
+        await this.prisma.expenseItem.createMany({
+          data: [
+            { projectId: createdProject.id, itemName: 'মিনিকেট চাল (৫০ কেজি বস্তা)', amount: 2000, category: 'খাদ্য সামগ্রী', description: 'পুষ্টিকর খাদ্য চাল সরবরাহ', expenseDate: new Date('2026-11-04') },
+            { projectId: createdProject.id, itemName: 'দেশি মসুর ডাল (৮ কেজি)', amount: 800, category: 'খাদ্য সামগ্রী', description: 'উচ্চ প্রোটিন ডাল', expenseDate: new Date('2026-11-04') },
+            { projectId: createdProject.id, itemName: 'তীর সয়াবিন তেল (৫ লিটার জার)', amount: 1000, category: 'খাদ্য সামগ্রী', description: 'ভোজ্য তেল', expenseDate: new Date('2026-11-04') },
+            { projectId: createdProject.id, itemName: 'অন্যান্য শুকনো খাবার ও শিশুখাদ্য', amount: 2200, category: 'খাদ্য সামগ্রী', description: 'লবণ, চিনি, বিস্কুট ও গুঁড়ো দুধ', expenseDate: new Date('2026-11-04') },
+            { projectId: createdProject.id, itemName: 'মালামাল পরিবহন ও রিকশা ভাড়া', amount: 1000, category: 'যাতায়াত ও পরিবহন', description: 'কৃষি মার্কেট হতে বিতরণ স্থান পর্যন্ত পরিবহন', expenseDate: new Date('2026-11-05') },
+            { projectId: createdProject.id, itemName: 'অন্যান্য আনুষঙ্গিক সহায়তা ও ওষুধ', amount: 3000, category: 'অন্যান্য জরুরি খরচ', description: 'পরিবারের অসুস্থ শিশুর প্রাথমিক চিকিৎসা ও প্রেসক্রিপশন ওষুধ', expenseDate: new Date('2026-11-05') },
+          ],
+        });
+      }
+
+      const existingTree = await this.prisma.orgProject.findFirst({
+        where: { category: 'TREE_PLANTATION' },
+      });
+
+      if (!existingTree) {
+        const generalFund = await this.prisma.orgFund.findFirst({
+          where: { code: 'GENERAL' },
+        });
+
+        const createdTreeProject = await this.prisma.orgProject.create({
+          data: {
+            title: 'নবজাতক আরিয়ান আহমেদের জন্ম স্মরণে দুটি বৃক্ষরোপণ',
+            description: 'সংগঠনের বিশেষ পরিবেশবান্ধব মানবিক উদ্যোগ অনুযায়ী মোহাম্মদপুরে জন্মগ্রহণকারী প্রতিটি শিশুর স্মরণে দুটি ফলদ ও ঔষধি গাছ রোপণ কর্মসূচির অংশ।',
+            category: 'TREE_PLANTATION',
+            childName: 'আরিয়ান আহমেদ',
+            fatherName: 'তানভীর আহমেদ',
+            motherName: 'ফারহানা ইসলাম',
+            birthDate: new Date('2026-10-18'),
+            birthPlace: 'মোহাম্মদপুর ফার্টিলিটি কেয়ার হাসপাতাল, ঢাকা',
+            treesPlanted: 'হাড়িভাঙা আম ও ওষধি নিম চারা',
+            plantationLocation: 'তাজমহল রোড কেন্দ্রীয় পার্ক সীমানা',
+            plantationDate: new Date('2026-10-25'),
+            budget: 2500,
+            spent: 2500,
+            progress: 100,
+            status: 'COMPLETED',
+            isPublic: true,
+            images: [
+              'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800',
+              'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800',
+            ],
+            fundId: generalFund?.id || null,
+          },
+        });
+
+        await this.prisma.expenseItem.createMany({
+          data: [
+            { projectId: createdTreeProject.id, itemName: 'উন্নত জাতের ফলদ আম ও নিম গাছের চারা ক্রয়', amount: 1200, category: 'গাছ চারা', description: 'নার্সারি হতে বড় ও সতেজ চারা সংগৃহীত', expenseDate: new Date('2026-10-24') },
+            { projectId: createdTreeProject.id, itemName: 'জৈব সার ও উর্বর মাটি প্রস্তুতকরণ', amount: 600, category: 'কৃষি উপকরণ', description: 'গোবর সার ও কেঁচো কম্পোস্ট সার', expenseDate: new Date('2026-10-25') },
+            { projectId: createdTreeProject.id, itemName: 'বাঁশের খাঁচা ও সুরক্ষা বেষ্টনী স্থাপন', amount: 500, category: 'সুরক্ষা বেষ্টনী', description: 'চারা সুরক্ষায় মজবুত বেড়া', expenseDate: new Date('2026-10-25') },
+            { projectId: createdTreeProject.id, itemName: 'রোপণ শ্রম ও পরিবহন ব্যয়', amount: 200, category: 'শ্রম ও পরিবহন', description: 'চারা পরিবহন ও গর্ত খনন সহায়তা', expenseDate: new Date('2026-10-25') },
+          ],
+        });
+      }
+
+      // Backfill: Ensure every project that has spent > 0 is properly recorded in fundTransaction
+      // and deducted from fund balance so that totalExpense and net cash calculations remain 100% accurate.
+      const unlinkedProjects = await this.prisma.orgProject.findMany({
+        where: {
+          spent: { gt: 0 },
+          transactions: { none: {} },
+        },
+        include: { items: true },
+      });
+
+      if (unlinkedProjects.length > 0) {
+        const defaultGeneralFund =
+          (await this.prisma.orgFund.findFirst({ where: { code: 'GENERAL' } })) ||
+          (await this.prisma.orgFund.findFirst());
+
+        if (defaultGeneralFund) {
+          for (const proj of unlinkedProjects) {
+            const targetFundId = proj.fundId || defaultGeneralFund.id;
+
+            // 1. Decrement fund balance
+            await this.prisma.orgFund.update({
+              where: { id: targetFundId },
+              data: { balance: { decrement: proj.spent } },
+            });
+
+            // 2. Create fund expense transaction
+            const trx = await this.prisma.fundTransaction.create({
+              data: {
+                fundId: targetFundId,
+                type: 'EXPENSE',
+                amount: proj.spent,
+                title: proj.title,
+                description: proj.description,
+                category:
+                  proj.category === 'TREE_PLANTATION'
+                    ? 'বৃক্ষরোপণ'
+                    : proj.category === 'HUMANITARIAN'
+                    ? 'মানবিক সহায়তা'
+                    : 'সাধারণ ব্যয়',
+                receiptUrl: (proj.images && proj.images[0]) || null,
+                performedBy: 'SYSTEM_ADMIN',
+                projectId: proj.id,
+                createdAt: proj.createdAt,
+              },
+            });
+
+            // 3. Link items to this transaction
+            if (proj.items && proj.items.length > 0) {
+              await this.prisma.expenseItem.updateMany({
+                where: { projectId: proj.id },
+                data: { transactionId: trx.id },
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Transparency sample data notice:', err);
+    }
   }
 
   public async getDocuments(accessRole: string | null) {

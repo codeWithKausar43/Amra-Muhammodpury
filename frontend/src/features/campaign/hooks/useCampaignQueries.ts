@@ -168,6 +168,7 @@ export function useCampaignMutations() {
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: campaignQueryKeys.all });
+    queryClient.invalidateQueries({ queryKey: ['org-transparency'] });
   };
 
   const submitDonation = useMutation({

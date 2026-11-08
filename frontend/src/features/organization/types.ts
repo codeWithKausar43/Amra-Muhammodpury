@@ -192,6 +192,10 @@ export interface OrgAdminStats {
     totalIncome: number;
     totalExpense: number;
     totalContributions: number;
+    netBalance?: number;
+    totalCampaignDonations?: number;
+    totalFundExpenses?: number;
+    totalCampaignExpenses?: number;
   };
   financialTrends?: FinancialTrends;
   elections: {
@@ -206,6 +210,7 @@ export interface OrgAdminStats {
     description?: string | null;
     createdAt: string;
     fund?: { name: string; code: string };
+    items?: ExpenseItem[];
   }>;
   recentPayments?: Array<{
     id: string;
@@ -237,6 +242,21 @@ export interface OrgFund {
   _count?: { transactions: number };
 }
 
+export interface ExpenseItem {
+  id: string;
+  transactionId?: string | null;
+  campaignExpenseId?: string | null;
+  projectId?: string | null;
+  itemName: string;
+  amount: number;
+  category?: string | null;
+  description?: string | null;
+  expenseDate: string;
+  responsiblePerson?: string | null;
+  receiptUrl?: string | null;
+  createdAt?: string;
+}
+
 export interface OrgTransaction {
   id: string;
   fundId: string;
@@ -248,9 +268,22 @@ export interface OrgTransaction {
   receiptUrl: string | null;
   referenceId: string | null;
   createdAt: string;
+  projectId?: string | null;
+  campaignId?: string | null;
+  items?: ExpenseItem[];
   fund?: {
     name: string;
     code: string;
+  };
+  project?: {
+    id: string;
+    title: string;
+    category?: string;
+  };
+  campaign?: {
+    id: string;
+    title: string;
+    slug?: string | null;
   };
   recordedBy?: {
     name: string;
@@ -320,12 +353,123 @@ export interface OrgProject {
   title: string;
   description: string;
   budget: number;
+  spent?: number;
   progress: number;
   status: 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'ON_HOLD';
   isPublic: boolean;
   startDate: string | null;
   endDate: string | null;
   images: string[];
+  category?: 'GENERAL' | 'HUMANITARIAN' | 'TREE_PLANTATION' | string;
+  beneficiaryName?: string | null;
+  beneficiaryPhone?: string | null;
+  beneficiaryAddress?: string | null;
+  assistanceType?: string | null;
+  consentGiven?: boolean;
+  childName?: string | null;
+  fatherName?: string | null;
+  motherName?: string | null;
+  birthDate?: string | null;
+  birthPlace?: string | null;
+  treesPlanted?: string | null;
+  plantationLocation?: string | null;
+  plantationDate?: string | null;
+  fundId?: string | null;
+  items?: ExpenseItem[];
+}
+
+export interface TransparencySummary {
+  totalIncome: number;
+  totalExpense: number;
+  netBalance: number;
+  totalContributions: number;
+  totalCampaignDonations: number;
+  totalGeneralIncome: number;
+  totalFundExpenses: number;
+  totalCampaignExpenses: number;
+  totalFundsBalance: number;
+  humanitarianCount: number;
+  treePlantationCount: number;
+  completedCampaignsCount: number;
+}
+
+export interface TransparencyFund {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  currentBalance: number;
+  totalIncome: number;
+  totalExpense: number;
+  transactionCount: number;
+  transactions: OrgTransaction[];
+}
+
+export interface TransparencyCampaign {
+  id: string;
+  title: string;
+  slug: string | null;
+  coverImage: string;
+  goalAmount: number | null;
+  collectedAmount: number;
+  totalExpenses: number;
+  remainingBalance: number;
+  status: string;
+  startDate: string;
+  endDate: string;
+  shortDescription: string;
+  description: string;
+  expenses: Array<{
+    id: string;
+    amount: number;
+    purpose: string;
+    description: string | null;
+    expenseDate: string;
+    voucherUrl: string | null;
+    performedBy: string;
+    items?: ExpenseItem[];
+  }>;
+  donationsCount: number;
+}
+
+export interface TransparencyIncomeItem {
+  id: string;
+  date: string;
+  amount: number;
+  source: 'MEMBERSHIP_CONTRIBUTION' | 'CAMPAIGN_DONATION' | 'GENERAL_FUND_INCOME';
+  sourceLabel: string;
+  title: string;
+  receiptNumber: string | null;
+  paymentMethod: string;
+}
+
+export interface TransparencyExpenseItem {
+  id: string;
+  date: string;
+  amount: number;
+  type: 'FUND_EXPENSE' | 'CAMPAIGN_EXPENSE';
+  title: string;
+  description: string | null;
+  category: string;
+  fundName: string;
+  fundCode: string;
+  campaignTitle: string | null;
+  projectTitle: string | null;
+  receiptUrl: string | null;
+  items: ExpenseItem[];
+}
+
+export interface FinancialTransparencyData {
+  summary: TransparencySummary;
+  funds: TransparencyFund[];
+  humanitarianActivities: Array<OrgProject & {
+    beneficiaryDisplayName: string | null;
+    beneficiaryDisplayPhone: string | null;
+  }>;
+  treePlantations: OrgProject[];
+  campaigns: TransparencyCampaign[];
+  recentIncomes: TransparencyIncomeItem[];
+  recentExpenses: TransparencyExpenseItem[];
 }
 
 export interface OrgDocument {

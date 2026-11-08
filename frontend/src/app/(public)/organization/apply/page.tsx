@@ -14,7 +14,7 @@ import {
 import { useOrgMutations } from '@/features/organization/hooks/useOrganizationQueries';
 import { useSession } from '@/lib/auth/auth-client';
 
-const PRESET_AMOUNTS = [50, 100, 200, 500, 1000];
+const PRESET_AMOUNTS = [100, 200, 500, 1000];
 
 export default function MembershipApplyPage() {
   const { data: session } = useSession();
@@ -225,16 +225,16 @@ export default function MembershipApplyPage() {
             এই অর্থ সংগঠনের স্বচ্ছ নাগরিক তহবিলে জমা হবে এবং এলাকার উন্নয়ন ও জনকল্যাণে ব্যয় হবে।
           </p>
 
-          {/* Quick preset chips */}
-          <div className="flex items-center gap-2 flex-wrap pt-1">
+          {/* Quick preset chips - clean 4-column balanced layout */}
+          <div className="grid grid-cols-4 gap-2 pt-1">
             {PRESET_AMOUNTS.map((amt) => (
               <button
                 key={amt}
                 type="button"
                 onClick={() => setMonthlyContribution(amt)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                className={`py-2 rounded-xl text-xs font-bold cursor-pointer transition-all text-center ${
                   monthlyContribution === amt
-                    ? 'bg-brand-emerald text-white shadow-sm'
+                    ? 'bg-brand-emerald text-white shadow-xs'
                     : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
                 }`}
               >
