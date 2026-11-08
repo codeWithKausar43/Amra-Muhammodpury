@@ -30,6 +30,8 @@ import {
   OrgPaymentConfig,
   FinancialTransparencyData,
   MemberDirectoryResult,
+  AdminUsersQueryParams,
+  AdminUsersResult,
 } from '../types';
 
 export const organizationService = {
@@ -517,6 +519,36 @@ export const organizationService = {
   // ==========================================
   // Member Management & Contribution Tracking
   // ==========================================
+
+  async getAdminUsers(query?: AdminUsersQueryParams): Promise<AdminUsersResult> {
+    const params = new URLSearchParams();
+    if (query?.search) params.set('search', query.search);
+    if (query?.type) params.set('type', query.type);
+    if (query?.provider) params.set('provider', query.provider);
+    if (query?.role) params.set('role', query.role);
+    if (query?.page) params.set('page', query.page.toString());
+    if (query?.limit) params.set('limit', query.limit.toString());
+
+    const qs = params.toString();
+    const res = await apiClient<ApiResponse<AdminUsersResult>>(
+      `/org/admin/users${qs ? '?' + qs : ''}`
+    );
+    return res.data!;
+  },
+
+  async toggleUserSystemRole(
+    userId: string,
+    role: 'USER' | 'ADMIN'
+  ): Promise<{ id: string; name: string; role: string }> {
+    const res = await apiClient<ApiResponse<{ id: string; name: string; role: string }>>(
+      `/org/admin/users/${userId}/role`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      }
+    );
+    return res.data!;
+  },
 
   async getAdminMembers(query?: {
     search?: string;

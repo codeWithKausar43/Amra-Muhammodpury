@@ -843,3 +843,53 @@ export interface OrgPaymentConfig {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AdminUserItem {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image: string | null;
+  phone: string | null;
+  role: string;
+  createdAt: string;
+  lastLoginAt: string;
+  providers: string[];
+  isGoogle: boolean;
+  isPassword: boolean;
+  isMember: boolean;
+  membership: {
+    id: string;
+    memberNumber: string | null;
+    orgRole: string | null;
+    joinedAt: string;
+    designation: string | null;
+    rank: number | null;
+  } | null;
+  applicationStatus: string | null;
+}
+
+export interface AdminUsersQueryParams {
+  search?: string;
+  type?: 'ALL' | 'GENERAL_USER' | 'MEMBER';
+  provider?: 'ALL' | 'google' | 'credential';
+  role?: 'ALL' | 'USER' | 'ADMIN';
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminUsersResult {
+  users: AdminUserItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  summary: {
+    totalUsers: number;
+    generalUsers: number;
+    members: number;
+    googleUsers: number;
+  };
+}

@@ -991,6 +991,7 @@ export class OrganizationService {
       expenseAgg,
       campaignExpenseAgg,
       activeElectionsCount,
+      totalUsersCount,
     ] = await Promise.all([
       this.prisma.orgMembership.count(),
       this.prisma.orgMembership.count({ where: { status: 'ACTIVE' } }),
@@ -1033,6 +1034,7 @@ export class OrganizationService {
       this.prisma.election.count({
         where: { status: 'ACTIVE' },
       }),
+      this.prisma.user.count(),
     ]);
 
     const totalContributions = contributionsAgg._sum.amount ? Number(contributionsAgg._sum.amount) : 0;
@@ -1076,6 +1078,9 @@ export class OrganizationService {
       financialTrends,
       elections: {
         activeElections: activeElectionsCount,
+      },
+      userCounts: {
+        total: totalUsersCount,
       },
       stats: {
         totalMembers,
@@ -3237,6 +3242,191 @@ export class OrganizationService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  // =========================================================================
+  // Registered Website Users Directory (Admin - General Users vs Members)
+  // =========================================================================
+
+  public async getAdminUsers(
+    reviewerId: string,
+    query: {
+      search?: string;
+      type?: 'ALL' | 'GENERAL_USER' | 'MEMBER';
+      provider?: 'ALL' | 'google' | 'credential';
+      role?: 'ALL' | 'USER' | 'ADMIN';
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    const role = await this.getOfficerRole(reviewerId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']);
+
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.min(100, Math.max(1, query.limit || 20));
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (query.search?.trim()) {
+      const s = query.search.trim();
+      where.OR = [
+        { name: { contains: s, mode: 'insensitive' } },
+        { email: { contains: s, mode: 'insensitive' } },
+        { phone: { contains: s, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.role && query.role !== 'ALL') {
+      where.role = query.role;
+    }
+
+    if (query.provider && query.provider !== 'ALL') {
+      where.accounts = {
+        some: { providerId: query.provider },
+      };
+    }
+
+    if (query.type === 'MEMBER') {
+      where.orgMemberships = {
+        some: { status: 'ACTIVE' },
+      };
+    } else if (query.type === 'GENERAL_USER') {
+      where.orgMemberships = {
+        none: { status: 'ACTIVE' },
+      };
+    }
+
+    const [total, users, totalAllUsers, totalGoogleUsers, totalGeneralUsers, totalMembers] =
+      await Promise.all([
+        this.prisma.user.count({ where }),
+        this.prisma.user.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            emailVerified: true,
+            image: true,
+            phone: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true,
+            accounts: {
+              select: {
+                providerId: true,
+                createdAt: true,
+              },
+            },
+            sessions: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                createdAt: true,
+                expiresAt: true,
+              },
+            },
+            orgMemberships: {
+              where: { status: 'ACTIVE' },
+              take: 1,
+              select: {
+                id: true,
+                status: true,
+                memberNumber: true,
+                orgRole: true,
+                joinedAt: true,
+                designation: {
+                  select: {
+                    id: true,
+                    name: true,
+                    rank: true,
+                  },
+                },
+              },
+            },
+            orgApplications: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                status: true,
+                createdAt: true,
+              },
+            },
+          },
+        }),
+        this.prisma.user.count(),
+        this.prisma.account.count({ where: { providerId: 'google' } }),
+        this.prisma.user.count({ where: { orgMemberships: { none: { status: 'ACTIVE' } } } }),
+        this.prisma.user.count({ where: { orgMemberships: { some: { status: 'ACTIVE' } } } }),
+      ]);
+
+    const formattedUsers = users.map((u) => {
+      const activeMembership = u.orgMemberships[0] || null;
+      const latestApp = u.orgApplications[0] || null;
+      const providers = u.accounts.map((a) => a.providerId);
+      const isGoogle = providers.includes('google');
+      const isPassword = providers.includes('credential') || providers.includes('email');
+      const lastSession = u.sessions[0] || null;
+
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        emailVerified: u.emailVerified,
+        image: u.image,
+        phone: u.phone,
+        role: u.role,
+        createdAt: u.createdAt,
+        lastLoginAt: lastSession?.createdAt || u.updatedAt,
+        providers,
+        isGoogle,
+        isPassword,
+        isMember: Boolean(activeMembership),
+        membership: activeMembership
+          ? {
+              id: activeMembership.id,
+              memberNumber: activeMembership.memberNumber,
+              orgRole: activeMembership.orgRole,
+              joinedAt: activeMembership.joinedAt,
+              designation: activeMembership.designation?.name || null,
+              rank: activeMembership.designation?.rank || null,
+            }
+          : null,
+        applicationStatus: !activeMembership && latestApp ? latestApp.status : null,
+      };
+    });
+
+    return {
+      users: formattedUsers,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+      summary: {
+        totalUsers: totalAllUsers,
+        generalUsers: totalGeneralUsers,
+        members: totalMembers,
+        googleUsers: totalGoogleUsers,
+      },
+    };
+  }
+
+  public async toggleUserSystemRole(adminId: string, targetUserId: string, newRole: 'USER' | 'ADMIN') {
+    const role = await this.getOfficerRole(adminId);
+    this.requireOfficer(role, ['ADMIN']);
+
+    const updated = await this.prisma.user.update({
+      where: { id: targetUserId },
+      data: { role: newRole },
+      select: { id: true, name: true, role: true },
+    });
+    return updated;
   }
 
   // =========================================================================

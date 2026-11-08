@@ -57,6 +57,7 @@ import { OrganizationMemberManagement } from '@/features/organization/components
 import { MonthlyContributionTracking } from '@/features/organization/components/MonthlyContributionTracking';
 import { CommitteeRoleManagementSection } from '@/features/organization/components/CommitteeRoleManagementSection';
 import { CampaignAdminManagement } from '@/features/campaign/components/CampaignAdminManagement';
+import { RegisteredUsersManagement } from '@/features/organization/components/RegisteredUsersManagement';
 import { useAdminNav } from '@/features/organization/context/AdminNavContext';
 
 function toBengaliNumber(num: number | string): string {
@@ -74,6 +75,11 @@ const MODULE_META: Record<
     icon: React.ComponentType<{ className?: string }>;
   }
 > = {
+  users: {
+    title: 'ওয়েবসাইট সাধারণ ব্যবহারকারী ডিরেক্টরি',
+    subtitle: 'ওয়েবসাইটে গুগল বা ইমেইল দিয়ে লগইন করা সকল সাধারণ ব্যবহারকারীর তালিকা (সদস্য ও সাধারণ ব্যবহারকারী পৃথক)',
+    icon: Users,
+  },
   members: {
     title: 'সংগঠন সদস্য ব্যবস্থাপনা ও ডিরেক্টরি',
     subtitle: 'নিবন্ধিত সদস্যদের তথ্য, পদবি নির্ধারণ, মাসিক চাঁদা আদায় স্ট্যাটাস ও সদস্যপদ নিয়ন্ত্রণ',
@@ -841,6 +847,11 @@ export default function AdminModulePage() {
           </span>
         </div>
       </div>
+
+      {/* =========================================================================
+          MODULE 0: REGISTERED WEBSITE USERS (GENERAL USERS DIRECTORY)
+         ========================================================================= */}
+      {moduleKey === 'users' && <RegisteredUsersManagement />}
 
       {/* =========================================================================
           MODULE 1: MEMBERS

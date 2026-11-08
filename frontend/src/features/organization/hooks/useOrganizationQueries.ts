@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { organizationService } from '../services/organization.service';
+import type { AdminUsersQueryParams } from '../types';
 
 // ==========================================
 // 1. Stable, Hierarchical Query Keys
@@ -297,6 +298,15 @@ export function prefetchOrgTabData(queryClient: ReturnType<typeof useQueryClient
 // ==========================================
 // Admin Member Management & Tracking Hooks
 // ==========================================
+
+export function useAdminUsersQuery(query?: AdminUsersQueryParams) {
+  return useQuery({
+    queryKey: ['org', 'admin', 'users', query],
+    queryFn: () => organizationService.getAdminUsers(query),
+    staleTime: 30 * 1000,
+    placeholderData: (previousData) => previousData,
+  });
+}
 
 export function useAdminMembersQuery(query?: {
   search?: string;

@@ -22,6 +22,7 @@ import {
   Receipt,
   Trash2,
   Upload,
+  UserCheck,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
@@ -383,6 +384,14 @@ export default function OrganizationAdminPage() {
   };
 
   const adminModules = [
+    {
+      href: '/organization/admin/users',
+      title: 'ওয়েবসাইট ব্যবহারকারী',
+      description: 'গুগল ও ইমেইল দিয়ে লগইন করা সাধারণ ব্যবহারকারী ডিরেক্টরি',
+      icon: UserCheck,
+      badge: `${toBengaliNumber((stats as any)?.userCounts?.total || 0)} জন ইউজার`,
+      badgeColor: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300',
+    },
     {
       href: '/organization/admin/members',
       title: 'সদস্য ব্যবস্থাপনা',

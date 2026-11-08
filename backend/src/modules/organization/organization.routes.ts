@@ -34,6 +34,8 @@ import {
   CreateDesignationSchema,
   UpdateDesignationSchema,
   UpdateOrgPaymentConfigSchema,
+  AdminUsersQuerySchema,
+  UpdateUserRoleSchema,
 } from './organization.schema.js';
 import { successResponse } from '../../utils/api-response.js';
 
@@ -479,6 +481,27 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     await service.deleteElection(session.user.id, id);
     return reply.send(successResponse(null, 'নির্বাচন সফলভাবে মুছে ফেলা হয়েছে'));
+  });
+
+  // ==========================================================================
+  // Registered Website Users (General Registered Users Directory)
+  // ==========================================================================
+
+  // Admin General Users Directory & Filter
+  fastify.get('/admin/users', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedQuery = AdminUsersQuerySchema.parse(request.query);
+    const result = await service.getAdminUsers(session.user.id, validatedQuery);
+    return reply.send(successResponse(result, 'ওয়েবসাইট ব্যবহারকারী তালিকা সফলভাবে লোড হয়েছে'));
+  });
+
+  // Admin Toggle User System Role (USER <-> ADMIN)
+  fastify.patch('/admin/users/:id/role', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = UpdateUserRoleSchema.parse(request.body);
+    const updated = await service.toggleUserSystemRole(session.user.id, id, validatedData.role);
+    return reply.send(successResponse(updated, 'ইউজার রোল সফলভাবে আপডেট হয়েছে'));
   });
 
   // ==========================================================================
