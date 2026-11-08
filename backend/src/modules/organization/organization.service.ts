@@ -3706,7 +3706,7 @@ export class OrganizationService {
     memberId: string,
     data: {
       designationId?: string | null;
-      committeeId?: string;
+      committeeId?: string | null;
       customTitle?: string;
       startDate?: string;
       endDate?: string;
@@ -3725,23 +3725,55 @@ export class OrganizationService {
       throw new NotFoundError('সদস্য রেকর্ড খুঁজে পাওয়া যায়নি');
     }
 
+    const targetDesignationId = data.designationId === '' ? null : data.designationId;
+    const targetCommitteeId = data.committeeId === '' ? null : data.committeeId;
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Update primary designation in OrgMembership
+      // Resolve orgRole based on assigned designation
+      let resolvedOrgRole: string | undefined = undefined;
+      if (targetDesignationId) {
+        const designation = await tx.orgDesignation.findUnique({
+          where: { id: targetDesignationId },
+          select: { code: true },
+        });
+        if (designation) {
+          const codeUpper = designation.code.toUpperCase();
+          if (['PRESIDENT', 'GENERAL_SECRETARY', 'VICE_PRESIDENT', 'CONVENER'].includes(codeUpper)) {
+            resolvedOrgRole = 'PRESIDENT';
+          } else if (codeUpper === 'TREASURER') {
+            resolvedOrgRole = 'TREASURER';
+          } else if (codeUpper === 'MODERATOR') {
+            resolvedOrgRole = 'MODERATOR';
+          } else {
+            resolvedOrgRole = 'MEMBER';
+          }
+        }
+      } else if (targetDesignationId === null) {
+        resolvedOrgRole = 'MEMBER';
+      }
+
+      // 1. Update primary designation & orgRole in OrgMembership
       const updatedMembership = await tx.orgMembership.update({
         where: { id: memberId },
         data: {
-          designationId: data.designationId !== undefined ? data.designationId : undefined,
+          designationId: targetDesignationId !== undefined ? targetDesignationId : undefined,
+          ...(resolvedOrgRole ? { orgRole: resolvedOrgRole } : {}),
         },
         include: { designation: true },
       });
 
       // 2. If committeeId is specified, assign / update committee position history
-      if (data.committeeId && data.designationId) {
+      if (targetCommitteeId && targetDesignationId) {
+        await tx.orgCommitteeMember.updateMany({
+          where: { committeeId: targetCommitteeId, userId: membership.userId, isCurrent: true },
+          data: { isCurrent: false, endDate: new Date() },
+        });
+
         await tx.orgCommitteeMember.create({
           data: {
-            committeeId: data.committeeId,
+            committeeId: targetCommitteeId,
             userId: membership.userId,
-            designationId: data.designationId,
+            designationId: targetDesignationId,
             customTitle: data.customTitle || null,
             startDate: data.startDate ? new Date(data.startDate) : new Date(),
             endDate: data.endDate ? new Date(data.endDate) : null,
@@ -4352,7 +4384,7 @@ export class OrganizationService {
     reviewerId: string,
     data: {
       name: string;
-      code: string;
+      code?: string;
       rank?: number;
       description?: string;
     },
@@ -4360,17 +4392,26 @@ export class OrganizationService {
     const role = await this.getOfficerRole(reviewerId);
     this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
 
+    let code = data.code?.trim().toUpperCase();
+    if (!code) {
+      code = `DESIG_${Date.now().toString(36).toUpperCase()}`;
+    }
+
     const existing = await this.prisma.orgDesignation.findUnique({
-      where: { code: data.code.toUpperCase() },
+      where: { code },
     });
     if (existing) {
-      throw new ConflictError('এই কোডের একটি পদবি ইতিমধ্যে বিদ্যমান রয়েছে');
+      if (data.code) {
+        throw new ConflictError('এই কোডের একটি পদবি ইতিমধ্যে বিদ্যমান রয়েছে');
+      } else {
+        code = `DESIG_${Date.now().toString(36).toUpperCase()}_${Math.floor(Math.random() * 1000)}`;
+      }
     }
 
     return this.prisma.orgDesignation.create({
       data: {
         name: data.name.trim(),
-        code: data.code.toUpperCase().trim(),
+        code,
         rank: data.rank ?? 10,
         description: data.description?.trim() || null,
         isActive: true,

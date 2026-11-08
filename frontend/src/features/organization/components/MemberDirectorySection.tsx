@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Loader2,
   X,
-  ShieldCheck,
 } from 'lucide-react';
 import { useOrgMemberDirectoryQuery } from '../hooks/useOrganizationQueries';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -58,27 +57,15 @@ export const MemberDirectorySection: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Directory Header & Search Bar Card */}
-      <div className="rounded-3xl bg-white dark:bg-[#0E1A16] border border-slate-200/80 dark:border-white/10 p-4 sm:p-5 shadow-soft space-y-3.5 transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-brand-emerald/10 text-brand-emerald dark:text-emerald-400 flex items-center justify-center">
-                <Users className="w-4 h-4" />
-              </div>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                সদস্য ডিরেক্টরি ও পরিচিতি
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 pl-10">
-              সংগঠনের সকল সক্রিয় সদস্যদের তালিকা, পরিচিতি ও প্রাতিষ্ঠানিক তথ্য।
-            </p>
-          </div>
-
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-brand-emerald dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/30 self-start sm:self-auto">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>মোট সদস্য: {toBengaliDigits(totalCount)} জন</span>
-          </div>
+      {/* Directory Header & Search Controls (Clean Unboxed Layout) */}
+      <div className="space-y-3 pt-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+            সদস্য ডিরেক্টরি ও পরিচিতি
+          </h2>
+          <span className="text-xs sm:text-sm font-bold text-brand-emerald dark:text-emerald-400">
+            ({toBengaliDigits(totalCount)} জন)
+          </span>
         </div>
 
         {/* Search Input with inline loader and clear button */}
@@ -89,7 +76,7 @@ export const MemberDirectorySection: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="সদস্যের নাম, পদবী, পেশা বা মোবাইল নম্বর দিয়ে খুঁজুন..."
-            className="w-full pl-10 pr-12 py-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20 transition-all"
+            className="w-full pl-10 pr-12 py-2.5 rounded-2xl bg-white dark:bg-[#0E1A16] border border-slate-200/80 dark:border-white/10 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20 transition-all shadow-xs"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {isFetching && (
@@ -116,7 +103,7 @@ export const MemberDirectorySection: React.FC = () => {
             className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
               roleFilter === 'ALL'
                 ? 'bg-brand-emerald text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                : 'bg-white dark:bg-[#0E1A16] border border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
             }`}
           >
             সকল সদস্য
@@ -127,7 +114,7 @@ export const MemberDirectorySection: React.FC = () => {
             className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
               roleFilter === 'OFFICER'
                 ? 'bg-brand-emerald text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                : 'bg-white dark:bg-[#0E1A16] border border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
             }`}
           >
             নেতৃত্ব ও কার্যনির্বাহী
@@ -138,7 +125,7 @@ export const MemberDirectorySection: React.FC = () => {
             className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
               roleFilter === 'MEMBER'
                 ? 'bg-brand-emerald text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                : 'bg-white dark:bg-[#0E1A16] border border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
             }`}
           >
             সাধারণ সদস্য

@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Share2,
   MapPin,
-  CheckCircle2,
   Globe,
   MoreHorizontal,
   Send,
@@ -15,6 +14,7 @@ import {
   Trash2,
   CornerDownRight,
 } from 'lucide-react';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { Post, Comment, ReactionType } from '../types';
 import { feedService } from '../services/feed.service';
 import { getBgPreset } from '../utils/bgPresets';
@@ -400,8 +400,8 @@ export function PostCard({
               <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight hover:underline cursor-pointer">
                 {post.author.name}
               </h3>
-              {/* Blue Verified Badge */}
-              <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500 dark:text-blue-400 dark:fill-blue-400 text-white shrink-0" />
+              {/* Blue Verified Badge - Strictly ONLY for approved organization members */}
+              {post.author.isOrgMember && <VerifiedBadge size="md" />}
               {post.blockBadge && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-mint/40 dark:bg-brand-emerald/20 text-brand-emerald dark:text-brand-mint border border-brand-emerald/20">
                   {post.blockBadge}
@@ -779,8 +779,9 @@ function CommentThreadItem({
         {/* Comment Bubble & Reply action */}
         <div className="flex-1 min-w-0">
           <div className="bg-slate-100 dark:bg-white/5 rounded-2xl px-3 py-2 inline-block max-w-full">
-            <p className="font-bold text-slate-900 dark:text-white text-[11px]">
-              {comment.author.name}
+            <p className="font-bold text-slate-900 dark:text-white text-[11px] inline-flex items-center gap-1">
+              <span>{comment.author.name}</span>
+              {comment.author.isOrgMember && <VerifiedBadge size="sm" />}
             </p>
             <p className="text-slate-700 dark:text-slate-300 text-xs mt-0.5 whitespace-pre-wrap break-words leading-relaxed">
               {comment.content}

@@ -8,12 +8,10 @@ import {
   Mail,
   Briefcase,
   Calendar,
-  ShieldCheck,
   Award,
   Check,
   Copy,
   User,
-  Info,
 } from 'lucide-react';
 import type { MemberDirectoryItem } from '../types';
 import { cleanImageUrl } from './CandidateAvatar';
@@ -77,14 +75,14 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
     (member.orgRole === 'PRESIDENT'
       ? 'সভাপতি'
       : member.orgRole === 'VICE_PRESIDENT'
-      ? 'সহ-সভাপতি'
-      : member.orgRole === 'GENERAL_SECRETARY'
-      ? 'সাধারণ সম্পাদক'
-      : member.orgRole === 'TREASURER'
-      ? 'কোষাধ্যক্ষ'
-      : member.orgRole === 'MODERATOR'
-      ? 'সমন্বয়ক'
-      : 'সাধারণ সদস্য');
+        ? 'সহ-সভাপতি'
+        : member.orgRole === 'GENERAL_SECRETARY'
+          ? 'সাধারণ সম্পাদক'
+          : member.orgRole === 'TREASURER'
+            ? 'কোষাধ্যক্ষ'
+            : member.orgRole === 'MODERATOR'
+              ? 'সমন্বয়ক'
+              : 'সাধারণ সদস্য');
 
   const isOfficer = ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(
     member.orgRole,
@@ -120,23 +118,108 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Top Header Banner */}
-        <div className="relative pt-6 pb-12 px-5 bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white text-center overflow-hidden">
-          <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+        {/* Top Header Banner with Nature & Tree Watermark Backdrop */}
+        <div className="relative h-32 sm:h-36 px-5 bg-gradient-to-br from-[#064e3b] via-[#043d2e] to-[#02281e] text-white overflow-hidden">
+          {/* Subtle Ambient Radial Glow */}
+          <div className="absolute -top-12 -right-12 w-44 h-44 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-white/15 backdrop-blur-md mb-1 text-emerald-100 border border-white/20">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-            <span>অফিসিয়াল সক্রিয় সদস্য প্রোফাইল</span>
-          </div>
+          {/* Full Nature & Tree Silhouette Watermark */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none text-emerald-300"
+            viewBox="0 0 600 160"
+            preserveAspectRatio="xMidYMid slice"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Soft Ambient Light Halo */}
+            <circle cx="300" cy="50" r="55" fill="currentColor" fillOpacity="0.06" />
+            <circle cx="300" cy="50" r="35" fill="currentColor" fillOpacity="0.08" />
+
+            {/* Distant Hills / Forest Horizon */}
+            <path
+              d="M0,160 Q80,120 180,135 T360,130 T520,138 T600,125 L600,160 Z"
+              fill="currentColor"
+              fillOpacity="0.10"
+            />
+            <path
+              d="M0,160 Q120,130 260,142 T480,136 T600,140 L600,160 Z"
+              fill="currentColor"
+              fillOpacity="0.14"
+            />
+
+            {/* Left Nature Grove (Lush Trees & Foliage) */}
+            <g fill="currentColor" fillOpacity="0.18">
+              {/* Tree 1 Trunk & Canopy */}
+              <path d="M45,160 L47,110 Q48,95 44,85 Q49,95 51,110 L53,160 Z" />
+              <circle cx="48" cy="75" r="28" />
+              <circle cx="32" cy="82" r="20" />
+              <circle cx="64" cy="80" r="22" />
+              <circle cx="48" cy="60" r="20" />
+
+              {/* Tree 2 */}
+              <path d="M95,160 L96,120 L98,160 Z" />
+              <circle cx="97" cy="100" r="22" />
+              <circle cx="84" cy="106" r="16" />
+              <circle cx="110" cy="104" r="17" />
+              <circle cx="97" cy="88" r="15" />
+            </g>
+
+            {/* Center Majestic Spreading Tree (Behind Profile Pic) */}
+            <g fill="currentColor" fillOpacity="0.22">
+              {/* Grand Tree Trunk & Branches */}
+              <path d="M295,160 C296,130 293,105 285,85 C295,95 305,95 315,85 C307,105 304,130 305,160 Z" />
+              <path d="M290,92 C275,80 255,75 240,78 C255,85 272,88 285,95 Z" />
+              <path d="M310,92 C325,80 345,75 360,78 C345,85 328,88 315,95 Z" />
+
+              {/* Grand Spreading Foliage Canopy */}
+              <circle cx="300" cy="50" r="38" />
+              <circle cx="265" cy="58" r="30" />
+              <circle cx="335" cy="58" r="30" />
+              <circle cx="235" cy="70" r="24" />
+              <circle cx="365" cy="70" r="24" />
+              <circle cx="280" cy="38" r="24" />
+              <circle cx="320" cy="38" r="24" />
+            </g>
+
+            {/* Right Nature Grove (Trees & Foliage) */}
+            <g fill="currentColor" fillOpacity="0.18">
+              {/* Tree 3 */}
+              <path d="M545,160 L547,105 Q548,90 544,80 Q549,90 551,105 L553,160 Z" />
+              <circle cx="548" cy="70" r="28" />
+              <circle cx="532" cy="78" r="22" />
+              <circle cx="566" cy="76" r="20" />
+              <circle cx="548" cy="54" r="19" />
+
+              {/* Tree 4 */}
+              <path d="M495,160 L496,115 L498,160 Z" />
+              <circle cx="497" cy="98" r="24" />
+              <circle cx="482" cy="104" r="18" />
+              <circle cx="512" cy="102" r="17" />
+              <circle cx="497" cy="85" r="16" />
+            </g>
+
+            {/* Birds in Flight Nature Accents */}
+            <g fill="currentColor" fillOpacity="0.22">
+              <path d="M150,45 Q156,40 162,45 Q168,40 174,45 Q168,42 162,44 Q156,42 150,45 Z" />
+              <path d="M178,35 Q183,31 188,35 Q193,31 198,35 Q193,32 188,34 Q183,32 178,35 Z" />
+              <path d="M420,40 Q426,35 432,40 Q438,35 444,40 Q438,37 432,39 Q426,37 420,40 Z" />
+            </g>
+
+            {/* Grassy Horizon Baseline */}
+            <path
+              d="M0,160 L600,160 L600,152 Q560,155 520,150 T440,152 T360,150 T280,153 T200,150 T120,153 T40,150 L0,152 Z"
+              fill="currentColor"
+              fillOpacity="0.20"
+            />
+          </svg>
         </div>
 
         {/* Floating Avatar & Main Info */}
-        <div className="relative px-5 pb-5 -mt-10 space-y-4">
+        <div className="relative px-5 pb-5 -mt-20 sm:-mt-24 space-y-4">
           <div className="flex flex-col items-center text-center">
-            {/* Avatar with Ring */}
-            <div className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden bg-white dark:bg-[#0B1713] p-1 shadow-xl border-2 border-brand-emerald">
-              <div className="relative w-full h-full rounded-xl overflow-hidden bg-emerald-50 dark:bg-emerald-950/60">
+            {/* Enlarged Avatar with Ring */}
+            <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-3xl overflow-hidden bg-white dark:bg-[#0B1713] p-1.5 sm:p-2 shadow-2xl border-[3px] border-brand-emerald">
+              <div className="relative w-full h-full rounded-2xl overflow-hidden bg-emerald-50 dark:bg-emerald-950/60 shadow-inner">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -144,9 +227,10 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                     fill
                     className="object-cover object-top"
                     unoptimized={avatarUrl.startsWith('data:')}
+                    priority
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-brand-emerald dark:text-white text-2xl font-black bg-emerald-100/60 dark:bg-emerald-900/60">
+                  <div className="w-full h-full flex items-center justify-center text-brand-emerald dark:text-white text-4xl sm:text-5xl font-black bg-emerald-100/60 dark:bg-emerald-900/60">
                     {member.user?.name?.charAt(0) || 'স'}
                   </div>
                 )}
@@ -156,7 +240,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
             {/* Name */}
             <h3
               id="member-profile-modal-title"
-              className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-2.5 leading-snug"
+              className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-3.5 leading-snug"
             >
               {member.user?.name || 'নাম পাওয়া যায়নি'}
             </h3>
@@ -164,11 +248,10 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
             {/* Role Badge & Member ID */}
             <div className="flex flex-wrap items-center justify-center gap-2 mt-1.5">
               <span
-                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold shadow-xs ${
-                  isOfficer
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold shadow-xs ${isOfficer
                     ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                     : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                }`}
+                  }`}
               >
                 <Award className="w-3 h-3" />
                 <span>{roleTitle}</span>
@@ -274,12 +357,6 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Privacy Note */}
-          <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-400 text-center pt-1">
-            <Info className="w-3.5 h-3.5 shrink-0" />
-            <span>সংগঠনের নীতিমালা অনুযায়ী আর্থিক তথ্যাবলি সম্পূর্ণ ব্যক্তিগত ও সংরক্ষিত।</span>
           </div>
         </div>
       </div>

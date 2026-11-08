@@ -27,6 +27,8 @@ import {
 import { socialService, UserProfileData } from '@/features/social/services/social.service';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
+import { useOrgMembershipStatusQuery } from '@/features/organization/hooks/useOrganizationQueries';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 
 type SettingsTab = 'profile' | 'account' | 'security' | 'overview';
 
@@ -45,6 +47,7 @@ interface DashboardUser {
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, isPending: sessionPending } = useSession();
+  const { data: membershipData } = useOrgMembershipStatusQuery();
 
   // Active Tab
   const [activeTab, setActiveTab] = React.useState<SettingsTab>('profile');
@@ -354,6 +357,11 @@ export default function DashboardPage() {
         }
       : null;
 
+  const isOrgMember =
+    currentUser?.role === 'ADMIN' ||
+    membershipData?.membership?.status === 'ACTIVE' ||
+    membershipData?.membership?.status === 'APPROVED_PAYMENT_PENDING';
+
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-6 animate-in fade-in duration-200">
       {/* Top Header Bar */}
@@ -464,14 +472,18 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {currentUser?.name || 'মোহাম্মদপুরী সদস্য'}
                 </h2>
-                <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500 text-white shrink-0" />
+                {isOrgMember && <VerifiedBadge size="md" />}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 {currentUser?.email || 'ইমেইল নেই'}
               </p>
               <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-brand-emerald dark:text-brand-mint border border-emerald-500/20">
-                  {currentUser?.role === 'ADMIN' ? 'অ্যাডমিন' : 'কমিউনিটি সদস্য'}
+                  {currentUser?.role === 'ADMIN'
+                    ? 'অ্যাডমিন'
+                    : isOrgMember
+                    ? 'সংগঠনের সক্রিয় সদস্য'
+                    : 'সাধারণ ইউজার'}
                 </span>
                 <span className="text-[11px] text-slate-400">
                   • আমরা মোহাম্মদপুরী পরিবার
@@ -864,7 +876,11 @@ export default function DashboardPage() {
                 <span>অ্যাকাউন্ট রোল</span>
               </div>
               <p className="text-sm font-bold text-slate-900 dark:text-white">
-                {currentUser?.role === 'ADMIN' ? 'অ্যাডমিনিস্ট্রেটর' : 'সাধারণ সদস্য'}
+                {currentUser?.role === 'ADMIN'
+                  ? 'অ্যাডমিনিস্ট্রেটর'
+                  : isOrgMember
+                  ? 'সংগঠনের সক্রিয় সদস্য'
+                  : 'সাধারণ ইউজার'}
               </p>
               <p className="text-[11px] text-slate-400">আমরা মোহাম্মদপুরী ভেরিফাইড ইউজার</p>
             </div>

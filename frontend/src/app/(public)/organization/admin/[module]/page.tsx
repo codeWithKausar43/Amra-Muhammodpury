@@ -42,8 +42,6 @@ import {
   useOrgAdminStatsQuery,
   useOrgApplicationsQuery,
   useOrgFundsQuery,
-  useOrgCommitteesQuery,
-  useOrgDesignationsQuery,
   useOrgElectionsQuery,
   useOrgNoticesQuery,
   useOrgVotingConfigQuery,
@@ -57,7 +55,7 @@ import { CandidateAvatar, cleanImageUrl, fileToDataUrl } from '@/features/organi
 import { notificationAudio } from '@/lib/audio/notificationSound';
 import { OrganizationMemberManagement } from '@/features/organization/components/OrganizationMemberManagement';
 import { MonthlyContributionTracking } from '@/features/organization/components/MonthlyContributionTracking';
-import { DesignationManagementSection } from '@/features/organization/components/DesignationManagementSection';
+import { CommitteeRoleManagementSection } from '@/features/organization/components/CommitteeRoleManagementSection';
 import { CampaignAdminManagement } from '@/features/campaign/components/CampaignAdminManagement';
 import { useAdminNav } from '@/features/organization/context/AdminNavContext';
 
@@ -136,7 +134,6 @@ export default function AdminModulePage() {
   }, [moduleKey, router]);
 
   const { setBadgeCounts } = useAdminNav();
-  const [committeeSubView, setCommitteeSubView] = React.useState<'COMMITTEES' | 'DESIGNATIONS'>('COMMITTEES');
 
   // Application Filters & Search
   const [appFilter, setAppFilter] = React.useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
@@ -151,8 +148,6 @@ export default function AdminModulePage() {
     appFilter === 'ALL' ? undefined : appFilter,
   );
   const { data: funds = [] } = useOrgFundsQuery();
-  const { data: committees = [] } = useOrgCommitteesQuery();
-  const { data: designations = [] } = useOrgDesignationsQuery();
   const { data: elections = [] } = useOrgElectionsQuery();
   const { data: notices = [] } = useOrgNoticesQuery();
   const mutations = useOrgMutations();
@@ -1364,96 +1359,10 @@ export default function AdminModulePage() {
       )}
 
       {/* =========================================================================
-          MODULE 6: COMMITTEES
+          MODULE 6: COMMITTEES & DESIGNATIONS
          ========================================================================= */}
       {moduleKey === 'committees' && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                {meta.title}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {meta.subtitle}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setCommitteeSubView('COMMITTEES')}
-                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                  committeeSubView === 'COMMITTEES'
-                    ? 'bg-brand-emerald text-white shadow-xs font-bold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                কমিটি পরিষদ
-              </button>
-              <button
-                type="button"
-                onClick={() => setCommitteeSubView('DESIGNATIONS')}
-                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                  committeeSubView === 'DESIGNATIONS'
-                    ? 'bg-brand-emerald text-white shadow-xs font-bold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                পদবি ডিরেক্টরি
-              </button>
-            </div>
-          </div>
-
-          {committeeSubView === 'DESIGNATIONS' && <DesignationManagementSection />}
-
-          <div className="space-y-2.5">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              নির্ধারিত প্রাতিষ্ঠানিক পদবিসমূহ ({toBengaliNumber(designations.length)})
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {designations.map((d) => (
-                <div
-                  key={d.id}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs"
-                >
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{d.title}</span>
-                  <span className="text-[10px] font-bold text-brand-emerald bg-brand-emerald/10 px-1.5 py-0.5 rounded">
-                    লেভেল {toBengaliNumber(d.level)}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">{d.code}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-3 border-t border-slate-200/60 dark:border-white/10">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              বর্তমান সক্রিয় কমিটিসমূহ ({toBengaliNumber(committees.length)})
-            </h3>
-            {committees.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {committees.map((c) => (
-                  <div
-                    key={c.id}
-                    className="border-l-2 border-l-brand-emerald pl-4 py-2 space-y-1 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors rounded-r-xl"
-                  >
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                      {c.name}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {c.description || 'সংগঠনের নির্ধারিত কার্যনির্বাহী কমিটি।'}
-                    </p>
-                    <div className="text-[11px] text-slate-400 pt-1">
-                      কার্যকাল শুরু: {c.startDate ? new Date(c.startDate).toLocaleDateString('bn-BD') : 'চলমান'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500 py-4">কোনো কমিটি রেকর্ড করা নেই।</p>
-            )}
-          </div>
-        </div>
+        <CommitteeRoleManagementSection />
       )}
 
       {/* =========================================================================

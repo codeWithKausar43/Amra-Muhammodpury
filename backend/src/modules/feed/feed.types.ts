@@ -6,6 +6,7 @@ export interface AuthorSummary {
   image?: string | null;
   role: string;
   phone?: string | null;
+  isOrgMember?: boolean;
 }
 
 export interface PostMediaDto {

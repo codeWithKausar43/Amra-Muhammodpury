@@ -620,6 +620,10 @@ export function useOrgMutations() {
       queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
       queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'designations'] });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.committees });
+      queryClient.invalidateQueries({ queryKey: ['org', 'member', 'directory'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.designations });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDashboard });
     },
   });
 
@@ -659,14 +663,16 @@ export function useOrgMutations() {
 
   const createDesignation = useMutation({
     mutationFn: (data: {
-      code: string;
+      code?: string;
       name: string;
       rank?: number;
       description?: string;
-    }) => organizationService.createDesignation(data),
+    }) => organizationService.createDesignation(data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'designations'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
       queryClient.invalidateQueries({ queryKey: orgQueryKeys.designations });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.committees });
     },
   });
 

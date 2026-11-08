@@ -22,6 +22,13 @@ export class ProfileService {
         bio: true,
         role: true,
         createdAt: true,
+        orgMemberships: {
+          select: {
+            status: true,
+            orgRole: true,
+            memberNumber: true,
+          },
+        },
         _count: {
           select: {
             friendshipsA: true,
@@ -95,6 +102,12 @@ export class ProfileService {
         coverImage: user.coverImage,
         bio: user.bio,
         role: user.role,
+        isOrgMember:
+          user.role === 'ADMIN' ||
+          user.orgMemberships?.some(
+            (m: any) => m.status === 'ACTIVE' || m.status === 'APPROVED_PAYMENT_PENDING',
+          ) ||
+          false,
         createdAt: user.createdAt,
         friendsCount: user._count.friendshipsA,
         postsCount: user._count.posts,

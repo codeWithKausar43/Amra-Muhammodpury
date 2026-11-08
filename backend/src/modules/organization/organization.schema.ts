@@ -286,8 +286,8 @@ export const UpdateMemberStatusSchema = z.object({
 });
 
 export const AssignMemberDesignationSchema = z.object({
-  designationId: z.string().uuid().nullable().optional(),
-  committeeId: z.string().uuid().optional(),
+  designationId: z.string().uuid().nullable().optional().or(z.literal('')),
+  committeeId: z.string().uuid().nullable().optional().or(z.literal('')),
   customTitle: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -323,7 +323,7 @@ export const BulkContributionReminderSchema = z.object({
 
 export const CreateDesignationSchema = z.object({
   name: z.string().min(2, 'পদবির নাম আবশ্যক'),
-  code: z.string().min(2, 'পদবি কোড আবশ্যক').toUpperCase(),
+  code: z.string().min(2, 'পদবি কোড আবশ্যক').toUpperCase().optional(),
   rank: z.coerce.number().default(10),
   description: z.string().optional(),
 });

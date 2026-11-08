@@ -5,11 +5,53 @@ import {
   UpdatePostInput,
   CreateCommentInput,
 } from './feed.schema.js';
-import { PostDto, CommentDto, StoryDto, ReactionType } from './feed.types.js';
+import { PostDto, CommentDto, StoryDto, ReactionType, AuthorSummary } from './feed.types.js';
 import { NotFoundError, UnauthorizedError } from '../../errors/app-error.js';
+
+const AUTHOR_SELECT = {
+  id: true,
+  name: true,
+  image: true,
+  role: true,
+  phone: true,
+  orgMemberships: {
+    select: {
+      status: true,
+      orgRole: true,
+    },
+  },
+} as const;
 
 export class FeedService {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private mapAuthor(author: any): AuthorSummary {
+    if (!author) {
+      return {
+        id: '',
+        name: 'সদস্য',
+        role: 'USER',
+        isOrgMember: false,
+      };
+    }
+
+    const isOrgMember =
+      author.role === 'ADMIN' ||
+      (Array.isArray(author.orgMemberships) &&
+        author.orgMemberships.some(
+          (m: any) => m.status === 'ACTIVE' || m.status === 'APPROVED_PAYMENT_PENDING',
+        )) ||
+      false;
+
+    return {
+      id: author.id,
+      name: author.name,
+      image: author.image,
+      role: author.role,
+      phone: author.phone,
+      isOrgMember,
+    };
+  }
 
   public async getFeed(
     query: FeedQueryInput,
@@ -58,13 +100,7 @@ export class FeedService {
             : { createdAt: 'desc' },
         include: {
           author: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-              role: true,
-              phone: true,
-            },
+            select: AUTHOR_SELECT,
           },
           media: {
             include: {
@@ -74,7 +110,7 @@ export class FeedService {
           },
           sharedPost: {
             include: {
-              author: { select: { id: true, name: true, image: true, role: true } },
+              author: { select: AUTHOR_SELECT },
               media: { include: { media: true } },
             },
           },
@@ -105,12 +141,7 @@ export class FeedService {
             orderBy: { createdAt: 'desc' },
             include: {
               author: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true,
-                  role: true,
-                },
+                select: AUTHOR_SELECT,
               },
             },
           },
@@ -154,7 +185,7 @@ export class FeedService {
       isEmergency: post.isEmergency,
       emergencyData: post.emergencyData,
       createdAt: post.createdAt,
-      author: post.author,
+      author: this.mapAuthor(post.author),
       sharedPost: post.sharedPost
         ? {
             id: post.sharedPost.id,
@@ -169,7 +200,7 @@ export class FeedService {
             hasLiked: false,
             isEmergency: post.sharedPost.isEmergency,
             createdAt: post.sharedPost.createdAt,
-            author: post.sharedPost.author,
+            author: this.mapAuthor(post.sharedPost.author),
             media: post.sharedPost.media.map((pm) => ({
               id: pm.media.id,
               publicId: pm.media.publicId,
@@ -196,7 +227,7 @@ export class FeedService {
         content: c.content,
         parentId: c.parentId,
         createdAt: c.createdAt,
-        author: c.author,
+        author: this.mapAuthor(c.author),
       })),
     };
   });
@@ -233,13 +264,7 @@ export class FeedService {
       },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            role: true,
-            phone: true,
-          },
+          select: AUTHOR_SELECT,
         },
         media: {
           include: {
@@ -274,7 +299,7 @@ export class FeedService {
       isEmergency: post.isEmergency,
       emergencyData: post.emergencyData,
       createdAt: post.createdAt,
-      author: post.author,
+      author: this.mapAuthor(post.author),
       media: post.media.map((pm) => ({
         id: pm.media.id,
         publicId: pm.media.publicId,
@@ -306,7 +331,7 @@ export class FeedService {
         ...(input.privacy !== undefined ? { privacy: input.privacy } : {}),
       },
       include: {
-        author: { select: { id: true, name: true, image: true, role: true } },
+        author: { select: AUTHOR_SELECT },
         media: { include: { media: true } },
         _count: { select: { likes: true, comments: { where: { isDeleted: false } } } },
       },
@@ -327,7 +352,7 @@ export class FeedService {
       isEmergency: updated.isEmergency,
       emergencyData: updated.emergencyData,
       createdAt: updated.createdAt,
-      author: updated.author,
+      author: this.mapAuthor(updated.author),
       media: updated.media.map((pm) => pm.media),
       recentComments: [],
     };
@@ -349,7 +374,7 @@ export class FeedService {
           privacy: 'PUBLIC',
         },
         include: {
-          author: { select: { id: true, name: true, image: true, role: true } },
+          author: { select: AUTHOR_SELECT },
           media: { include: { media: true } },
           _count: { select: { likes: true, comments: true } },
         },
@@ -390,7 +415,7 @@ export class FeedService {
       hasLiked: false,
       isEmergency: false,
       createdAt: shared.createdAt,
-      author: shared.author,
+      author: this.mapAuthor(shared.author),
       media: [],
       recentComments: [],
     };
@@ -523,12 +548,7 @@ export class FeedService {
       orderBy: { createdAt: 'asc' },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            role: true,
-          },
+          select: AUTHOR_SELECT,
         },
       },
     });
@@ -538,7 +558,7 @@ export class FeedService {
       content: c.content,
       parentId: c.parentId,
       createdAt: c.createdAt,
-      author: c.author,
+      author: this.mapAuthor(c.author),
     }));
   }
 
@@ -564,12 +584,7 @@ export class FeedService {
       },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            role: true,
-          },
+          select: AUTHOR_SELECT,
         },
       },
     });
@@ -594,7 +609,7 @@ export class FeedService {
       content: comment.content,
       parentId: comment.parentId,
       createdAt: comment.createdAt,
-      author: comment.author,
+      author: this.mapAuthor(comment.author),
     };
   }
 
@@ -624,12 +639,7 @@ export class FeedService {
       take: 15,
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            role: true,
-          },
+          select: AUTHOR_SELECT,
         },
       },
     });
@@ -638,7 +648,7 @@ export class FeedService {
       id: s.id,
       title: s.title,
       mediaUrl: s.mediaUrl,
-      author: s.author,
+      author: this.mapAuthor(s.author),
       createdAt: s.createdAt,
     }));
   }
@@ -657,12 +667,7 @@ export class FeedService {
       },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            role: true,
-          },
+          select: AUTHOR_SELECT,
         },
       },
     });
@@ -671,7 +676,7 @@ export class FeedService {
       id: story.id,
       title: story.title,
       mediaUrl: story.mediaUrl,
-      author: story.author,
+      author: this.mapAuthor(story.author),
       createdAt: story.createdAt,
     };
   }

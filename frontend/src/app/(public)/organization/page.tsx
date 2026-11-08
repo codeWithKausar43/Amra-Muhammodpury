@@ -13,8 +13,6 @@ import {
   Sparkles,
   Lock,
   HeartHandshake,
-  ShieldCheck,
-  Users,
 } from 'lucide-react';
 import {
   useOrgOverviewQuery,
@@ -71,13 +69,6 @@ export default function OrganizationPage() {
                   <Award className="w-4 h-4" />
                   <span>সদস্য ড্যাশবোর্ড</span>
                 </Link>
-                <Link
-                  href="/organization/member?tab=directory"
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-2 rounded-2xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs backdrop-blur-md border border-white/20 active:scale-95 transition-all"
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>সদস্য ডিরেক্টরি</span>
-                </Link>
                 {isOfficer && (
                   <Link
                     href="/organization/admin"
@@ -125,16 +116,8 @@ export default function OrganizationPage() {
               </Link>
             )}
 
-            {/* Jump Link: Financial transparency for members, About organization for general users */}
-            {isActiveMember || isOfficer ? (
-              <a
-                href="#transparency"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md border border-white/15 transition-all cursor-pointer"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-                <span>আর্থিক স্বচ্ছতা ও হিসাব</span>
-              </a>
-            ) : (
+            {/* Jump Link: About organization for general users */}
+            {!isActiveMember && !isOfficer && (
               <a
                 href="#about"
                 className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md border border-white/15 transition-all cursor-pointer"

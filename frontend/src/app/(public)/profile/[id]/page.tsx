@@ -11,7 +11,6 @@ import {
   UserCheck,
   Edit3,
   Loader2,
-  CheckCircle2,
   FileText,
   X,
   ArrowLeft,
@@ -26,6 +25,7 @@ import {
   socialService,
 } from '@/features/social/services/social.service';
 import { PostCard } from '@/features/feed/components/PostCard';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -175,10 +175,16 @@ export default function UserProfilePage() {
                   <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white leading-tight">
                     {user.name}
                   </h1>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-brand-emerald dark:text-brand-mint">
-                    <CheckCircle2 className="w-3 h-3" />
-                    সক্রিয় সদস্য
-                  </span>
+                  {(user as any).isOrgMember ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-brand-emerald dark:text-brand-mint">
+                      <VerifiedBadge size="xs" />
+                      সংগঠনের সক্রিয় সদস্য
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400">
+                      কমিউনিটি সদস্য
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {user.bio || 'মোহাম্মদপুরী কমিউনিটির একজন সদস্য।'}

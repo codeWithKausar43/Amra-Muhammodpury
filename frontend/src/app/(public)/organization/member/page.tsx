@@ -811,7 +811,7 @@ export default function MemberDashboardPage() {
         </div>
       </div>
 
-      {/* Navigation Switcher: [আমার চাঁদা ও ড্যাশবোর্ড] vs [সদস্য ডিরেক্টরি] */}
+      {/* Navigation Switcher: [আমার চাঁদা] vs [সদস্য ডিরেক্টরি] */}
       <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-xs">
         <button
           type="button"
@@ -821,14 +821,14 @@ export default function MemberDashboardPage() {
               window.history.replaceState(null, '', '/organization/member');
             }
           }}
-          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'dashboard'
               ? 'bg-white dark:bg-[#0E1A16] text-brand-emerald dark:text-emerald-300 shadow-sm border border-slate-200/60 dark:border-emerald-500/20'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <CreditCard className="w-4 h-4" />
-          <span>আমার চাঁদা ও রসিদ</span>
+          <CreditCard className="w-4 h-4 shrink-0" />
+          <span>আমার চাঁদা</span>
         </button>
 
         <button
@@ -839,13 +839,13 @@ export default function MemberDashboardPage() {
               window.history.replaceState(null, '', '/organization/member?tab=directory');
             }
           }}
-          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'directory'
               ? 'bg-white dark:bg-[#0E1A16] text-brand-emerald dark:text-emerald-300 shadow-sm border border-slate-200/60 dark:border-emerald-500/20'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-4 h-4 shrink-0" />
           <span>সদস্য ডিরেক্টরি</span>
         </button>
       </div>

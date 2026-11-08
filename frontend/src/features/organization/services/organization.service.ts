@@ -653,7 +653,7 @@ export const organizationService = {
   },
 
   async createDesignation(data: {
-    code: string;
+    code?: string;
     name: string;
     rank?: number;
     description?: string;
