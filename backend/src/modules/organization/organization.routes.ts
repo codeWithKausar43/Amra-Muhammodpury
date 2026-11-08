@@ -24,6 +24,7 @@ import {
   SubmitNominationSchema,
   ReviewNominationSchema,
   CastVoteSchema,
+  MemberDirectoryQuerySchema,
   AdminMembersQuerySchema,
   UpdateMemberStatusSchema,
   AssignMemberDesignationSchema,
@@ -142,6 +143,14 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const session = await fastify.authenticate(request, reply);
     const dashboard = await service.getMemberDashboard(session.user.id);
     return reply.send(successResponse(dashboard, 'সদস্য ড্যাশবোর্ড তথ্য সফলভাবে পাওয়া গেছে'));
+  });
+
+  // Member Directory (Active Members Only - STRICT PRIVACY: Zero Contribution Amounts)
+  fastify.get('/member/directory', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedQuery = MemberDirectoryQuerySchema.parse(request.query);
+    const directory = await service.getMemberDirectory(session.user.id, validatedQuery);
+    return reply.send(successResponse(directory, 'সদস্য তালিকা সফলভাবে লোড হয়েছে'));
   });
 
   // Organization Financial Transparency & Complete Accounts Ledger (Public & Members)

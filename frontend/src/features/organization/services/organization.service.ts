@@ -29,6 +29,7 @@ import {
   AdminDesignationItem,
   OrgPaymentConfig,
   FinancialTransparencyData,
+  MemberDirectoryResult,
 } from '../types';
 
 export const organizationService = {
@@ -115,6 +116,23 @@ export const organizationService = {
 
   async getMemberDashboard(): Promise<OrgMemberDashboardData> {
     const res = await apiClient<ApiResponse<OrgMemberDashboardData>>('/org/member/dashboard');
+    return res.data!;
+  },
+
+  async getMemberDirectory(query?: {
+    search?: string;
+    role?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<MemberDirectoryResult> {
+    const params = new URLSearchParams();
+    if (query?.search) params.append('search', query.search);
+    if (query?.role) params.append('role', query.role);
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.limit) params.append('limit', String(query.limit));
+    const qs = params.toString();
+    const url = `/org/member/directory${qs ? `?${qs}` : ''}`;
+    const res = await apiClient<ApiResponse<MemberDirectoryResult>>(url);
     return res.data!;
   },
 

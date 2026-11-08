@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { X, Users, HeartHandshake, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { X, ArrowRight, Quote, Handshake, Sprout, ShieldCheck, Heart } from 'lucide-react';
 
 interface MembershipInvitationPopupProps {
   isOpen: boolean;
@@ -21,122 +21,99 @@ export const MembershipInvitationPopup: React.FC<MembershipInvitationPopupProps>
       role="dialog"
       aria-modal="true"
       aria-labelledby="membership-invitation-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-300 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto"
     >
-      <div className="relative w-full max-w-md bg-white dark:bg-brand-charcoal rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
-        {/* Close button top right */}
+      {/* Main Modal Card with Deep Emerald Luxury Gradient - Consistent in Light & Dark Mode */}
+      <div className="relative w-full max-w-[390px] sm:max-w-md rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-emerald-500/30 bg-gradient-to-b from-[#06422e] via-[#043324] to-[#022319] p-5 sm:p-6 text-white text-center my-auto animate-in zoom-in-95 duration-200">
+        
+        {/* Subtle Ambient Radial Glows */}
+        <div className="absolute -top-16 -right-16 w-44 h-44 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Close Button top-right */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 z-10 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all backdrop-blur-xs cursor-pointer shadow-sm"
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 hover:text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md border border-white/10"
           aria-label="বন্ধ করুন"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* Header Visual Banner */}
-        <div className="relative pt-7 pb-6 px-5 sm:px-6 bg-gradient-to-br from-brand-emerald/90 via-emerald-800 to-emerald-950 text-white text-center overflow-hidden">
-          {/* Subtle background glow */}
-          <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
-
-          {/* Org Logo / Icon Badge */}
-          <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-xl mb-3 border border-white/30 bg-emerald-950/40 p-0.5">
+        {/* Circular Illuminated Logo Seal */}
+        <div className="relative mx-auto mb-3 mt-1 w-28 h-28 sm:w-32 sm:h-32 rounded-full p-2 bg-gradient-to-b from-emerald-300/40 via-emerald-500/20 to-transparent border border-emerald-400/50 shadow-[0_0_25px_rgba(16,185,129,0.35)] flex items-center justify-center">
+          <div className="w-full h-full rounded-full bg-white p-1.5 flex items-center justify-center overflow-hidden shadow-inner">
             <Image
               src="/logos/logo.png"
               alt="আমরা মোহাম্মদপুরী লোগো"
-              width={80}
-              height={80}
-              className="w-full h-full object-contain rounded-xl"
+              width={120}
+              height={120}
+              className="w-full h-full object-contain rounded-full"
+              priority
             />
           </div>
+        </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/20 backdrop-blur-md mb-2 text-emerald-100">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>সংগঠনের সদস্যপদ আহ্বান</span>
+        {/* Title & Subtitle */}
+        <h2
+          id="membership-invitation-title"
+          className="text-2xl sm:text-[26px] font-black text-white tracking-tight flex items-center justify-center gap-2"
+        >
+          <span>আমরা মোহাম্মদপুরী</span>
+          <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 fill-red-500 shrink-0 inline-block animate-pulse" />
+        </h2>
+        <p className="text-xs sm:text-[13px] text-emerald-100/90 font-medium mt-1">
+          আপনিও হোন আমাদের পরিবারের একজন!
+        </p>
+
+        {/* Glass Quote Card */}
+        <div className="relative bg-white/[0.07] border border-white/10 rounded-2xl p-3.5 sm:p-4 text-center mt-4 backdrop-blur-md shadow-xs">
+          <div className="absolute top-2 left-2 text-emerald-400/40">
+            <Quote className="w-3.5 h-3.5 rotate-180" />
           </div>
-
-          <h2
-            id="membership-invitation-title"
-            className="text-lg sm:text-xl font-black text-white tracking-tight"
-          >
-            আমরা মুহাম্মদপুরী
-          </h2>
-          <p className="text-xs text-emerald-100/90 mt-1 max-w-xs mx-auto leading-relaxed">
-            মুহাম্মদপুরবাসীর ঐক্য, সামাজিক উন্নয়ন ও মানবিক সহায়তায় আমাদের সাথে যুক্ত হোন।
+          <p className="text-xs sm:text-[13px] text-emerald-50/95 leading-relaxed font-normal italic px-2">
+            “একটু ভালোবাসা, একটু সহযোগিতা—হয়তো বদলে দিতে পারে কারও জীবনের গল্প। আসুন, মানুষের পাশে দাঁড়ায়, একসাথে সুন্দর মোহাম্মদপুরী গড়ি”
           </p>
         </div>
 
-        {/* Content Body */}
-        <div className="p-4 sm:p-5 space-y-4">
-          {/* Feature Highlights */}
-          <div className="space-y-2.5">
-            <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/5 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-brand-emerald/10 text-brand-emerald dark:text-brand-mint flex items-center justify-center shrink-0 mt-0.5">
-                <HeartHandshake className="w-4 h-4" />
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                  সামাজিক উন্নয়ন ও মানবিক সহায়তা
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  জরুরি ত্রাণ, চিকিৎসা ও শিক্ষা সহায়তায় মুহাম্মদপুরবাসীর পাশে দাঁড়ান।
-                </p>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/5 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-                <Users className="w-4 h-4" />
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                  সম্মিলিত ঐক্য ও নেটওয়ার্কিং
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  এলাকার সচেতন নাগরিক ও পেশাজীবীদের সাথে সুদৃঢ় ভ্রাতৃত্ব গড়ে তুলুন।
-                </p>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/5 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 mt-0.5">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="text-left min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                  স্বচ্ছ তহবিল ও ভোটাধিকার
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  ডিজিটাল নির্বাচন, স্বচ্ছ আর্থিক হিসাব ও নিয়মিত সাধারণ সভায় মতামত দিন।
-                </p>
-              </div>
-            </div>
+        {/* 3 Feature Highlights in a Row with Lucide Icons */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 mt-4">
+          <div className="rounded-2xl p-2.5 sm:p-3 bg-white/[0.07] border border-white/10 flex flex-col items-center justify-center gap-1.5 text-center shadow-xs">
+            <Handshake className="w-5 h-5 text-amber-300 shrink-0" />
+            <span className="text-[11px] font-bold text-white/95">পারস্পরিক ঐক্য</span>
           </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
-            <Link
-              href="/organization"
-              onClick={onClose}
-              className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-white/15 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-slate-200 font-bold text-xs text-center transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>আমাদের সম্পর্কে</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+          <div className="rounded-2xl p-2.5 sm:p-3 bg-white/[0.07] border border-white/10 flex flex-col items-center justify-center gap-1.5 text-center shadow-xs">
+            <Sprout className="w-5 h-5 text-emerald-300 shrink-0" />
+            <span className="text-[11px] font-bold text-white/95">সমাজকল্যাণ</span>
+          </div>
 
-            <Link
-              href="/organization/apply"
-              onClick={onClose}
-              className="py-2.5 px-3 rounded-xl bg-brand-emerald hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs text-center transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>সদস্য হতে আবেদন</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+          <div className="rounded-2xl p-2.5 sm:p-3 bg-white/[0.07] border border-white/10 flex flex-col items-center justify-center gap-1.5 text-center shadow-xs">
+            <ShieldCheck className="w-5 h-5 text-sky-300 shrink-0" />
+            <span className="text-[11px] font-bold text-white/95">স্বচ্ছ তহবিল</span>
           </div>
         </div>
+
+        {/* Primary CTA Button */}
+        <Link
+          href="/organization/apply"
+          onClick={onClose}
+          className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:scale-[0.98] text-white font-extrabold text-sm sm:text-base text-center transition-all shadow-[0_8px_25px_rgba(16,185,129,0.35)] flex items-center justify-center gap-2 mt-4 cursor-pointer"
+        >
+          <span>সদস্য হতে আবেদন করুন</span>
+          <ArrowRight className="w-4 h-4 shrink-0" />
+        </Link>
+
+        {/* Secondary Link */}
+        <Link
+          href="/organization"
+          onClick={onClose}
+          className="text-xs sm:text-sm font-semibold text-emerald-200/90 hover:text-white transition-colors cursor-pointer block text-center mt-3"
+        >
+          আমাদের সম্পর্কে জানুন
+        </Link>
+
       </div>
     </div>
   );
 };
-

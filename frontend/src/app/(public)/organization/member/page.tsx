@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   RotateCcw,
   ShieldCheck,
+  Users,
 } from 'lucide-react';
 import {
   useOrgMemberDashboardQuery,
@@ -27,6 +28,7 @@ import {
   useOrgMutations,
 } from '@/features/organization/hooks/useOrganizationQueries';
 import { cleanImageUrl } from '@/features/organization/components/CandidateAvatar';
+import { MemberDirectorySection } from '@/features/organization/components/MemberDirectorySection';
 import type { ContributionPayment } from '@/features/organization/types';
 
 const MONTH_NAMES_BN = [
@@ -346,6 +348,18 @@ export default function MemberDashboardPage() {
       .filter((c) => !c.isPaid && c.status !== 'NOT_APPLICABLE' && c.month <= currentMonthNum)
       .map((c) => c.month);
   }, [calendar]);
+
+  // Tab switch state: 'dashboard' | 'directory'
+  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'directory'>('dashboard');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'directory') {
+        setActiveTab('directory');
+      }
+    }
+  }, []);
 
   // Payment modal state
   const [payModalOpen, setPayModalOpen] = React.useState(false);
@@ -751,8 +765,23 @@ export default function MemberDashboardPage() {
             <p className="text-xs text-slate-600 dark:text-emerald-200/90 font-medium truncate">
               {membership.designation?.title || 'সাধারণ সদস্য'} • {membership.orgRole}
             </p>
-            <div className="inline-block px-3 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/90 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-[11px] sm:text-xs font-bold tracking-wider">
-              ID: {memberIdDisplay}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-block px-3 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/90 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-[11px] sm:text-xs font-bold tracking-wider">
+                ID: {memberIdDisplay}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('directory');
+                  if (typeof window !== 'undefined') {
+                    window.history.replaceState(null, '', '/organization/member?tab=directory');
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-brand-emerald dark:text-emerald-300 font-bold text-[11px] transition-colors cursor-pointer"
+              >
+                <Users className="w-3 h-3" />
+                <span>সদস্য ডিরেক্টরি</span>
+              </button>
             </div>
           </div>
         </div>
@@ -782,7 +811,51 @@ export default function MemberDashboardPage() {
         </div>
       </div>
 
-      {/* Link to Organization Financial Transparency at /organization#transparency */}
+      {/* Navigation Switcher: [আমার চাঁদা ও ড্যাশবোর্ড] vs [সদস্য ডিরেক্টরি] */}
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-xs">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('dashboard');
+            if (typeof window !== 'undefined') {
+              window.history.replaceState(null, '', '/organization/member');
+            }
+          }}
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'dashboard'
+              ? 'bg-white dark:bg-[#0E1A16] text-brand-emerald dark:text-emerald-300 shadow-sm border border-slate-200/60 dark:border-emerald-500/20'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>আমার চাঁদা ও রসিদ</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('directory');
+            if (typeof window !== 'undefined') {
+              window.history.replaceState(null, '', '/organization/member?tab=directory');
+            }
+          }}
+          className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'directory'
+              ? 'bg-white dark:bg-[#0E1A16] text-brand-emerald dark:text-emerald-300 shadow-sm border border-slate-200/60 dark:border-emerald-500/20'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>সদস্য ডিরেক্টরি</span>
+        </button>
+      </div>
+
+      {/* Active Tab View */}
+      {activeTab === 'directory' ? (
+        <MemberDirectorySection />
+      ) : (
+        <>
+          {/* Link to Organization Financial Transparency at /organization#transparency */}
       <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-500/20 text-xs">
         <div className="flex items-center gap-2.5">
           <ShieldCheck className="w-4 h-4 text-brand-emerald shrink-0" />
@@ -1198,6 +1271,8 @@ export default function MemberDashboardPage() {
             </Link>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* =========================================================================

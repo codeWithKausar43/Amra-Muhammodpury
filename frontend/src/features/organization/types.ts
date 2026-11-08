@@ -632,6 +632,40 @@ export interface ElectionResult {
 // Organization Member Management & Tracking Types
 // ==========================================
 
+export interface MemberDirectoryItem {
+  id: string;
+  userId: string;
+  memberNumber: string | null;
+  profession: string | null;
+  orgRole: string;
+  joinedAt: string | null;
+  createdAt: string;
+  designation: {
+    id: string;
+    name: string;
+    code: string;
+    rank: number;
+  } | null;
+  user: {
+    id: string;
+    name: string;
+    image: string | null;
+    phone: string | null;
+    email: string | null;
+    bio: string | null;
+  };
+}
+
+export interface MemberDirectoryResult {
+  members: MemberDirectoryItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export interface AdminMemberSummaryCounts {
   totalRegistered: number;
   totalActive: number;

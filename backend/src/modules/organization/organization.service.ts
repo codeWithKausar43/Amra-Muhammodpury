@@ -3128,6 +3128,118 @@ export class OrganizationService {
   }
 
   // =========================================================================
+  // Member Directory (Active Members Only - STRICT PRIVACY: Zero Contribution Amounts)
+  // =========================================================================
+
+  public async getMemberDirectory(
+    userId: string,
+    query: {
+      search?: string;
+      role?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    // 1. Authorization: Only ACTIVE members can access directory
+    const requester = await this.prisma.orgMembership.findUnique({
+      where: { userId },
+      select: { id: true, status: true },
+    });
+
+    if (!requester || requester.status !== 'ACTIVE') {
+      throw new ForbiddenError('শুধুমাত্র সংগঠনের সক্রিয় সদস্যরা সদস্য ডিরেক্টরি দেখতে পারবেন');
+    }
+
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.min(100, Math.max(1, query.limit || 50));
+    const skip = (page - 1) * limit;
+
+    // 2. Build where filter: ONLY active members
+    const where: any = {
+      status: 'ACTIVE',
+    };
+
+    if (query.role && query.role !== 'ALL') {
+      if (query.role === 'OFFICER') {
+        where.orgRole = { in: ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'] };
+      } else {
+        where.orgRole = query.role;
+      }
+    }
+
+    if (query.search && query.search.trim()) {
+      const q = query.search.trim();
+      where.OR = [
+        { user: { name: { contains: q, mode: 'insensitive' } } },
+        { user: { phone: { contains: q, mode: 'insensitive' } } },
+        { profession: { contains: q, mode: 'insensitive' } },
+        { memberNumber: { contains: q, mode: 'insensitive' } },
+        { designation: { name: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    // 3. Execute query with strict field whitelist (NO financial / contribution data whatsoever!)
+    const [total, members] = await Promise.all([
+      this.prisma.orgMembership.count({ where }),
+      this.prisma.orgMembership.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [
+          { joinedAt: 'asc' },
+          { createdAt: 'asc' },
+        ],
+        select: {
+          id: true,
+          userId: true,
+          memberNumber: true,
+          profession: true,
+          orgRole: true,
+          joinedAt: true,
+          createdAt: true,
+          designation: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              rank: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              phone: true,
+              email: true,
+              bio: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    // Format clean image URL
+    const cleanedMembers = members.map((m) => ({
+      ...m,
+      user: {
+        ...m.user,
+        image: cleanImageUrl(m.user.image),
+      },
+    }));
+
+    return {
+      members: cleanedMembers,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // =========================================================================
   // Organization Member Management Dashboard (Admin)
   // =========================================================================
 

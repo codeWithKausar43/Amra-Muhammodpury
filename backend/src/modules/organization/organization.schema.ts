@@ -261,6 +261,13 @@ export const UpdateVotingConfigSchema = z.object({
 // Organization Member Management & Tracking Schemas
 // ==========================================
 
+export const MemberDirectoryQuerySchema = z.object({
+  search: z.string().optional(),
+  role: z.string().optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(50),
+});
+
 export const AdminMembersQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(['ALL', 'ACTIVE', 'PENDING', 'APPROVED_PAYMENT_PENDING', 'SUSPENDED', 'ARCHIVED']).default('ALL'),

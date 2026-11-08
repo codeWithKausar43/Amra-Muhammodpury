@@ -10,6 +10,8 @@ export const orgQueryKeys = {
   overview: ['org', 'overview'] as const,
   membershipStatus: ['org', 'membership', 'status'] as const,
   memberDashboard: ['org', 'member', 'dashboard'] as const,
+  memberDirectory: (query?: { search?: string; role?: string; page?: number; limit?: number }) =>
+    ['org', 'member', 'directory', query] as const,
   notices: ['org', 'notices'] as const,
   projects: ['org', 'projects'] as const,
   committees: ['org', 'committees'] as const,
@@ -48,6 +50,10 @@ export const ORG_CACHE_POLICY = {
   memberDashboard: {
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 20 * 60 * 1000,
+  },
+  memberDirectory: {
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 15 * 60 * 1000,
   },
   adminStats: {
     staleTime: 30 * 1000, // 30 seconds
@@ -93,6 +99,20 @@ export function useOrgMemberDashboardQuery(enabled = true) {
     enabled,
     staleTime: ORG_CACHE_POLICY.memberDashboard.staleTime,
     gcTime: ORG_CACHE_POLICY.memberDashboard.gcTime,
+  });
+}
+
+export function useOrgMemberDirectoryQuery(
+  query?: { search?: string; role?: string; page?: number; limit?: number },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: orgQueryKeys.memberDirectory(query),
+    queryFn: () => organizationService.getMemberDirectory(query),
+    enabled,
+    placeholderData: (previousData) => previousData,
+    staleTime: ORG_CACHE_POLICY.memberDirectory.staleTime,
+    gcTime: ORG_CACHE_POLICY.memberDirectory.gcTime,
   });
 }
 

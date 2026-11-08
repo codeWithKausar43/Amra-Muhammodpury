@@ -14,6 +14,7 @@ import {
   Lock,
   HeartHandshake,
   ShieldCheck,
+  Users,
 } from 'lucide-react';
 import {
   useOrgOverviewQuery,
@@ -69,6 +70,13 @@ export default function OrganizationPage() {
                 >
                   <Award className="w-4 h-4" />
                   <span>সদস্য ড্যাশবোর্ড</span>
+                </Link>
+                <Link
+                  href="/organization/member?tab=directory"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-2 rounded-2xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs backdrop-blur-md border border-white/20 active:scale-95 transition-all"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>সদস্য ডিরেক্টরি</span>
                 </Link>
                 {isOfficer && (
                   <Link
