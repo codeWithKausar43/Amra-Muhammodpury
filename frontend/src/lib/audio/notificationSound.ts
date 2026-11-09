@@ -82,7 +82,7 @@ class NotificationAudioEngine {
     if ('vibrate' in navigator) {
       try {
         navigator.vibrate([250, 100, 250, 100, 250]);
-      } catch (e) {
+      } catch {
         // Ignored
       }
     }

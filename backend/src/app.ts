@@ -3,6 +3,7 @@ import { getLoggerConfig } from './config/logger.js';
 import prismaPlugin from './plugins/prisma.plugin.js';
 import corsPlugin from './plugins/cors.plugin.js';
 import securityPlugin from './plugins/security.plugin.js';
+import rateLimitPlugin from './plugins/rate-limit.plugin.js';
 import swaggerPlugin from './plugins/swagger.plugin.js';
 import authPlugin from './plugins/auth.plugin.js';
 import { errorHandler } from './middleware/error-handler.middleware.js';
@@ -63,9 +64,28 @@ export const buildApp = async (): Promise<FastifyInstance> => {
   // Core infrastructure plugins
   await app.register(securityPlugin);
   await app.register(corsPlugin);
+  await app.register(rateLimitPlugin);
   await app.register(swaggerPlugin);
   await app.register(prismaPlugin);
   await app.register(fastifyWebsocket);
+
+  // Root ping & lightweight health checks for deployment keep-alive (e.g. Render / UptimeRobot)
+  app.get('/', async () => {
+    return {
+      status: 'ok',
+      service: 'amra-muhammadpuri-api',
+      version: '0.1.0',
+      timestamp: new Date().toISOString(),
+    };
+  });
+
+  app.get('/health', async () => {
+    return {
+      status: 'healthy',
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    };
+  });
 
   // Better Auth core plugin (serves /api/auth/*)
   await app.register(authPlugin);

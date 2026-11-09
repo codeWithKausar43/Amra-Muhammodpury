@@ -4,6 +4,18 @@ import { prisma } from './database.js';
 import { env } from './env.js';
 import { emailService } from '../services/email.service.js';
 
+const configuredOrigins = env.FRONTEND_URL
+  ? env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/+$/, '')).filter(Boolean)
+  : [];
+
+const trustedOrigins = Array.from(
+  new Set([
+    ...configuredOrigins,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ]),
+);
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
@@ -11,7 +23,7 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   basePath: '/api/auth',
   secret: env.BETTER_AUTH_SECRET,
-  trustedOrigins: [env.FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  trustedOrigins,
   logger: {
     level: 'debug',
   },
@@ -89,6 +101,10 @@ export const auth = betterAuth({
   },
   advanced: {
     useSecureCookies: env.NODE_ENV === 'production',
+    defaultCookieAttributes: {
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: env.NODE_ENV === 'production',
+    },
   },
 });
 

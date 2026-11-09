@@ -135,7 +135,7 @@ export function usePushNotifications() {
             // Also trigger backend test if subscribed
             notificationService.sendTestPush().catch(() => {});
             return;
-          } catch (e) {
+          } catch {
             // fallback
           }
         }

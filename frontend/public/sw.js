@@ -1,12 +1,18 @@
 // Service Worker for আমরা মোহাম্মদপুরী (Amra Mohammodpury)
 // Enables Web Push Notifications, Background Notifications, and Sound/Vibration alerts
+const SW_VERSION = 'v2-clean';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((cacheNames) => Promise.all(cacheNames.map((name) => caches.delete(name))))
+      .then(() => self.clients.claim())
+  );
 });
 
 // Push notification event (triggered when app is closed or in background with mobile data / wifi on)
