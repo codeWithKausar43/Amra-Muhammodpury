@@ -101,7 +101,7 @@ export function RegisteredUsersManagement() {
 
   // Professional Dialog State (Eliminates browser alert/confirm/prompt popups)
   const [activeDialog, setActiveDialog] = React.useState<{
-    type: 'APPOINT_PRESIDENT' | 'SUSPEND' | 'DELETE';
+    type: 'SUSPEND' | 'DELETE';
     user: AdminUserItem;
   } | null>(null);
   const [suspendReason, setSuspendReason] = React.useState('প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত');
@@ -114,10 +114,7 @@ export function RegisteredUsersManagement() {
     setActionLoadingId(user.id);
 
     try {
-      if (type === 'APPOINT_PRESIDENT') {
-        await mutations.appointPresident.mutateAsync(user.id);
-        toast.success(`${user.name} এখন সংগঠনের প্রধান সভাপতি হিসেবে নিযুক্ত হয়েছেন।`);
-      } else if (type === 'SUSPEND') {
+      if (type === 'SUSPEND') {
         const willSuspend = !user.isSuspended;
         await mutations.suspendUser.mutateAsync({
           userId: user.id,
@@ -371,16 +368,16 @@ export function RegisteredUsersManagement() {
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Desktop Table View (hidden on small mobile screens) */}
-            <div className="hidden sm:block overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10">
-              <div className="min-w-[640px]">
-                {/* Desktop Table Header */}
+            {/* Unified Horizontal Scrolling Table View (Responsive across all screen sizes) */}
+            <div className="overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10">
+              <div className="min-w-[660px]">
+                {/* Table Header */}
                 <div
                   className={`grid ${
                     isSystemAdmin
-                      ? 'grid-cols-[minmax(180px,1.2fr)_minmax(200px,1.3fr)_minmax(90px,0.7fr)_minmax(80px,0.5fr)_minmax(85px,0.5fr)_minmax(130px,0.9fr)]'
+                      ? 'grid-cols-[minmax(180px,1.2fr)_minmax(210px,1.4fr)_minmax(95px,0.7fr)_minmax(75px,0.5fr)_minmax(85px,0.5fr)_minmax(80px,0.5fr)]'
                       : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
-                  } items-center gap-3 px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5`}
+                  } items-center gap-2.5 px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5`}
                 >
                   <div>ব্যবহারকারী</div>
                   <div>যোগাযোগ</div>
@@ -390,7 +387,7 @@ export function RegisteredUsersManagement() {
                   {isSystemAdmin && <div className="text-right">অ্যাকশন</div>}
                 </div>
 
-                {/* Desktop Rows */}
+                {/* Compact Rows (একটার নিচে একটা কম জায়গায় স্লিম লেআউট) */}
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
                   {users.map((user) => {
                     const isMember = user.isMember;
@@ -405,21 +402,21 @@ export function RegisteredUsersManagement() {
                         key={user.id}
                         className={`grid ${
                           isSystemAdmin
-                            ? 'grid-cols-[minmax(180px,1.2fr)_minmax(200px,1.3fr)_minmax(90px,0.7fr)_minmax(80px,0.5fr)_minmax(85px,0.5fr)_minmax(130px,0.9fr)]'
+                            ? 'grid-cols-[minmax(180px,1.2fr)_minmax(210px,1.4fr)_minmax(95px,0.7fr)_minmax(75px,0.5fr)_minmax(85px,0.5fr)_minmax(80px,0.5fr)]'
                             : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
-                        } items-center gap-3 px-3 py-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors ${
+                        } items-center gap-2.5 px-3 py-2 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors ${
                           user.isSuspended ? 'opacity-60 bg-rose-50/30 dark:bg-rose-950/10' : ''
                         }`}
                       >
                         {/* 1. User Profile & Name */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="relative w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 shrink-0">
                             {user.image ? (
                               <Image
                                 src={user.image}
                                 alt={user.name}
                                 fill
-                                sizes="36px"
+                                sizes="32px"
                                 className="object-cover"
                               />
                             ) : (
@@ -431,26 +428,26 @@ export function RegisteredUsersManagement() {
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                              <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
                                 {user.name}
                               </span>
                               {isMember && <VerifiedBadge size="xs" />}
                               {isTargetSuperAdmin ? (
-                                <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
+                                <span className="px-1.5 py-0.2 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
                                   সিস্টেম এডমিন
                                 </span>
                               ) : isPresident ? (
-                                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
+                                <span className="px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
                                   <Crown className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                                   সভাপতি
                                 </span>
                               ) : user.role === 'ADMIN' ? (
-                                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20 shrink-0">
+                                <span className="px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20 shrink-0">
                                   এডমিন
                                 </span>
                               ) : null}
                               {user.isSuspended && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 shrink-0 inline-flex items-center gap-0.5">
+                                <span className="px-1.5 py-0.2 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 shrink-0 inline-flex items-center gap-0.5">
                                   <Ban className="w-2.5 h-2.5" />
                                   স্থগিত
                                 </span>
@@ -463,7 +460,7 @@ export function RegisteredUsersManagement() {
                         </div>
 
                         {/* 2. Contact details (Full Email & Phone) */}
-                        <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                        <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 space-y-0.5">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span className="font-mono text-[11px] select-all break-all">{user.email}</span>
@@ -484,16 +481,16 @@ export function RegisteredUsersManagement() {
                         {/* 3. User Classification: General User vs Member */}
                         <div className="min-w-0 flex items-center">
                           {isMember ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold shrink-0">
-                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold shrink-0">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                               <span>মেম্বার</span>
                             </span>
                           ) : user.applicationStatus === 'PENDING' ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-semibold shrink-0">
                               আবেদন অপেক্ষমাণ
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-slate-600 dark:text-slate-300 text-xs font-medium shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-slate-600 dark:text-slate-300 text-[11px] font-medium shrink-0">
                               সাধারণ ব্যবহারকারী
                             </span>
                           )}
@@ -502,12 +499,12 @@ export function RegisteredUsersManagement() {
                         {/* 4. Login Method / Provider */}
                         <div className="min-w-0 flex items-center">
                           {user.isGoogle ? (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 text-[11px] font-semibold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 text-[10px] font-semibold">
                               <GoogleBrandIcon className="w-3 h-3 shrink-0" />
                               <span>গুগল</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-slate-600 dark:text-slate-300 text-[11px] font-medium">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-slate-600 dark:text-slate-300 text-[10px] font-medium">
                               <KeyRound className="w-3 h-3 text-slate-400 shrink-0" />
                               <span>ইমেইল</span>
                             </span>
@@ -521,28 +518,13 @@ export function RegisteredUsersManagement() {
                           </span>
                         </div>
 
-                        {/* 6. System Admin Exclusive Actions */}
+                        {/* 6. System Admin Exclusive Actions (Suspend & Delete only - No 'সভাপতি করুন') */}
                         {isSystemAdmin && (
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1">
                             {isTargetSuperAdmin || isSelf ? (
                               <span className="text-[10px] text-slate-400 italic">সুরক্ষিত</span>
                             ) : (
                               <>
-                                {!isPresident && (
-                                  <button
-                                    type="button"
-                                    disabled={actionLoadingId === user.id}
-                                    onClick={() => setActiveDialog({ type: 'APPOINT_PRESIDENT', user })}
-                                    title="সভাপতি হিসেবে নিযুক্ত করুন"
-                                    className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 transition-colors disabled:opacity-50 cursor-pointer"
-                                  >
-                                    {actionLoadingId === user.id ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                      <Crown className="w-3.5 h-3.5" />
-                                    )}
-                                  </button>
-                                )}
                                 <button
                                   type="button"
                                   disabled={actionLoadingId === user.id}
@@ -586,188 +568,6 @@ export function RegisteredUsersManagement() {
                 </div>
               </div>
             </div>
-
-            {/* Mobile Responsive Cards (visible only on mobile sm:hidden) */}
-            <div className="sm:hidden space-y-2.5">
-              {users.map((user) => {
-                const isMember = user.isMember;
-                const isTargetSuperAdmin =
-                  user.role === 'SUPER_ADMIN' || user.email === 'itskausarprodhan@gmail.com';
-                const isPresident = user.membership?.orgRole === 'PRESIDENT';
-                const isSelf =
-                  session?.user?.id === user.id || session?.user?.email === user.email;
-
-                return (
-                  <div
-                    key={user.id}
-                    className={`p-3 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2 shadow-2xs ${
-                      user.isSuspended ? 'opacity-65 bg-rose-50/30 dark:bg-rose-950/10' : ''
-                    }`}
-                  >
-                    {/* Top Row: User Identity (Avatar + Name + Badges) & Status Badge on Right */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10 border border-slate-200 dark:border-white/10 shrink-0">
-                          {user.image ? (
-                            <Image
-                              src={user.image}
-                              alt={user.name}
-                              fill
-                              sizes="32px"
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs">
-                              {user.name?.slice(0, 1) || 'ব'}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                              {user.name}
-                            </span>
-                            {isMember && <VerifiedBadge size="xs" />}
-                            {isTargetSuperAdmin ? (
-                              <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
-                                সিস্টেম এডমিন
-                              </span>
-                            ) : isPresident ? (
-                              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
-                                <Crown className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
-                                সভাপতি
-                              </span>
-                            ) : user.role === 'ADMIN' ? (
-                              <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20 shrink-0">
-                                এডমিন
-                              </span>
-                            ) : null}
-                            {user.isSuspended && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 shrink-0 inline-flex items-center gap-0.5">
-                                <Ban className="w-2.5 h-2.5" />
-                                স্থগিত
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Status Badge */}
-                      <div className="shrink-0">
-                        {isMember ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold shrink-0">
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <span>মেম্বার</span>
-                          </span>
-                        ) : user.applicationStatus === 'PENDING' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-semibold shrink-0">
-                            আবেদন অপেক্ষমাণ
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-slate-600 dark:text-slate-300 text-[11px] font-medium shrink-0">
-                            সাধারণ ব্যবহারকারী
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Middle Row: Full-width Email Address - NEVER truncated */}
-                    <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-mono break-all py-1 px-2.5 rounded-lg bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200/50 dark:border-white/5">
-                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="select-all flex-1 text-[11px]">{user.email}</span>
-                      {user.emailVerified && (
-                        <span title="ইমেইল ভেরিফাইড" className="inline-flex shrink-0">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Bottom Row: Phone, Provider & Date */}
-                    <div className="flex items-center justify-between pt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {user.isGoogle ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 text-[10px] font-semibold">
-                            <GoogleBrandIcon className="w-3 h-3 shrink-0" />
-                            <span>গুগল</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-slate-600 dark:text-slate-300 text-[10px] font-medium">
-                            <KeyRound className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span>ইমেইল</span>
-                          </span>
-                        )}
-                        {user.phone ? (
-                          <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                            {user.phone}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">ফোন নম্বর নেই</span>
-                        )}
-                      </div>
-
-                      <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
-                        {formatBengaliDate(user.createdAt)}
-                      </div>
-                    </div>
-
-                    {/* Mobile System Admin Actions */}
-                    {isSystemAdmin && !isTargetSuperAdmin && !isSelf && (
-                      <div className="pt-2 mt-1 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-end gap-2 flex-wrap">
-                        {!isPresident && (
-                          <button
-                            type="button"
-                            disabled={actionLoadingId === user.id}
-                            onClick={() => setActiveDialog({ type: 'APPOINT_PRESIDENT', user })}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 disabled:opacity-50 cursor-pointer"
-                          >
-                            {actionLoadingId === user.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Crown className="w-3 h-3" />
-                            )}
-                            <span>সভাপতি করুন</span>
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          disabled={actionLoadingId === user.id}
-                          onClick={() => {
-                            setSuspendReason('প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত');
-                            setActiveDialog({ type: 'SUSPEND', user });
-                          }}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border disabled:opacity-50 cursor-pointer ${
-                            user.isSuspended
-                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                              : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/20'
-                          }`}
-                        >
-                          {actionLoadingId === user.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Ban className="w-3 h-3" />
-                          )}
-                          <span>{user.isSuspended ? 'সক্রিয় করুন' : 'স্থগিত'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={actionLoadingId === user.id}
-                          onClick={() => setActiveDialog({ type: 'DELETE', user })}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 disabled:opacity-50 cursor-pointer"
-                        >
-                          {actionLoadingId === user.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-3 h-3" />
-                          )}
-                          <span>মুছুন</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
 
@@ -809,27 +609,17 @@ export function RegisteredUsersManagement() {
           title={
             activeDialog.type === 'DELETE'
               ? 'অ্যাকাউন্ট মুছে ফেলা'
-              : activeDialog.type === 'SUSPEND'
-              ? activeDialog.user.isSuspended
+              : activeDialog.user.isSuspended
                 ? 'স্থগিতাদেশ প্রত্যাহার'
                 : 'অ্যাকাউন্ট স্থগিতকরণ'
-              : 'সভাপতি হিসেবে নিযুক্তকরণ'
           }
-          variant={
-            activeDialog.type === 'DELETE'
-              ? 'danger'
-              : activeDialog.type === 'SUSPEND'
-              ? 'warning'
-              : 'crown'
-          }
+          variant={activeDialog.type === 'DELETE' ? 'danger' : 'warning'}
           confirmText={
             activeDialog.type === 'DELETE'
               ? 'স্থায়ীভাবে মুছুন'
-              : activeDialog.type === 'SUSPEND'
-              ? activeDialog.user.isSuspended
+              : activeDialog.user.isSuspended
                 ? 'সক্রিয় করুন'
                 : 'স্থগিত করুন'
-              : 'সভাপতি করুন'
           }
           description={
             activeDialog.type === 'DELETE' ? (
@@ -841,7 +631,7 @@ export function RegisteredUsersManagement() {
                   ⚠️ সতর্কতা: এটি ডাটাবেজ থেকে ব্যবহারকারীর সমস্ত রেকর্ড স্থায়ীভাবে মুছে ফেলবে এবং এটি আর ফিরিয়ে আনা সম্ভব নয়!
                 </p>
               </div>
-            ) : activeDialog.type === 'SUSPEND' ? (
+            ) : (
               <div className="space-y-1.5">
                 <p>
                   আপনি কি নিশ্চিতভাবে <strong className="text-slate-900 dark:text-white">{activeDialog.user.name}</strong>-এর অ্যাকাউন্ট{' '}
@@ -852,15 +642,6 @@ export function RegisteredUsersManagement() {
                     স্থগিত থাকাকালীন ব্যবহারকারী প্ল্যাটফর্মে প্রবেশ করতে বা কোনো পোস্ট করতে পারবেন না।
                   </p>
                 )}
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                <p>
-                  আপনি কি নিশ্চিতভাবে <strong className="text-slate-900 dark:text-white">{activeDialog.user.name}</strong>-কে সংগঠনের <strong className="text-amber-500">"সভাপতি (President)"</strong> হিসেবে নিযুক্ত করতে চান?
-                </p>
-                <p className="text-xs text-slate-500">
-                  নিযুক্ত হওয়ার পর তিনি সংগঠনের শীর্ষ প্রশাসনিক পদ এবং নির্বাহী কমিটি পরিচালনার দায়িত্ব লাভ করবেন।
-                </p>
               </div>
             )
           }
