@@ -1,21 +1,120 @@
 // Service Worker for আমরা মোহাম্মদপুরী (Amra Mohammodpury)
-// Enables Web Push Notifications, Background Notifications, and Sound/Vibration alerts
-const SW_VERSION = 'v2-clean';
+// Enables Web Push Notifications, Background Notifications, Safe Static Asset Caching, and PWA Support.
+const SW_VERSION = 'v3-clean';
+const STATIC_CACHE_NAME = `amra-static-${SW_VERSION}`;
+
+// Precache strictly safe, public, non-sensitive static branding assets
+const PRECACHE_ASSETS = [
+  '/manifest.json',
+  '/favicon.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/icons/badge-72x72.png',
+  '/logos/app-logo.png',
+  '/sounds/notification.wav',
+  '/fonts/SolaimanLipi.woff2',
+  '/fonts/SolaimanLipi-Bold.woff2',
+];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(STATIC_CACHE_NAME).then((cache) => {
+      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+        // Precache error should never block SW installation
+        console.warn('[SW] Precache non-blocking warning:', err);
+      });
+    })
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((cacheNames) => Promise.all(cacheNames.map((name) => caches.delete(name))))
+      .then((cacheNames) =>
+        Promise.all(
+          cacheNames.map((name) => {
+            if (name !== STATIC_CACHE_NAME) {
+              return caches.delete(name);
+            }
+          })
+        )
+      )
       .then(() => self.clients.claim())
   );
 });
 
-// Push notification event (triggered when app is closed or in background with mobile data / wifi on)
+// Safe Caching & Fetch Strategy
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+
+  // 1. Only handle GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(request.url);
+
+  // 2. NEVER cache sensitive or dynamic requests:
+  // - API endpoints (/api/*)
+  // - Cross-origin backend API (onrender.com or localhost:5000)
+  // - Next.js RSC Server Components (_rsc query)
+  // - Socket.io or WebSockets
+  // - Browser extensions
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.hostname.includes('onrender.com') ||
+    url.pathname.includes('/socket.io') ||
+    url.searchParams.has('_rsc') ||
+    !url.protocol.startsWith('http')
+  ) {
+    return;
+  }
+
+  // 3. Cache-First for safe static assets (icons, logos, fonts, sounds, manifest)
+  const isSafeStaticAsset =
+    url.origin === self.location.origin &&
+    (url.pathname.startsWith('/icons/') ||
+      url.pathname.startsWith('/logos/') ||
+      url.pathname.startsWith('/fonts/') ||
+      url.pathname.startsWith('/sounds/') ||
+      url.pathname === '/manifest.json' ||
+      url.pathname === '/favicon.png' ||
+      url.pathname === '/favicon.ico');
+
+  if (isSafeStaticAsset) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) {
+          return cached;
+        }
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(STATIC_CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return networkResponse;
+        });
+      })
+    );
+    return;
+  }
+
+  // 4. Network-First with safe fallback for HTML navigations
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return caches.match(request);
+      })
+    );
+    return;
+  }
+});
+
+// Push notification event (triggered when app is closed or in background)
 self.addEventListener('push', (event) => {
   let data = {
     title: 'আমরা মোহাম্মদপুরী',
@@ -26,7 +125,7 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       data = event.data.json();
-    } catch (e) {
+    } catch {
       data.body = event.data.text();
     }
   }
@@ -98,4 +197,3 @@ self.addEventListener('message', (event) => {
     });
   }
 });
-

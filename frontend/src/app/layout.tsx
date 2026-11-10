@@ -1,13 +1,21 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { AppProviders } from '@/providers/AppProviders';
+import { PwaInstallGate } from '@/features/pwa/components/PwaInstallGate';
 import './globals.css';
+
+export const viewport: Viewport = {
+  themeColor: '#087A55',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: {
     default: 'আমরা মোহাম্মদপুরী',
     template: '%s | আমরা মোহাম্মদপুরী',
   },
-  description: 'Community platform connecting residents and initiatives.',
+  description: 'আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা ও সামাজিক প্ল্যাটফর্ম।',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -112,12 +120,35 @@ export default function RootLayout({
                   });
                 } catch(e) {}
               })();
+
+              // Early PWA Install Prompt Capture & Service Worker Registration
+              (function() {
+                try {
+                  window.__deferredPwaPrompt = null;
+                  window.addEventListener('beforeinstallprompt', function(e) {
+                    e.preventDefault();
+                    window.__deferredPwaPrompt = e;
+                    if (window.__onPwaPromptReady) {
+                      try {
+                        window.__onPwaPromptReady(e);
+                      } catch (err) {}
+                    }
+                  });
+                  if ('serviceWorker' in navigator) {
+                    try {
+                      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function() {});
+                    } catch (err) {}
+                  }
+                } catch(e) {}
+              })();
             `,
           }}
         />
       </head>
       <body suppressHydrationWarning className="font-sans antialiased min-h-screen bg-slate-50 dark:bg-brand-charcoal-dark text-slate-900 dark:text-slate-100 transition-colors duration-300">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <PwaInstallGate>{children}</PwaInstallGate>
+        </AppProviders>
       </body>
     </html>
   );

@@ -2,11 +2,16 @@
   "name": "আমরা মোহাম্মদপুরী",
   "short_name": "মোহাম্মদপুরী",
   "description": "আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা ও সামাজিক প্ল্যাটফর্ম",
-  "start_url": "/",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#064e3b",
-  "theme_color": "#059669",
-  "orientation": "portrait",
+  "theme_color": "#087A55",
+  "orientation": "portrait-primary",
+  "categories": ["social", "community", "productivity"],
+  "lang": "bn",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -34,4 +39,3 @@
     }
   ]
 }
-
