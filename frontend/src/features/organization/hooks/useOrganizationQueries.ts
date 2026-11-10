@@ -728,6 +728,8 @@ export function useOrgMutations() {
       organizationService.suspendUser(userId, isSuspended, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDirectory() });
     },
   });
 
@@ -735,6 +737,9 @@ export function useOrgMutations() {
     mutationFn: (userId: string) => organizationService.deleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDirectory() });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.membershipStatus });
     },
   });
 

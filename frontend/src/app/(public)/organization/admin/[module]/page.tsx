@@ -58,6 +58,8 @@ import { MonthlyContributionTracking } from '@/features/organization/components/
 import { CommitteeRoleManagementSection } from '@/features/organization/components/CommitteeRoleManagementSection';
 import { CampaignAdminManagement } from '@/features/campaign/components/CampaignAdminManagement';
 import { RegisteredUsersManagement } from '@/features/organization/components/RegisteredUsersManagement';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/feedback/Toast';
 import { useAdminNav } from '@/features/organization/context/AdminNavContext';
 
 function toBengaliNumber(num: number | string): string {
@@ -171,6 +173,16 @@ export default function AdminModulePage() {
   const [trxModalOpen, setTrxModalOpen] = React.useState(false);
   const [noticeModalOpen, setNoticeModalOpen] = React.useState(false);
   const [electionModalOpen, setElectionModalOpen] = React.useState(false);
+
+  // Professional Confirmation Dialog State
+  const [confirmDialog, setConfirmDialog] = React.useState<{
+    title: string;
+    description: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    confirmText?: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [isConfirming, setIsConfirming] = React.useState(false);
 
   // Unified Expense & Transparency Activity Modal State
   const [entryCategory, setEntryCategory] = React.useState<
@@ -734,65 +746,75 @@ export default function AdminModulePage() {
     }
   };
 
-  const handleStartVoting = async (electionId: string, title: string) => {
-    if (!confirm(`"${title}" নির্বাচনের লাইভ ভোটগ্রহণ শুরু করতে চান? এর ফলে সক্রিয় সদস্যরা ভোটকেন্দ্রে ব্যালট দেখতে পাবেন ও ভোট দিতে পারবেন।`)) {
-      return;
-    }
-    try {
-      await mutations.updateElectionStatus.mutateAsync({
-        electionId,
-        status: 'VOTING_ACTIVE',
-      });
-    } catch (err: any) {
-      alert(err.message || 'ভোটগ্রহণ শুরু করা যায়নি');
-    }
+  const handleStartVoting = (electionId: string, title: string) => {
+    setConfirmDialog({
+      title: 'ভোটগ্রহণ শুরু',
+      description: `"${title}" নির্বাচনের লাইভ ভোটগ্রহণ শুরু করতে চান? এর ফলে সক্রিয় সদস্যরা ভোটকেন্দ্রে ব্যালট দেখতে পাবেন ও ভোট দিতে পারবেন।`,
+      variant: 'primary',
+      confirmText: 'ভোটগ্রহণ শুরু করুন',
+      onConfirm: async () => {
+        await mutations.updateElectionStatus.mutateAsync({
+          electionId,
+          status: 'VOTING_ACTIVE',
+        });
+        toast.success('ভোটগ্রহণ সফলভাবে শুরু হয়েছে');
+      },
+    });
   };
 
-  const handleCloseVoting = async (electionId: string, title: string) => {
-    if (!confirm(`"${title}" নির্বাচনের ভোটগ্রহণ সমাপ্ত করতে চান? এর পর আর কোনো নতুন ভোট গ্রহণ করা হবে না।`)) {
-      return;
-    }
-    try {
-      await mutations.updateElectionStatus.mutateAsync({
-        electionId,
-        status: 'VOTING_CLOSED',
-      });
-    } catch (err: any) {
-      alert(err.message || 'ভোটগ্রহণ সমাপ্ত করা যায়নি');
-    }
+  const handleCloseVoting = (electionId: string, title: string) => {
+    setConfirmDialog({
+      title: 'ভোটগ্রহণ সমাপ্তি',
+      description: `"${title}" নির্বাচনের ভোটগ্রহণ সমাপ্ত করতে চান? এর পর আর কোনো নতুন ভোট গ্রহণ করা হবে না।`,
+      variant: 'warning',
+      confirmText: 'ভোটগ্রহণ সমাপ্ত করুন',
+      onConfirm: async () => {
+        await mutations.updateElectionStatus.mutateAsync({
+          electionId,
+          status: 'VOTING_CLOSED',
+        });
+        toast.success('ভোটগ্রহণ সমাপ্ত করা হয়েছে');
+      },
+    });
   };
 
-  const handleFinalizeElection = async (electionId: string, title: string) => {
-    if (!confirm(`"${title}" নির্বাচনের ফলাফল চূড়ান্ত করতে চান? এর ফলে বিজয়ী প্রার্থীকে কার্যনির্বাহী পদবি স্বয়ংক্রিয়ভাবে প্রদান করা হবে।`)) {
-      return;
-    }
-    try {
-      await mutations.finalizeElection.mutateAsync({ electionId });
-    } catch (err: any) {
-      alert(err.message || 'ফলাফল চূড়ান্ত করা যায়নি');
-    }
+  const handleFinalizeElection = (electionId: string, title: string) => {
+    setConfirmDialog({
+      title: 'ফলাফল চূড়ান্তকরণ',
+      description: `"${title}" নির্বাচনের ফলাফল চূড়ান্ত করতে চান? এর ফলে বিজয়ী প্রার্থীকে কার্যনির্বাহী পদবি স্বয়ংক্রিয়ভাবে প্রদান করা হবে।`,
+      variant: 'primary',
+      confirmText: 'ফলাফল চূড়ান্ত করুন',
+      onConfirm: async () => {
+        await mutations.finalizeElection.mutateAsync({ electionId });
+        toast.success('নির্বাচনের ফলাফল চূড়ান্ত করা হয়েছে');
+      },
+    });
   };
 
-  const handleDeleteElection = async (electionId: string, title: string) => {
-    if (!confirm(`আপনি কি নিশ্চিত যে "${title}" নির্বাচনটি মুছে ফেলতে চান?`)) {
-      return;
-    }
-    try {
-      await mutations.deleteElection.mutateAsync({ electionId });
-    } catch (err: any) {
-      alert(err.message || 'নির্বাচন মুছতে ব্যর্থ হয়েছে');
-    }
+  const handleDeleteElection = (electionId: string, title: string) => {
+    setConfirmDialog({
+      title: 'নির্বাচন মুছে ফেলা',
+      description: `আপনি কি নিশ্চিত যে "${title}" নির্বাচনটি স্থায়ীভাবে মুছে ফেলতে চান?`,
+      variant: 'danger',
+      confirmText: 'মুছে ফেলুন',
+      onConfirm: async () => {
+        await mutations.deleteElection.mutateAsync({ electionId });
+        toast.success('নির্বাচনটি সফলভাবে মুছে ফেলা হয়েছে');
+      },
+    });
   };
 
-  const handleDeleteNotice = async (noticeId: string, title: string) => {
-    if (!confirm(`আপনি কি নিশ্চিত যে "${title}" বিজ্ঞপ্তিটি মুছে ফেলতে চান?`)) {
-      return;
-    }
-    try {
-      await mutations.deleteNotice.mutateAsync({ noticeId });
-    } catch (err: any) {
-      alert(err.message || 'বিজ্ঞপ্তি মুছতে ব্যর্থ হয়েছে');
-    }
+  const handleDeleteNotice = (noticeId: string, title: string) => {
+    setConfirmDialog({
+      title: 'বিজ্ঞপ্তি মুছে ফেলা',
+      description: `আপনি কি নিশ্চিত যে "${title}" বিজ্ঞপ্তিটি মুছে ফেলতে চান?`,
+      variant: 'danger',
+      confirmText: 'মুছে ফেলুন',
+      onConfirm: async () => {
+        await mutations.deleteNotice.mutateAsync({ noticeId });
+        toast.success('বিজ্ঞপ্তিটি সফলভাবে মুছে ফেলা হয়েছে');
+      },
+    });
   };
 
   const meta = MODULE_META[moduleKey];
@@ -2825,6 +2847,30 @@ export default function AdminModulePage() {
         <VotingPollMonitoringModal
           electionId={monitoringElectionId}
           onClose={() => setMonitoringElectionId(null)}
+        />
+      )}
+
+      {/* Professional Confirmation Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          isOpen={Boolean(confirmDialog)}
+          onClose={() => !isConfirming && setConfirmDialog(null)}
+          onConfirm={async () => {
+            setIsConfirming(true);
+            try {
+              await confirmDialog.onConfirm();
+              setConfirmDialog(null);
+            } catch (err: any) {
+              toast.error(err.message || 'অপারেশন ব্যর্থ হয়েছে');
+            } finally {
+              setIsConfirming(false);
+            }
+          }}
+          isLoading={isConfirming}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          variant={confirmDialog.variant}
+          confirmText={confirmDialog.confirmText}
         />
       )}
     </div>

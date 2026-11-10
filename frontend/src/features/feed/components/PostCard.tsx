@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useSession } from '@/lib/auth/auth-client';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/feedback/Toast';
 import { Post, Comment, ReactionType } from '../types';
 import { feedService } from '../services/feed.service';
 import { getBgPreset } from '../utils/bgPresets';
@@ -336,30 +338,36 @@ export function PostCard({
   const isAuthor = currentUserId === post.author.id;
   const canManagePost = isAuthor || isSystemAdmin;
   const [postStatus, setPostStatus] = React.useState((post as any).status || 'PUBLISHED');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const handleToggleDraft = async () => {
     try {
       const nextStatus = postStatus === 'DRAFT' ? 'PUBLISHED' : 'DRAFT';
       await feedService.togglePostDraft(post.id, nextStatus);
       setPostStatus(nextStatus);
-      alert(
+      toast.success(
         nextStatus === 'DRAFT'
-          ? 'পোস্টটি সফলভাবে ড্রাফট করা হয়েছে এবং সাধারণ ফিড থেকে লুকানো হয়েছে।'
-          : 'পোস্টটি পুনরায় ফিডে প্রকাশ করা হয়েছে।',
+          ? 'পোস্টটি সফলভাবে ড্রাফট করা হয়েছে এবং ফিড থেকে লুকানো হয়েছে।'
+          : 'পোস্টটি পুনরায় ফিডে প্রকাশ করা হয়েছে।'
       );
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'অপারেশন ব্যর্থ হয়েছে');
+      toast.error(err instanceof Error ? err.message : 'অপারেশন ব্যর্থ হয়েছে');
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('আপনি কি নিশ্চিতভাবে এই পোস্টটি মুছে ফেলতে চান?')) return;
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
     try {
       await feedService.deletePost(post.id);
+      setIsDeleteDialogOpen(false);
+      toast.success('পোস্টটি সফলভাবে মুছে ফেলা হয়েছে');
       onPostDeleted?.(post.id);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'পোস্ট মুছে ফেলা যায়নি';
-      alert(message);
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
   const bgPreset = getBgPreset(post.bgColor);
@@ -486,9 +494,9 @@ export function PostCard({
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
-                      handleDelete();
+                      setIsDeleteDialogOpen(true);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-left font-medium"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-left font-medium cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>{isSystemAdmin && !isAuthor ? 'অ্যাডমিন ডিলিট' : 'পোস্ট মুছুন'}</span>
@@ -744,6 +752,27 @@ export function PostCard({
           </div>
         </div>
       )}
+
+      {/* Professional Post Delete Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => !isDeleting && setIsDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title="পোস্ট মুছে ফেলা"
+        variant="danger"
+        confirmText="মুছে ফেলুন"
+        description={
+          <div className="space-y-1">
+            <p>আপনি কি নিশ্চিতভাবে এই পোস্টটি স্থায়ীভাবে মুছে ফেলতে চান?</p>
+            {isSystemAdmin && !isAuthor && (
+              <p className="text-xs text-amber-500 font-medium">
+                (সিস্টেম অ্যাডমিন প্রিভিলেজ দ্বারা এই পোস্টটি মুছে ফেলা হচ্ছে)
+              </p>
+            )}
+          </div>
+        }
+      />
     </article>
   );
 }

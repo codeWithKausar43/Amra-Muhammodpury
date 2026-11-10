@@ -3472,14 +3472,23 @@ export class OrganizationService {
       throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনকে স্থগিত করা সম্ভব নয়');
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id: targetUserId },
-      data: {
-        isSuspended,
-        suspendedAt: isSuspended ? new Date() : null,
-        suspendedReason: isSuspended ? (reason || 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে অ্যাকাউন্ট স্থগিত') : null,
-      },
-      select: { id: true, name: true, email: true, isSuspended: true, suspendedAt: true, suspendedReason: true },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // If suspending, revoke all active sessions immediately
+      if (isSuspended) {
+        await tx.session.deleteMany({
+          where: { userId: targetUserId },
+        });
+      }
+
+      return tx.user.update({
+        where: { id: targetUserId },
+        data: {
+          isSuspended,
+          suspendedAt: isSuspended ? new Date() : null,
+          suspendedReason: isSuspended ? (reason || 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে অ্যাকাউন্ট স্থগিত') : null,
+        },
+        select: { id: true, name: true, email: true, isSuspended: true, suspendedAt: true, suspendedReason: true },
+      });
     });
 
     return updated;
@@ -3502,8 +3511,50 @@ export class OrganizationService {
       throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনের অ্যাকাউন্ট মুছে ফেলা সম্ভব নয়');
     }
 
-    await this.prisma.user.delete({
-      where: { id: targetUserId },
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Invalidate sessions and accounts
+      await tx.session.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.account.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+
+      // 2. Organization items
+      await tx.orgMeetingAttendance.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.orgCommitteeMember.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.contributionPayment.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.contributionReminder.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.contributionAgreement.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.orgApplication.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.orgMembership.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.electionNomination.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.voterParticipation.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+
+      // 3. Social / Feed relations
+      await tx.postLike.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.comment.deleteMany({ where: { authorId: targetUserId } }).catch(() => {});
+      await tx.savedPost.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.story.deleteMany({ where: { authorId: targetUserId } }).catch(() => {});
+      await tx.post.deleteMany({ where: { authorId: targetUserId } }).catch(() => {});
+      await tx.groupMember.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.groupJoinRequest.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.friendRequest.deleteMany({
+        where: { OR: [{ senderId: targetUserId }, { receiverId: targetUserId }] },
+      }).catch(() => {});
+      await tx.friendship.deleteMany({
+        where: { OR: [{ userId: targetUserId }, { friendId: targetUserId }] },
+      }).catch(() => {});
+      await tx.message.deleteMany({
+        where: { OR: [{ senderId: targetUserId }, { recipientId: targetUserId }] },
+      }).catch(() => {});
+      await tx.notification.deleteMany({ where: { recipientId: targetUserId } }).catch(() => {});
+      await tx.blockedUser.deleteMany({
+        where: { OR: [{ blockerId: targetUserId }, { blockedId: targetUserId }] },
+      }).catch(() => {});
+      await tx.report.deleteMany({ where: { reporterId: targetUserId } }).catch(() => {});
+      await tx.pushSubscription.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+
+      // 4. Finally delete user from database
+      await tx.user.delete({
+        where: { id: targetUserId },
+      });
     });
 
     return { success: true, message: 'ব্যবহারকারী স্থায়ীভাবে মুছে ফেলা হয়েছে' };

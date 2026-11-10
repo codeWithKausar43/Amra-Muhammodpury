@@ -21,6 +21,8 @@ import {
 import { useSession } from '@/lib/auth/auth-client';
 import { useAdminUsersQuery, useOrgMutations } from '../hooks/useOrganizationQueries';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/feedback/Toast';
 import type { AdminUserItem, AdminUsersQueryParams } from '../types';
 
 function toBengaliNumber(num: number | string): string {
@@ -97,61 +99,43 @@ export function RegisteredUsersManagement() {
   const [page, setPage] = React.useState(1);
   const [actionLoadingId, setActionLoadingId] = React.useState<string | null>(null);
 
-  const handleAppointPresident = async (targetUser: AdminUserItem) => {
-    if (!confirm(`আপনি কি নিশ্চিতভাবে ${targetUser.name}-কে সংগঠনের "সভাপতি (President)" হিসেবে নিযুক্ত করতে চান?`)) {
-      return;
-    }
-    setActionLoadingId(targetUser.id);
+  // Professional Dialog State (Eliminates browser alert/confirm/prompt popups)
+  const [activeDialog, setActiveDialog] = React.useState<{
+    type: 'APPOINT_PRESIDENT' | 'SUSPEND' | 'DELETE';
+    user: AdminUserItem;
+  } | null>(null);
+  const [suspendReason, setSuspendReason] = React.useState('প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত');
+  const [isDialogSubmitting, setIsDialogSubmitting] = React.useState(false);
+
+  const handleConfirmAction = async () => {
+    if (!activeDialog) return;
+    const { type, user } = activeDialog;
+    setIsDialogSubmitting(true);
+    setActionLoadingId(user.id);
+
     try {
-      await mutations.appointPresident.mutateAsync(targetUser.id);
-      alert(`${targetUser.name} এখন সংগঠনের প্রধান সভাপতি হিসেবে নিযুক্ত হয়েছেন।`);
+      if (type === 'APPOINT_PRESIDENT') {
+        await mutations.appointPresident.mutateAsync(user.id);
+        toast.success(`${user.name} এখন সংগঠনের প্রধান সভাপতি হিসেবে নিযুক্ত হয়েছেন।`);
+      } else if (type === 'SUSPEND') {
+        const willSuspend = !user.isSuspended;
+        await mutations.suspendUser.mutateAsync({
+          userId: user.id,
+          isSuspended: willSuspend,
+          reason: willSuspend ? suspendReason.trim() || undefined : undefined,
+        });
+        toast.success(
+          willSuspend ? 'অ্যাকাউন্ট সফলভাবে স্থগিত করা হয়েছে।' : 'স্থগিতাদেশ প্রত্যাহার করা হয়েছে।'
+        );
+      } else if (type === 'DELETE') {
+        await mutations.deleteUser.mutateAsync(user.id);
+        toast.success(`${user.name}-এর অ্যাকাউন্ট সফলভাবে মুছে ফেলা হয়েছে।`);
+      }
+      setActiveDialog(null);
     } catch (err: any) {
-      alert(err.message || 'সভাপতি নিযুক্ত করা সম্ভব হয়নি');
+      toast.error(err.message || 'অপারেশন সম্পন্ন করা সম্ভব হয়নি');
     } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleToggleSuspend = async (targetUser: AdminUserItem) => {
-    const willSuspend = !targetUser.isSuspended;
-    const msg = willSuspend
-      ? `আপনি কি নিশ্চিতভাবে ${targetUser.name}-এর অ্যাকাউন্ট সাময়িকভাবে স্থগিত (Suspend) করতে চান?`
-      : `আপনি কি নিশ্চিতভাবে ${targetUser.name}-এর স্থগিতাদেশ প্রত্যাহার (Unsuspend) করতে চান?`;
-    if (!confirm(msg)) return;
-
-    let reason: string | undefined = undefined;
-    if (willSuspend) {
-      const inputReason = prompt('স্থগিতের কারণ লিখুন (ঐচ্ছিক):', 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে স্থগিত');
-      if (inputReason === null) return;
-      reason = inputReason.trim() || undefined;
-    }
-
-    setActionLoadingId(targetUser.id);
-    try {
-      await mutations.suspendUser.mutateAsync({
-        userId: targetUser.id,
-        isSuspended: willSuspend,
-        reason,
-      });
-      alert(willSuspend ? 'অ্যাকাউন্ট সফলভাবে স্থগিত করা হয়েছে।' : 'স্থগিতাদেশ প্রত্যাহার করা হয়েছে।');
-    } catch (err: any) {
-      alert(err.message || 'অপারেশন ব্যর্থ হয়েছে');
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleDeleteUser = async (targetUser: AdminUserItem) => {
-    if (!confirm(`সতর্কতা: আপনি কি নিশ্চিতভাবে ${targetUser.name}-এর অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!`)) {
-      return;
-    }
-    setActionLoadingId(targetUser.id);
-    try {
-      await mutations.deleteUser.mutateAsync(targetUser.id);
-      alert('ব্যবহারকারী সফলভাবে মুছে ফেলা হয়েছে।');
-    } catch (err: any) {
-      alert(err.message || 'ইউজার মুছে ফেলা যায়নি');
-    } finally {
+      setIsDialogSubmitting(false);
       setActionLoadingId(null);
     }
   };
@@ -548,7 +532,7 @@ export function RegisteredUsersManagement() {
                                   <button
                                     type="button"
                                     disabled={actionLoadingId === user.id}
-                                    onClick={() => handleAppointPresident(user)}
+                                    onClick={() => setActiveDialog({ type: 'APPOINT_PRESIDENT', user })}
                                     title="সভাপতি হিসেবে নিযুক্ত করুন"
                                     className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 transition-colors disabled:opacity-50 cursor-pointer"
                                   >
@@ -562,7 +546,10 @@ export function RegisteredUsersManagement() {
                                 <button
                                   type="button"
                                   disabled={actionLoadingId === user.id}
-                                  onClick={() => handleToggleSuspend(user)}
+                                  onClick={() => {
+                                    setSuspendReason('প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত');
+                                    setActiveDialog({ type: 'SUSPEND', user });
+                                  }}
                                   title={user.isSuspended ? 'স্থগিতাদেশ প্রত্যাহার করুন' : 'অ্যাকাউন্ট স্থগিত করুন'}
                                   className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer ${
                                     user.isSuspended
@@ -579,7 +566,7 @@ export function RegisteredUsersManagement() {
                                 <button
                                   type="button"
                                   disabled={actionLoadingId === user.id}
-                                  onClick={() => handleDeleteUser(user)}
+                                  onClick={() => setActiveDialog({ type: 'DELETE', user })}
                                   title="অ্যাকাউন্ট মুছে ফেলুন"
                                   className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-colors disabled:opacity-50 cursor-pointer"
                                 >
@@ -731,7 +718,7 @@ export function RegisteredUsersManagement() {
                           <button
                             type="button"
                             disabled={actionLoadingId === user.id}
-                            onClick={() => handleAppointPresident(user)}
+                            onClick={() => setActiveDialog({ type: 'APPOINT_PRESIDENT', user })}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 disabled:opacity-50 cursor-pointer"
                           >
                             {actionLoadingId === user.id ? (
@@ -745,7 +732,10 @@ export function RegisteredUsersManagement() {
                         <button
                           type="button"
                           disabled={actionLoadingId === user.id}
-                          onClick={() => handleToggleSuspend(user)}
+                          onClick={() => {
+                            setSuspendReason('প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত');
+                            setActiveDialog({ type: 'SUSPEND', user });
+                          }}
                           className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border disabled:opacity-50 cursor-pointer ${
                             user.isSuspended
                               ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
@@ -762,7 +752,7 @@ export function RegisteredUsersManagement() {
                         <button
                           type="button"
                           disabled={actionLoadingId === user.id}
-                          onClick={() => handleDeleteUser(user)}
+                          onClick={() => setActiveDialog({ type: 'DELETE', user })}
                           className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 disabled:opacity-50 cursor-pointer"
                         >
                           {actionLoadingId === user.id ? (
@@ -808,6 +798,84 @@ export function RegisteredUsersManagement() {
           </div>
         )}
       </div>
+
+      {/* Professional Confirmation Modal (No native browser alerts/confirm) */}
+      {activeDialog && (
+        <ConfirmDialog
+          isOpen={Boolean(activeDialog)}
+          onClose={() => !isDialogSubmitting && setActiveDialog(null)}
+          onConfirm={handleConfirmAction}
+          isLoading={isDialogSubmitting}
+          title={
+            activeDialog.type === 'DELETE'
+              ? 'অ্যাকাউন্ট মুছে ফেলা'
+              : activeDialog.type === 'SUSPEND'
+              ? activeDialog.user.isSuspended
+                ? 'স্থগিতাদেশ প্রত্যাহার'
+                : 'অ্যাকাউন্ট স্থগিতকরণ'
+              : 'সভাপতি হিসেবে নিযুক্তকরণ'
+          }
+          variant={
+            activeDialog.type === 'DELETE'
+              ? 'danger'
+              : activeDialog.type === 'SUSPEND'
+              ? 'warning'
+              : 'crown'
+          }
+          confirmText={
+            activeDialog.type === 'DELETE'
+              ? 'স্থায়ীভাবে মুছুন'
+              : activeDialog.type === 'SUSPEND'
+              ? activeDialog.user.isSuspended
+                ? 'সক্রিয় করুন'
+                : 'স্থগিত করুন'
+              : 'সভাপতি করুন'
+          }
+          description={
+            activeDialog.type === 'DELETE' ? (
+              <div className="space-y-1.5">
+                <p>
+                  আপনি কি নিশ্চিতভাবে <strong className="text-slate-900 dark:text-white">{activeDialog.user.name}</strong>-এর অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলতে চান?
+                </p>
+                <p className="text-xs text-rose-500 font-semibold">
+                  ⚠️ সতর্কতা: এটি ডাটাবেজ থেকে ব্যবহারকারীর সমস্ত রেকর্ড স্থায়ীভাবে মুছে ফেলবে এবং এটি আর ফিরিয়ে আনা সম্ভব নয়!
+                </p>
+              </div>
+            ) : activeDialog.type === 'SUSPEND' ? (
+              <div className="space-y-1.5">
+                <p>
+                  আপনি কি নিশ্চিতভাবে <strong className="text-slate-900 dark:text-white">{activeDialog.user.name}</strong>-এর অ্যাকাউন্ট{' '}
+                  {activeDialog.user.isSuspended ? 'পুনরায় সক্রিয়' : 'সাময়িকভাবে স্থগিত (Suspend)'} করতে চান?
+                </p>
+                {!activeDialog.user.isSuspended && (
+                  <p className="text-xs text-amber-500">
+                    স্থগিত থাকাকালীন ব্যবহারকারী প্ল্যাটফর্মে প্রবেশ করতে বা কোনো পোস্ট করতে পারবেন না।
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <p>
+                  আপনি কি নিশ্চিতভাবে <strong className="text-slate-900 dark:text-white">{activeDialog.user.name}</strong>-কে সংগঠনের <strong className="text-amber-500">"সভাপতি (President)"</strong> হিসেবে নিযুক্ত করতে চান?
+                </p>
+                <p className="text-xs text-slate-500">
+                  নিযুক্ত হওয়ার পর তিনি সংগঠনের শীর্ষ প্রশাসনিক পদ এবং নির্বাহী কমিটি পরিচালনার দায়িত্ব লাভ করবেন।
+                </p>
+              </div>
+            )
+          }
+          inputPrompt={
+            activeDialog.type === 'SUSPEND' && !activeDialog.user.isSuspended
+              ? {
+                  label: 'স্থগিতের কারণ (ঐচ্ছিক):',
+                  placeholder: 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত',
+                  value: suspendReason,
+                  onChange: setSuspendReason,
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

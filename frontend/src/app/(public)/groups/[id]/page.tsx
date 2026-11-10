@@ -17,6 +17,8 @@ import {
 import { socialService, GroupData } from '@/features/social/services/social.service';
 import { Post } from '@/features/feed/types';
 import { PostCard } from '@/features/feed/components/PostCard';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/feedback/Toast';
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -26,6 +28,8 @@ export default function GroupDetailPage() {
   const [group, setGroup] = React.useState<GroupData | null>(null);
   const [posts, setPosts] = React.useState<Post[]>([]);
   const [actionLoading, setActionLoading] = React.useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = React.useState(false);
+  const [isLeaving, setIsLeaving] = React.useState(false);
 
   // Group post composer state
   const [postContent, setPostContent] = React.useState('');
@@ -63,15 +67,18 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleLeave = async () => {
-    if (!confirm('আপনি কি এই গ্রুপটি ত্যাগ করতে চান?')) return;
+  const handleConfirmLeave = async () => {
+    setIsLeaving(true);
     setActionLoading(true);
     try {
       await socialService.leaveGroup(groupId);
+      toast.success('গ্রুপটি সফলভাবে ত্যাগ করা হয়েছে');
+      setIsLeaveDialogOpen(false);
       await loadData();
     } catch {
-      // ignore
+      toast.error('গ্রুপ ত্যাগ করা সম্ভব হয়নি');
     } finally {
+      setIsLeaving(false);
       setActionLoading(false);
     }
   };
@@ -188,7 +195,7 @@ export default function GroupDetailPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={handleLeave}
+                    onClick={() => setIsLeaveDialogOpen(true)}
                     disabled={actionLoading}
                     className="px-3.5 py-1.5 rounded-xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer"
                   >
@@ -293,6 +300,24 @@ export default function GroupDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Professional Leave Group Modal */}
+      {isLeaveDialogOpen && (
+        <ConfirmDialog
+          isOpen={isLeaveDialogOpen}
+          onClose={() => !isLeaving && setIsLeaveDialogOpen(false)}
+          onConfirm={handleConfirmLeave}
+          isLoading={isLeaving}
+          title="গ্রুপ ত্যাগ"
+          variant="warning"
+          confirmText="গ্রুপ ত্যাগ করুন"
+          description={
+            <p>
+              আপনি কি নিশ্চিতভাবে <strong className="text-slate-900 dark:text-white">{group.name}</strong> গ্রুপটি ত্যাগ করতে চান?
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }
