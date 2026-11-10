@@ -108,7 +108,7 @@ export function Navbar({ onSearch }: NavbarProps) {
         <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-3">
           {/* Brand Logo & Name */}
           <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 select-none min-w-0 group">
-            <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+            <div className="hidden sm:block relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-sm shrink-0 group-hover:scale-105 transition-transform">
               <Image
                 src="/logos/logo.png"
                 alt="আমরা মোহাম্মদপুরী লোগো"
@@ -119,7 +119,7 @@ export function Navbar({ onSearch }: NavbarProps) {
               />
             </div>
             <div className="flex flex-col text-left min-w-0">
-              <span className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate max-w-[125px] min-[360px]:max-w-[165px] sm:max-w-none">
+              <span className="text-[17px] sm:text-base md:text-lg font-black sm:font-bold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate">
                 আমরা মোহাম্মদপুরী
               </span>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
