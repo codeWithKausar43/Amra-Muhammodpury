@@ -78,6 +78,7 @@ export function usePwaInstall() {
     const handleAppInstalled = () => {
       if (typeof window !== 'undefined') {
         window.__deferredPwaPrompt = null;
+        window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
       }
       setDeferredPrompt(null);
       setIsInstalled(true);
@@ -134,6 +135,9 @@ export function usePwaInstall() {
       const choice = await promptEvent.userChoice;
       if (choice.outcome === 'accepted') {
         setIsInstalled(true);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
+        }
       }
       setDeferredPrompt(null);
       if (typeof window !== 'undefined') {

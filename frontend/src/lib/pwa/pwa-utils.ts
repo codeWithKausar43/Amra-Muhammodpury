@@ -65,3 +65,24 @@ export function getPwaPlatformInfo(): PwaPlatformInfo {
   };
 }
 
+/**
+ * Attempts to launch installed WebAPK on Android devices using Chrome intent scheme.
+ */
+export function launchAndroidInstalledApp(path = '/'): boolean {
+  if (typeof window === 'undefined') return false;
+  const isAndroid = /Android/i.test(navigator.userAgent || '');
+  if (!isAndroid) return false;
+
+  try {
+    const host = window.location.host;
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const intentUrl = `intent://${host}${cleanPath}#Intent;scheme=https;package=com.android.chrome;end;`;
+    window.location.href = intentUrl;
+    return true;
+  } catch (err) {
+    console.warn('[PWA] Could not trigger Android intent:', err);
+    return false;
+  }
+}
+
+
