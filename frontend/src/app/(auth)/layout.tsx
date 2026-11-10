@@ -24,8 +24,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // If already authenticated, don't render auth pages (redirect is in progress)
-  if (session) return null;
+  // If already authenticated, show loading while redirecting to dashboard
+  if (session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-brand-charcoal-dark">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-emerald border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-[100dvh] w-full flex flex-col justify-center items-center p-3 sm:p-6 overflow-x-hidden transition-colors duration-300">

@@ -25,8 +25,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  // Don't render children if not authenticated (redirect is in progress)
-  if (!session) return null;
+  // If not authenticated, show loading while redirecting to login
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-brand-charcoal-dark">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-emerald border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-brand-charcoal-dark text-slate-900 dark:text-slate-100 transition-colors duration-300">

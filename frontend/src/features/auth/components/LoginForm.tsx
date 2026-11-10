@@ -51,11 +51,12 @@ export function LoginForm() {
     setServerError(null);
 
     try {
+      const callbackParam = searchParams.get('callbackUrl') || '/dashboard';
       const response = await signIn.email({
         email: values.email.trim().toLowerCase(),
         password: values.password,
         rememberMe,
-        callbackURL: '/dashboard',
+        callbackURL: callbackParam,
       });
 
       if (response?.error) {
@@ -73,7 +74,7 @@ export function LoginForm() {
       }
 
       // Successful login
-      router.push('/dashboard');
+      router.push(callbackParam);
       router.refresh();
     } catch (err: unknown) {
       const message =

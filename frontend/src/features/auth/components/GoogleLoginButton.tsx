@@ -13,10 +13,17 @@ export function GoogleLoginButton() {
     setConfigNotice(null);
 
     try {
+      const searchCallback =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('callbackUrl')
+          : null;
+      const targetPath =
+        searchCallback && searchCallback.startsWith('/') ? searchCallback : '/dashboard';
+
       // Better Auth social login
       const result = await signIn.social({
         provider: 'google',
-        callbackURL: window.location.origin + '/dashboard',
+        callbackURL: window.location.origin + targetPath,
         errorCallbackURL: window.location.origin + '/login',
       });
 
