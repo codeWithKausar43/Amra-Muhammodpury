@@ -4,6 +4,19 @@ import { auth } from '../src/config/auth.js';
 const prisma = new PrismaClient();
 
 async function main() {
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    Boolean(process.env.DATABASE_URL?.includes('neon.tech')) ||
+    Boolean(process.env.DATABASE_URL?.includes('pooler.'));
+
+  const allowProduction = process.argv.includes('--allow-production');
+
+  if (isProduction && !allowProduction) {
+    console.error('⛔ [SECURITY SHIELD] Seeding aborted: Target is a PRODUCTION cloud database!');
+    console.error('👉 Seeding demo/test data is strictly disallowed in production to prevent data overwrites.');
+    console.error('💡 If you genuinely need to seed a staging database, pass the "--allow-production" flag explicitly.');
+    process.exit(1);
+  }
   console.info('🌱 Starting comprehensive database seeding for আমরা মোহাম্মদপুরী...');
 
   const authCtx = await auth.$context;
