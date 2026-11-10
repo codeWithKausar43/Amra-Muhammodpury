@@ -14,8 +14,12 @@ import {
   ShieldCheck,
   UserCheck,
   Loader2,
+  Crown,
+  Ban,
+  Trash2,
 } from 'lucide-react';
-import { useAdminUsersQuery } from '../hooks/useOrganizationQueries';
+import { useSession } from '@/lib/auth/auth-client';
+import { useAdminUsersQuery, useOrgMutations } from '../hooks/useOrganizationQueries';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import type { AdminUserItem, AdminUsersQueryParams } from '../types';
 
@@ -79,12 +83,78 @@ function GoogleBrandIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) 
 }
 
 export function RegisteredUsersManagement() {
+  const { data: session } = useSession();
+  const isSystemAdmin =
+    (session?.user as any)?.role === 'SUPER_ADMIN' ||
+    session?.user?.email === 'itskausarprodhan@gmail.com';
+  const mutations = useOrgMutations();
+
   const [search, setSearch] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [selectedType, setSelectedType] = React.useState<'ALL' | 'GENERAL_USER' | 'MEMBER'>('ALL');
   const [selectedProvider, setSelectedProvider] = React.useState<'ALL' | 'google' | 'credential'>('ALL');
-  const [selectedRole, setSelectedRole] = React.useState<'ALL' | 'USER' | 'ADMIN'>('ALL');
+  const [selectedRole, setSelectedRole] = React.useState<'ALL' | 'USER' | 'ADMIN' | 'SUPER_ADMIN'>('ALL');
   const [page, setPage] = React.useState(1);
+  const [actionLoadingId, setActionLoadingId] = React.useState<string | null>(null);
+
+  const handleAppointPresident = async (targetUser: AdminUserItem) => {
+    if (!confirm(`আপনি কি নিশ্চিতভাবে ${targetUser.name}-কে সংগঠনের "সভাপতি (President)" হিসেবে নিযুক্ত করতে চান?`)) {
+      return;
+    }
+    setActionLoadingId(targetUser.id);
+    try {
+      await mutations.appointPresident.mutateAsync(targetUser.id);
+      alert(`${targetUser.name} এখন সংগঠনের প্রধান সভাপতি হিসেবে নিযুক্ত হয়েছেন।`);
+    } catch (err: any) {
+      alert(err.message || 'সভাপতি নিযুক্ত করা সম্ভব হয়নি');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleToggleSuspend = async (targetUser: AdminUserItem) => {
+    const willSuspend = !targetUser.isSuspended;
+    const msg = willSuspend
+      ? `আপনি কি নিশ্চিতভাবে ${targetUser.name}-এর অ্যাকাউন্ট সাময়িকভাবে স্থগিত (Suspend) করতে চান?`
+      : `আপনি কি নিশ্চিতভাবে ${targetUser.name}-এর স্থগিতাদেশ প্রত্যাহার (Unsuspend) করতে চান?`;
+    if (!confirm(msg)) return;
+
+    let reason: string | undefined = undefined;
+    if (willSuspend) {
+      const inputReason = prompt('স্থগিতের কারণ লিখুন (ঐচ্ছিক):', 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে স্থগিত');
+      if (inputReason === null) return;
+      reason = inputReason.trim() || undefined;
+    }
+
+    setActionLoadingId(targetUser.id);
+    try {
+      await mutations.suspendUser.mutateAsync({
+        userId: targetUser.id,
+        isSuspended: willSuspend,
+        reason,
+      });
+      alert(willSuspend ? 'অ্যাকাউন্ট সফলভাবে স্থগিত করা হয়েছে।' : 'স্থগিতাদেশ প্রত্যাহার করা হয়েছে।');
+    } catch (err: any) {
+      alert(err.message || 'অপারেশন ব্যর্থ হয়েছে');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDeleteUser = async (targetUser: AdminUserItem) => {
+    if (!confirm(`সতর্কতা: আপনি কি নিশ্চিতভাবে ${targetUser.name}-এর অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা যাবে না!`)) {
+      return;
+    }
+    setActionLoadingId(targetUser.id);
+    try {
+      await mutations.deleteUser.mutateAsync(targetUser.id);
+      alert('ব্যবহারকারী সফলভাবে মুছে ফেলা হয়েছে।');
+    } catch (err: any) {
+      alert(err.message || 'ইউজার মুছে ফেলা যায়নি');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   // Debounce search input
   React.useEffect(() => {
@@ -260,6 +330,9 @@ export function RegisteredUsersManagement() {
               <option value="ADMIN" className="bg-white dark:bg-[#162420] text-slate-900 dark:text-white">
                 প্রশাসক (ADMIN)
               </option>
+              <option value="SUPER_ADMIN" className="bg-white dark:bg-[#162420] text-slate-900 dark:text-white">
+                সিস্টেম অ্যাডমিন (SUPER_ADMIN)
+              </option>
             </select>
           </div>
         </div>
@@ -318,23 +391,41 @@ export function RegisteredUsersManagement() {
             <div className="hidden sm:block overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10">
               <div className="min-w-[640px]">
                 {/* Desktop Table Header */}
-                <div className="grid grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)] items-center gap-3 px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5">
+                <div
+                  className={`grid ${
+                    isSystemAdmin
+                      ? 'grid-cols-[minmax(180px,1.2fr)_minmax(200px,1.3fr)_minmax(90px,0.7fr)_minmax(80px,0.5fr)_minmax(85px,0.5fr)_minmax(130px,0.9fr)]'
+                      : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
+                  } items-center gap-3 px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5`}
+                >
                   <div>ব্যবহারকারী</div>
                   <div>যোগাযোগ</div>
                   <div>শ্রেণি</div>
                   <div>মাধ্যম</div>
-                  <div className="text-right">তারিখ</div>
+                  <div className={isSystemAdmin ? '' : 'text-right'}>তারিখ</div>
+                  {isSystemAdmin && <div className="text-right">অ্যাকশন</div>}
                 </div>
 
                 {/* Desktop Rows */}
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
                   {users.map((user) => {
                     const isMember = user.isMember;
+                    const isTargetSuperAdmin =
+                      user.role === 'SUPER_ADMIN' || user.email === 'itskausarprodhan@gmail.com';
+                    const isPresident = user.membership?.orgRole === 'PRESIDENT';
+                    const isSelf =
+                      session?.user?.id === user.id || session?.user?.email === user.email;
 
                     return (
                       <div
                         key={user.id}
-                        className="grid grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)] items-center gap-3 px-3 py-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors"
+                        className={`grid ${
+                          isSystemAdmin
+                            ? 'grid-cols-[minmax(180px,1.2fr)_minmax(200px,1.3fr)_minmax(90px,0.7fr)_minmax(80px,0.5fr)_minmax(85px,0.5fr)_minmax(130px,0.9fr)]'
+                            : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
+                        } items-center gap-3 px-3 py-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors ${
+                          user.isSuspended ? 'opacity-60 bg-rose-50/30 dark:bg-rose-950/10' : ''
+                        }`}
                       >
                         {/* 1. User Profile & Name */}
                         <div className="flex items-center gap-3 min-w-0">
@@ -360,9 +451,24 @@ export function RegisteredUsersManagement() {
                                 {user.name}
                               </span>
                               {isMember && <VerifiedBadge size="xs" />}
-                              {user.role === 'ADMIN' && (
+                              {isTargetSuperAdmin ? (
                                 <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
+                                  সিস্টেম এডমিন
+                                </span>
+                              ) : isPresident ? (
+                                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
+                                  <Crown className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                                  সভাপতি
+                                </span>
+                              ) : user.role === 'ADMIN' ? (
+                                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20 shrink-0">
                                   এডমিন
+                                </span>
+                              ) : null}
+                              {user.isSuspended && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 shrink-0 inline-flex items-center gap-0.5">
+                                  <Ban className="w-2.5 h-2.5" />
+                                  স্থগিত
                                 </span>
                               )}
                             </div>
@@ -424,12 +530,69 @@ export function RegisteredUsersManagement() {
                           )}
                         </div>
 
-                        {/* 5. Registration Date (Clean single line, no repeated 'ইউজার') */}
-                        <div className="min-w-0 text-right">
+                        {/* 5. Registration Date */}
+                        <div className={`min-w-0 ${isSystemAdmin ? '' : 'text-right'}`}>
                           <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
                             {formatBengaliDate(user.createdAt)}
                           </span>
                         </div>
+
+                        {/* 6. System Admin Exclusive Actions */}
+                        {isSystemAdmin && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isTargetSuperAdmin || isSelf ? (
+                              <span className="text-[10px] text-slate-400 italic">সুরক্ষিত</span>
+                            ) : (
+                              <>
+                                {!isPresident && (
+                                  <button
+                                    type="button"
+                                    disabled={actionLoadingId === user.id}
+                                    onClick={() => handleAppointPresident(user)}
+                                    title="সভাপতি হিসেবে নিযুক্ত করুন"
+                                    className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 transition-colors disabled:opacity-50 cursor-pointer"
+                                  >
+                                    {actionLoadingId === user.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Crown className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  disabled={actionLoadingId === user.id}
+                                  onClick={() => handleToggleSuspend(user)}
+                                  title={user.isSuspended ? 'স্থগিতাদেশ প্রত্যাহার করুন' : 'অ্যাকাউন্ট স্থগিত করুন'}
+                                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer ${
+                                    user.isSuspended
+                                      ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400'
+                                  }`}
+                                >
+                                  {actionLoadingId === user.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Ban className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={actionLoadingId === user.id}
+                                  onClick={() => handleDeleteUser(user)}
+                                  title="অ্যাকাউন্ট মুছে ফেলুন"
+                                  className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-colors disabled:opacity-50 cursor-pointer"
+                                >
+                                  {actionLoadingId === user.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -441,11 +604,18 @@ export function RegisteredUsersManagement() {
             <div className="sm:hidden space-y-2.5">
               {users.map((user) => {
                 const isMember = user.isMember;
+                const isTargetSuperAdmin =
+                  user.role === 'SUPER_ADMIN' || user.email === 'itskausarprodhan@gmail.com';
+                const isPresident = user.membership?.orgRole === 'PRESIDENT';
+                const isSelf =
+                  session?.user?.id === user.id || session?.user?.email === user.email;
 
                 return (
                   <div
                     key={user.id}
-                    className="p-3 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2 shadow-2xs"
+                    className={`p-3 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2 shadow-2xs ${
+                      user.isSuspended ? 'opacity-65 bg-rose-50/30 dark:bg-rose-950/10' : ''
+                    }`}
                   >
                     {/* Top Row: User Identity (Avatar + Name + Badges) & Status Badge on Right */}
                     <div className="flex items-center justify-between gap-2">
@@ -472,9 +642,24 @@ export function RegisteredUsersManagement() {
                               {user.name}
                             </span>
                             {isMember && <VerifiedBadge size="xs" />}
-                            {user.role === 'ADMIN' && (
-                              <span className="px-1.5 py-0.2 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
+                            {isTargetSuperAdmin ? (
+                              <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
+                                সিস্টেম এডমিন
+                              </span>
+                            ) : isPresident ? (
+                              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
+                                <Crown className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                                সভাপতি
+                              </span>
+                            ) : user.role === 'ADMIN' ? (
+                              <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20 shrink-0">
                                 এডমিন
+                              </span>
+                            ) : null}
+                            {user.isSuspended && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 shrink-0 inline-flex items-center gap-0.5">
+                                <Ban className="w-2.5 h-2.5" />
+                                স্থগিত
                               </span>
                             )}
                           </div>
@@ -538,6 +723,57 @@ export function RegisteredUsersManagement() {
                         {formatBengaliDate(user.createdAt)}
                       </div>
                     </div>
+
+                    {/* Mobile System Admin Actions */}
+                    {isSystemAdmin && !isTargetSuperAdmin && !isSelf && (
+                      <div className="pt-2 mt-1 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-end gap-2 flex-wrap">
+                        {!isPresident && (
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === user.id}
+                            onClick={() => handleAppointPresident(user)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 disabled:opacity-50 cursor-pointer"
+                          >
+                            {actionLoadingId === user.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Crown className="w-3 h-3" />
+                            )}
+                            <span>সভাপতি করুন</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={actionLoadingId === user.id}
+                          onClick={() => handleToggleSuspend(user)}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border disabled:opacity-50 cursor-pointer ${
+                            user.isSuspended
+                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/20'
+                          }`}
+                        >
+                          {actionLoadingId === user.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Ban className="w-3 h-3" />
+                          )}
+                          <span>{user.isSuspended ? 'সক্রিয় করুন' : 'স্থগিত'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionLoadingId === user.id}
+                          onClick={() => handleDeleteUser(user)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 disabled:opacity-50 cursor-pointer"
+                        >
+                          {actionLoadingId === user.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                          <span>মুছুন</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -538,13 +538,48 @@ export const organizationService = {
 
   async toggleUserSystemRole(
     userId: string,
-    role: 'USER' | 'ADMIN'
+    role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
   ): Promise<{ id: string; name: string; role: string }> {
     const res = await apiClient<ApiResponse<{ id: string; name: string; role: string }>>(
       `/org/admin/users/${userId}/role`,
       {
         method: 'PATCH',
         body: JSON.stringify({ role }),
+      }
+    );
+    return res.data!;
+  },
+
+  async suspendUser(
+    userId: string,
+    isSuspended: boolean,
+    reason?: string
+  ): Promise<{ id: string; name: string; isSuspended: boolean }> {
+    const res = await apiClient<ApiResponse<{ id: string; name: string; isSuspended: boolean }>>(
+      `/org/admin/users/${userId}/suspend`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ isSuspended, reason }),
+      }
+    );
+    return res.data!;
+  },
+
+  async deleteUser(userId: string): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient<ApiResponse<{ success: boolean; message: string }>>(
+      `/org/admin/users/${userId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    return res.data!;
+  },
+
+  async appointPresident(userId: string): Promise<any> {
+    const res = await apiClient<ApiResponse<any>>(
+      `/org/admin/users/${userId}/appoint-president`,
+      {
+        method: 'POST',
       }
     );
     return res.data!;

@@ -714,6 +714,40 @@ export function useOrgMutations() {
     },
   });
 
+  const toggleUserSystemRole = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: 'USER' | 'ADMIN' | 'SUPER_ADMIN' }) =>
+      organizationService.toggleUserSystemRole(userId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+    },
+  });
+
+  const suspendUser = useMutation({
+    mutationFn: ({ userId, isSuspended, reason }: { userId: string; isSuspended: boolean; reason?: string }) =>
+      organizationService.suspendUser(userId, isSuspended, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'users'] });
+    },
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (userId: string) => organizationService.deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'users'] });
+    },
+  });
+
+  const appointPresident = useMutation({
+    mutationFn: (userId: string) => organizationService.appointPresident(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.committees });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.membershipStatus });
+    },
+  });
+
   return {
     applyMembership,
     submitInitialPayment,
@@ -721,6 +755,10 @@ export function useOrgMutations() {
     reviewApplication,
     reviewPayment,
     updatePaymentConfig,
+    toggleUserSystemRole,
+    suspendUser,
+    deleteUser,
+    appointPresident,
     createFund,
     recordTransaction,
     createCommittee,

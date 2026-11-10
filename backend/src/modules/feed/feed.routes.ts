@@ -21,6 +21,9 @@ export const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // Delete post (auth required, ownership checked)
   fastify.delete('/feed/posts/:id', FeedController.deletePost);
 
+  // Toggle Draft / Unpublish post (auth required, author or System Admin)
+  fastify.patch('/feed/posts/:id/draft', FeedController.toggleDraft);
+
   // Toggle Like (auth required)
   fastify.post('/feed/posts/:id/like', FeedController.toggleLike);
 

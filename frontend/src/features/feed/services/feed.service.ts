@@ -111,4 +111,12 @@ export const feedService = {
       method: 'DELETE',
     });
   },
+
+  async togglePostDraft(postId: string, status?: 'PUBLISHED' | 'DRAFT'): Promise<{ id: string; status: string }> {
+    const res = await apiClient<ApiResponse<{ id: string; status: string }>>(`/feed/posts/${postId}/draft`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    return res.data!;
+  },
 };

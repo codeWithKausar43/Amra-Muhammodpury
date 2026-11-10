@@ -156,13 +156,22 @@ export class OrganizationService {
   }
 
   // --------------------------------------------------------------------------
-  // Helper: Verify User Officer Role
+  // Helper: Verify User Officer Role & System Admin Privileges
   // --------------------------------------------------------------------------
+  public async isSystemAdmin(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, email: true },
+    });
+    return user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com';
+  }
+
   private async getOfficerRole(userId: string): Promise<string | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { role: true, email: true },
     });
+    if (user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com') return 'SUPER_ADMIN';
     if (user?.role === 'ADMIN') return 'PRESIDENT'; // System ADMIN has President privileges
 
     const membership = await this.prisma.orgMembership.findUnique({
@@ -176,7 +185,7 @@ export class OrganizationService {
   }
 
   private requireOfficer(role: string | null, allowed: string[] = ['PRESIDENT', 'TREASURER', 'ADMIN']) {
-    if (!role || !allowed.includes(role)) {
+    if (!role || (!allowed.includes(role) && role !== 'SUPER_ADMIN')) {
       throw new ForbiddenError('এই কার্যক্রমটি সম্পাদনের জন্য আপনার সাংগঠনিক অনুমতি নেই');
     }
   }
@@ -3254,7 +3263,7 @@ export class OrganizationService {
       search?: string;
       type?: 'ALL' | 'GENERAL_USER' | 'MEMBER';
       provider?: 'ALL' | 'google' | 'credential';
-      role?: 'ALL' | 'USER' | 'ADMIN';
+      role?: 'ALL' | 'USER' | 'ADMIN' | 'SUPER_ADMIN';
       page?: number;
       limit?: number;
     },
@@ -3313,6 +3322,9 @@ export class OrganizationService {
             image: true,
             phone: true,
             role: true,
+            isSuspended: true,
+            suspendedAt: true,
+            suspendedReason: true,
             createdAt: true,
             updatedAt: true,
             accounts: {
@@ -3380,6 +3392,9 @@ export class OrganizationService {
         image: u.image,
         phone: u.phone,
         role: u.role,
+        isSuspended: Boolean(u.isSuspended),
+        suspendedAt: u.suspendedAt,
+        suspendedReason: u.suspendedReason,
         createdAt: u.createdAt,
         lastLoginAt: lastSession?.createdAt || u.updatedAt,
         providers,
@@ -3417,9 +3432,20 @@ export class OrganizationService {
     };
   }
 
-  public async toggleUserSystemRole(adminId: string, targetUserId: string, newRole: 'USER' | 'ADMIN') {
-    const role = await this.getOfficerRole(adminId);
-    this.requireOfficer(role, ['ADMIN']);
+  public async toggleUserSystemRole(adminId: string, targetUserId: string, newRole: 'USER' | 'ADMIN' | 'SUPER_ADMIN') {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('ইউজার রোল পরিবর্তন করার অনুমতি শুধুমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { email: true, role: true },
+    });
+
+    if (targetUser?.email === 'itskausarprodhan@gmail.com' || targetUser?.role === 'SUPER_ADMIN') {
+      throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনের রোল পরিবর্তন করা সম্ভব নয়');
+    }
 
     const updated = await this.prisma.user.update({
       where: { id: targetUserId },
@@ -3427,6 +3453,186 @@ export class OrganizationService {
       select: { id: true, name: true, role: true },
     });
     return updated;
+  }
+
+  public async suspendUser(adminId: string, targetUserId: string, isSuspended: boolean, reason?: string) {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('ব্যবহারকারী স্থগিত (Suspend) করার ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, email: true, role: true, name: true },
+    });
+
+    if (!targetUser) throw new NotFoundError('ব্যবহারকারী পাওয়া যায়নি');
+
+    if (targetUser.id === adminId || targetUser.email === 'itskausarprodhan@gmail.com' || targetUser.role === 'SUPER_ADMIN') {
+      throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনকে স্থগিত করা সম্ভব নয়');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        isSuspended,
+        suspendedAt: isSuspended ? new Date() : null,
+        suspendedReason: isSuspended ? (reason || 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে অ্যাকাউন্ট স্থগিত') : null,
+      },
+      select: { id: true, name: true, email: true, isSuspended: true, suspendedAt: true, suspendedReason: true },
+    });
+
+    return updated;
+  }
+
+  public async deleteUser(adminId: string, targetUserId: string) {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('ব্যবহারকারী মুছে ফেলার ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, email: true, role: true, name: true },
+    });
+
+    if (!targetUser) throw new NotFoundError('ব্যবহারকারী পাওয়া যায়নি');
+
+    if (targetUser.id === adminId || targetUser.email === 'itskausarprodhan@gmail.com' || targetUser.role === 'SUPER_ADMIN') {
+      throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনের অ্যাকাউন্ট মুছে ফেলা সম্ভব নয়');
+    }
+
+    await this.prisma.user.delete({
+      where: { id: targetUserId },
+    });
+
+    return { success: true, message: 'ব্যবহারকারী স্থায়ীভাবে মুছে ফেলা হয়েছে' };
+  }
+
+  public async appointPresident(adminId: string, targetUserId: string) {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('সংগঠনের সভাপতি নির্ধারণের ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: { orgMemberships: true },
+    });
+
+    if (!targetUser) throw new NotFoundError('ব্যবহারকারী পাওয়া যায়নি');
+
+    const presidentDesig = await this.prisma.orgDesignation.findFirst({
+      where: { code: 'PRESIDENT' },
+    });
+
+    if (!presidentDesig) throw new NotFoundError('সভাপতি পদবি ডাটাবেজে পাওয়া যায়নি');
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Ensure user has role ADMIN if not SUPER_ADMIN
+      if (targetUser.role !== 'SUPER_ADMIN') {
+        await tx.user.update({
+          where: { id: targetUserId },
+          data: { role: 'ADMIN' },
+        });
+      }
+
+      // 2. Demote existing President who is not System Admin and not the target
+      const existingPresidents = await tx.orgMembership.findMany({
+        where: {
+          orgRole: 'PRESIDENT',
+          userId: { notIn: [targetUserId, adminId] },
+          status: 'ACTIVE',
+        },
+      });
+
+      const memberDesig = await tx.orgDesignation.findFirst({
+        where: { code: 'EXECUTIVE_MEMBER' },
+      });
+
+      for (const p of existingPresidents) {
+        await tx.orgMembership.update({
+          where: { id: p.id },
+          data: {
+            orgRole: 'MEMBER',
+            designationId: memberDesig?.id || null,
+          },
+        });
+      }
+
+      // 3. Update target user's OrgMembership to ACTIVE PRESIDENT
+      const targetMembership = await tx.orgMembership.upsert({
+        where: { userId: targetUserId },
+        update: {
+          status: 'ACTIVE',
+          orgRole: 'PRESIDENT',
+          designationId: presidentDesig.id,
+          joinedAt: targetUser.orgMemberships[0]?.joinedAt || new Date(),
+        },
+        create: {
+          userId: targetUserId,
+          status: 'ACTIVE',
+          orgRole: 'PRESIDENT',
+          designationId: presidentDesig.id,
+          memberNumber: `AMP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+          monthlyContribution: 500,
+          joinedAt: new Date(),
+        },
+      });
+
+      // 4. Update Central Executive Committee
+      const activeCommittee = await tx.orgCommittee.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (activeCommittee) {
+        // Demote previous committee presidents except System Admin
+        await tx.orgCommitteeMember.updateMany({
+          where: {
+            committeeId: activeCommittee.id,
+            designationId: presidentDesig.id,
+            userId: { notIn: [targetUserId, adminId] },
+          },
+          data: {
+            isCurrent: false,
+            endDate: new Date(),
+          },
+        });
+
+        // Assign target to committee as PRESIDENT
+        const existingAssignment = await tx.orgCommitteeMember.findFirst({
+          where: {
+            committeeId: activeCommittee.id,
+            userId: targetUserId,
+          },
+        });
+
+        if (existingAssignment) {
+          await tx.orgCommitteeMember.update({
+            where: { id: existingAssignment.id },
+            data: {
+              designationId: presidentDesig.id,
+              customTitle: 'সভাপতি',
+              isCurrent: true,
+              endDate: null,
+            },
+          });
+        } else {
+          await tx.orgCommitteeMember.create({
+            data: {
+              committeeId: activeCommittee.id,
+              userId: targetUserId,
+              designationId: presidentDesig.id,
+              customTitle: 'সভাপতি',
+              isCurrent: true,
+            },
+          });
+        }
+      }
+
+      return targetMembership;
+    });
   }
 
   // =========================================================================
@@ -3762,6 +3968,9 @@ export class OrganizationService {
             phone: true,
             image: true,
             role: true,
+            isSuspended: true,
+            suspendedAt: true,
+            suspendedReason: true,
             createdAt: true,
           },
         },
@@ -3905,14 +4114,22 @@ export class OrganizationService {
   ) {
     const role = await this.getOfficerRole(reviewerId);
     this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+    const isSysAdmin = await this.isSystemAdmin(reviewerId);
 
     const membership = await this.prisma.orgMembership.findUnique({
       where: { id: memberId },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, user: { select: { email: true, role: true } } },
     });
 
     if (!membership) {
       throw new NotFoundError('সদস্য রেকর্ড খুঁজে পাওয়া যায়নি');
+    }
+
+    // Protection rule: No one can change or demote the System Admin
+    if (membership.user?.role === 'SUPER_ADMIN' || membership.user?.email === 'itskausarprodhan@gmail.com') {
+      if (!isSysAdmin) {
+        throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনের পদবি বা রোল পরিবর্তন করার অনুমতি কারো নেই');
+      }
     }
 
     const targetDesignationId = data.designationId === '' ? null : data.designationId;
@@ -3928,8 +4145,13 @@ export class OrganizationService {
         });
         if (designation) {
           const codeUpper = designation.code.toUpperCase();
-          if (['PRESIDENT', 'GENERAL_SECRETARY', 'VICE_PRESIDENT', 'CONVENER'].includes(codeUpper)) {
+          if (['PRESIDENT', 'CONVENER'].includes(codeUpper)) {
+            if (!isSysAdmin) {
+              throw new ForbiddenError('সংগঠনের সভাপতি নির্ধারণের ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+            }
             resolvedOrgRole = 'PRESIDENT';
+          } else if (['GENERAL_SECRETARY', 'VICE_PRESIDENT', 'JOINT_SECRETARY', 'ORGANIZING_SECRETARY', 'PUBLICITY_SECRETARY'].includes(codeUpper)) {
+            resolvedOrgRole = codeUpper;
           } else if (codeUpper === 'TREASURER') {
             resolvedOrgRole = 'TREASURER';
           } else if (codeUpper === 'MODERATOR') {

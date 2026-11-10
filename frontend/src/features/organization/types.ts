@@ -852,6 +852,9 @@ export interface AdminUserItem {
   image: string | null;
   phone: string | null;
   role: string;
+  isSuspended?: boolean;
+  suspendedAt?: string | null;
+  suspendedReason?: string | null;
   createdAt: string;
   lastLoginAt: string;
   providers: string[];
@@ -873,7 +876,7 @@ export interface AdminUsersQueryParams {
   search?: string;
   type?: 'ALL' | 'GENERAL_USER' | 'MEMBER';
   provider?: 'ALL' | 'google' | 'credential';
-  role?: 'ALL' | 'USER' | 'ADMIN';
+  role?: 'ALL' | 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   page?: number;
   limit?: number;
 }
