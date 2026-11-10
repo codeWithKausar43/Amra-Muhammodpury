@@ -20,6 +20,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Users,
+  Settings,
 } from 'lucide-react';
 import {
   useOrgMemberDashboardQuery,
@@ -782,6 +783,16 @@ export default function MemberDashboardPage() {
                 <Users className="w-3 h-3" />
                 <span>সদস্য ডিরেক্টরি</span>
               </button>
+              {(['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(membership.orgRole) ||
+                (membership.user as any)?.role === 'ADMIN') && (
+                <Link
+                  href="/organization/admin"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-900 dark:text-amber-300 font-bold text-[11px] transition-colors cursor-pointer"
+                >
+                  <Settings className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <span>প্রশাসনিক প্যানেল</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
