@@ -63,7 +63,6 @@ export default function OrganizationAdminPage() {
 
   // Role translation mapping
   const ORG_ROLE_MAP: Record<string, string> = {
-    SUPER_ADMIN: 'সিস্টেম অ্যাডমিন',
     PRESIDENT: 'সভাপতি',
     VICE_PRESIDENT: 'সহ-সভাপতি',
     GENERAL_SECRETARY: 'সাধারণ সম্পাদক',
@@ -77,13 +76,6 @@ export default function OrganizationAdminPage() {
 
   // Determine user's official position in the organization
   const userPosition = React.useMemo(() => {
-    // 0. Super Admin / Platform Owner has highest precedence
-    const systemRole = (session?.user as any)?.role;
-    const userEmail = session?.user?.email;
-    if (systemRole === 'SUPER_ADMIN' || userEmail === 'itskausarprodhan@gmail.com') {
-      return 'সিস্টেম অ্যাডমিন';
-    }
-
     // 1. Check committee designation
     if (session?.user && committees.length > 0) {
       const uId = session.user.id;
@@ -121,6 +113,7 @@ export default function OrganizationAdminPage() {
     }
 
     // 3. Check system user role
+    const systemRole = (session?.user as any)?.role;
     if (systemRole === 'ADMIN') {
       return 'প্রধান প্রশাসক';
     }
