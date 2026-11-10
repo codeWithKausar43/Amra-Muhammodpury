@@ -17,6 +17,7 @@ export function GoogleLoginButton() {
       const result = await signIn.social({
         provider: 'google',
         callbackURL: window.location.origin + '/dashboard',
+        errorCallbackURL: window.location.origin + '/login',
       });
 
       if (result?.error) {

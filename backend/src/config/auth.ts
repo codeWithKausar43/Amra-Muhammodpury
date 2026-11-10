@@ -4,13 +4,17 @@ import { prisma } from './database.js';
 import { env } from './env.js';
 import { emailService } from '../services/email.service.js';
 
-const configuredOrigins = env.FRONTEND_URL
-  ? env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/+$/, '')).filter(Boolean)
+const baseURL = env.BETTER_AUTH_URL.trim().replace(/\/+$/, '');
+const frontendURL = env.FRONTEND_URL.trim().replace(/\/+$/, '');
+
+const configuredOrigins = frontendURL
+  ? frontendURL.split(',').map((url) => url.trim().replace(/\/+$/, '')).filter(Boolean)
   : [];
 
 const trustedOrigins = Array.from(
   new Set([
     ...configuredOrigins,
+    'https://amra-muhammodpury.vercel.app',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
   ]),
@@ -20,10 +24,20 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
-  baseURL: env.BETTER_AUTH_URL,
+  baseURL,
   basePath: '/api/auth',
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins,
+  onAPIError: {
+    errorURL: `${frontendURL || 'https://amra-muhammodpury.vercel.app'}/login`,
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['google'],
+      requireLocalEmailVerified: false,
+    },
+  },
   logger: {
     level: 'debug',
   },
@@ -86,7 +100,7 @@ export const auth = betterAuth({
           google: {
             clientId: env.GOOGLE_CLIENT_ID,
             clientSecret: env.GOOGLE_CLIENT_SECRET,
-            redirectURI: `${env.BETTER_AUTH_URL}/api/auth/callback/google`,
+            redirectURI: `${baseURL}/api/auth/callback/google`,
           },
         }
       : {}),

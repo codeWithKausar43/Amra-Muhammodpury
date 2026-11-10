@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, Loader2, AlertCircle } from 'lucide-react';
@@ -14,8 +14,26 @@ import { GoogleLoginButton } from './GoogleLoginButton';
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [rememberMe, setRememberMe] = React.useState(true);
+
+  React.useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      if (error === 'account_not_linked') {
+        setServerError(
+          'এই ইমেইল দিয়ে ইতোমধ্যে পাসওয়ার্ডভিত্তিক অ্যাকাউন্ট খোলা হয়েছে। লিংক করতে প্রথমে পাসওয়ার্ড দিয়ে লগইন করুন।'
+        );
+      } else if (error === 'access_denied') {
+        setServerError('Google সাইন-ইন বাতিল করা হয়েছে।');
+      } else if (error === 'oauth_provider_not_found') {
+        setServerError('Google লগইন সাময়িকভাবে অনুপলব্ধ।');
+      } else {
+        setServerError(`লগইন সম্পন্ন করা যায়নি (${error})। অনুগ্রহ করে আবার চেষ্টা করুন।`);
+      }
+    }
+  }, [searchParams]);
 
   const {
     register,

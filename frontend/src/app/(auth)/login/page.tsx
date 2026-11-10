@@ -1,3 +1,4 @@
+import * as React from 'react';
 import type { Metadata } from 'next';
 import { AuthCard } from '@/features/auth/components/AuthCard';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
@@ -12,7 +13,9 @@ export default function LoginPage() {
   return (
     <AuthCard>
       <AuthHeader title="আবার ফিরে আসুন" subtitle="আপনার কমিউনিটির সঙ্গে যুক্ত থাকতে লগইন করুন।" />
-      <LoginForm />
+      <React.Suspense fallback={<div className="py-6 text-center text-xs text-slate-400">লোড হচ্ছে...</div>}>
+        <LoginForm />
+      </React.Suspense>
     </AuthCard>
   );
 }
