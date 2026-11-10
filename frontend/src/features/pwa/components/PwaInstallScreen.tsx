@@ -18,21 +18,15 @@ import { usePwaInstall } from '@/lib/pwa/usePwaInstall';
 export default function PwaInstallScreen() {
   const { isInstalled, platformInfo, isPrompting, promptInstall } =
     usePwaInstall();
-  const [installStatus, setInstallStatus] = React.useState<
-    'idle' | 'prompting' | 'accepted' | 'dismissed'
-  >('idle');
   const [showDesktopGuide, setShowDesktopGuide] = React.useState<boolean>(false);
 
   const handleInstallClick = async () => {
-    setInstallStatus('prompting');
     const result = await promptInstall();
     if (result === 'accepted') {
-      setInstallStatus('accepted');
       setShowDesktopGuide(false);
     } else if (result === 'dismissed') {
-      setInstallStatus('dismissed');
+      // User dismissed native prompt
     } else {
-      setInstallStatus('idle');
       setShowDesktopGuide(true);
     }
   };
