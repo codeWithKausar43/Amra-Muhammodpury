@@ -3,7 +3,6 @@ import { isPwaStandalone, getPwaPlatformInfo } from '@/lib/pwa/pwa-utils';
 
 describe('PWA Utility Detection', () => {
   const originalMatchMedia = window.matchMedia;
-  const originalNavigator = window.navigator;
 
   beforeEach(() => {
     vi.restoreAllMocks();

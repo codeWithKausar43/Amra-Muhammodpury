@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
+import { toast } from '@/components/feedback/Toast';
 import { feedService } from '../services/feed.service';
 import { Post } from '../types';
 import { BG_PRESETS, getBgPreset, BgCategory } from '../utils/bgPresets';
@@ -81,7 +82,7 @@ export function CreatePostModal({
 
     const validImageFiles = files.filter((f) => f.type.startsWith('image/'));
     if (validImageFiles.length === 0) {
-      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল বাছাই করুন');
+      toast.warning('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল বাছাই করুন');
       return;
     }
 
@@ -200,7 +201,7 @@ export function CreatePostModal({
       onClose();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'পোস্ট প্রকাশ করা সম্ভব হয়নি';
-      alert(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
       setStatusText('প্রকাশ হচ্ছে...');

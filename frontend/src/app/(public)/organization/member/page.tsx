@@ -20,6 +20,8 @@ import {
   RotateCcw,
   ShieldCheck,
   Users,
+  Settings,
+  Edit3,
 } from 'lucide-react';
 import {
   useOrgMemberDashboardQuery,
@@ -29,6 +31,7 @@ import {
 } from '@/features/organization/hooks/useOrganizationQueries';
 import { cleanImageUrl } from '@/features/organization/components/CandidateAvatar';
 import { MemberDirectorySection } from '@/features/organization/components/MemberDirectorySection';
+import { UpdateContributionModal } from '@/features/organization/components/UpdateContributionModal';
 import type { ContributionPayment } from '@/features/organization/types';
 
 const MONTH_NAMES_BN = [
@@ -370,6 +373,7 @@ export default function MemberDashboardPage() {
   const [payError, setPayError] = React.useState<string | null>(null);
   const [paySuccessMsg, setPaySuccessMsg] = React.useState<string | null>(null);
   const [isNumberCopied, setIsNumberCopied] = React.useState(false);
+  const [updateContribModalOpen, setUpdateContribModalOpen] = React.useState(false);
 
   // Dynamic payment config lookup merging DB records with fallback defaults
   const { data: dbPaymentConfigs } = useOrgPaymentConfigsQuery();
@@ -419,9 +423,13 @@ export default function MemberDashboardPage() {
     const joinedYear = joinedDate ? joinedDate.getFullYear() : curY;
     const joinedMonth = joinedDate ? joinedDate.getMonth() + 1 : 1;
 
+    const ORG_START_YEAR = 2026;
+    const ORG_START_MONTH = 11;
+
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
-      const isEligible = payYear > joinedYear || (payYear === joinedYear && m >= joinedMonth);
+      const isBeforeOrgStart = payYear < ORG_START_YEAR || (payYear === ORG_START_YEAR && m < ORG_START_MONTH);
+      const isEligible = !isBeforeOrgStart && (payYear > joinedYear || (payYear === joinedYear && m >= joinedMonth));
 
       // Check if verified paid for this specific payYear
       const isPaid =
@@ -782,6 +790,18 @@ export default function MemberDashboardPage() {
                 <Users className="w-3 h-3" />
                 <span>সদস্য ডিরেক্টরি</span>
               </button>
+              {(['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(membership.orgRole) ||
+                (membership.user as any)?.role === 'ADMIN' ||
+                (membership.user as any)?.role === 'SUPER_ADMIN' ||
+                membership.user?.email === 'itskausarprodhan@gmail.com') && (
+                <Link
+                  href="/organization/admin"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-900 dark:text-amber-300 font-bold text-[11px] transition-colors cursor-pointer"
+                >
+                  <Settings className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <span>প্রশাসনিক প্যানেল</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -804,9 +824,25 @@ export default function MemberDashboardPage() {
             <span className="text-[10px] text-slate-500 dark:text-emerald-300/80 block uppercase font-medium">
               মাসিক অঙ্গীকার
             </span>
-            <span className="text-xs sm:text-sm font-bold text-brand-emerald dark:text-emerald-400">
-              ৳{toBengaliNumber(agreedAmount)} / মাস
-            </span>
+            <div className="flex items-center justify-end gap-1.5 mt-0.5">
+              <span className="text-xs sm:text-sm font-bold text-brand-emerald dark:text-emerald-400">
+                ৳{toBengaliNumber(agreedAmount)} / মাস
+              </span>
+              <button
+                type="button"
+                onClick={() => setUpdateContribModalOpen(true)}
+                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-brand-emerald dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 transition-all cursor-pointer"
+                title="মাসিক অনুদান পরিবর্তন করুন"
+              >
+                <Edit3 className="w-2.5 h-2.5 shrink-0" />
+                <span>পরিবর্তন</span>
+              </button>
+            </div>
+            {agreement?.nextEffectiveAmount && (
+              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 block mt-0.5">
+                (আগামী মাস থেকে: ৳{toBengaliNumber(agreement.nextEffectiveAmount)})
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -945,22 +981,32 @@ export default function MemberDashboardPage() {
          ========================================================================= */}
       <div className="space-y-3 pt-1 text-slate-900 dark:text-white transition-colors">
         {/* Header: Progress Summary */}
-        <div className="flex items-center justify-between text-xs sm:text-sm px-1">
-          <span className="font-bold text-slate-800 dark:text-slate-200">
-            {toBengaliDigits(currentYear)} সালের অনুদান অগ্রগতি
-          </span>
-          <span className="font-bold text-brand-emerald dark:text-emerald-400">
-            {toBengaliDigits(paidMonthsCount)} / {toBengaliDigits(12)} মাস পূর্ণ
-          </span>
-        </div>
+        {(() => {
+          const eligibleMonths = calendar.filter((c) => c.status !== 'NOT_APPLICABLE' && c.isEligible !== false);
+          const totalEligible = eligibleMonths.length > 0 ? eligibleMonths.length : 12;
+          const progressPercent = Math.min(100, Math.round((paidMonthsCount / totalEligible) * 100));
 
-        {/* Progress Bar Track */}
-        <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
-          <div
-            style={{ width: `${Math.min(100, Math.round((paidMonthsCount / 12) * 100))}%` }}
-            className="h-full rounded-full bg-brand-emerald dark:bg-emerald-400 transition-all duration-500"
-          />
-        </div>
+          return (
+            <>
+              <div className="flex items-center justify-between text-xs sm:text-sm px-1">
+                <span className="font-bold text-slate-800 dark:text-slate-200">
+                  {toBengaliDigits(currentYear)} সালের অনুদান অগ্রগতি
+                </span>
+                <span className="font-bold text-brand-emerald dark:text-emerald-400">
+                  {toBengaliDigits(paidMonthsCount)} / {toBengaliDigits(totalEligible)} মাস পূর্ণ
+                </span>
+              </div>
+
+              {/* Progress Bar Track */}
+              <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                <div
+                  style={{ width: `${progressPercent}%` }}
+                  className="h-full rounded-full bg-brand-emerald dark:bg-emerald-400 transition-all duration-500"
+                />
+              </div>
+            </>
+          );
+        })()}
 
         {/* 12-Month Calendar Chips (4 Per Row, Clean Open Layout) */}
         <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 gap-1.5 sm:gap-2 pt-0.5">
@@ -1785,6 +1831,14 @@ export default function MemberDashboardPage() {
           </div>
         </div>
       )}
+      {/* Update Monthly Contribution Modal */}
+      <UpdateContributionModal
+        isOpen={updateContribModalOpen}
+        onClose={() => setUpdateContribModalOpen(false)}
+        currentAmount={agreedAmount}
+        nextEffectiveAmount={agreement?.nextEffectiveAmount}
+        nextEffectiveDate={agreement?.nextEffectiveDate}
+      />
     </div>
   );
 }

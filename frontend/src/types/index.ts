@@ -20,6 +20,6 @@ export interface UserSummary {
   id: string;
   name: string;
   email: string;
-  role: 'USER' | 'ADMIN' | 'MODERATOR';
+  role: 'USER' | 'ADMIN' | 'MODERATOR' | 'SUPER_ADMIN';
   createdAt: string;
 }

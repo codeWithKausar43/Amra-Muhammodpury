@@ -34,10 +34,13 @@ export default function OrganizationPage() {
   const isOfficer =
     Boolean(
       membership &&
-        ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(
+        ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(
           membership.orgRole,
         ),
-    ) || (session?.user as any)?.role === 'ADMIN';
+    ) ||
+    (session?.user as any)?.role === 'ADMIN' ||
+    (session?.user as any)?.role === 'SUPER_ADMIN' ||
+    session?.user?.email === 'itskausarprodhan@gmail.com';
 
   // Only elections with active voting or open nomination are considered active
   const activeElection = elections.find(
@@ -60,15 +63,17 @@ export default function OrganizationPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row md:flex-col gap-2.5 shrink-0">
-            {isActiveMember ? (
+            {isActiveMember || isOfficer ? (
               <div className="space-y-2">
-                <Link
-                  href="/organization/member"
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-brand-emerald font-bold text-sm shadow-lg hover:bg-emerald-50 active:scale-95 transition-all"
-                >
-                  <Award className="w-4 h-4" />
-                  <span>সদস্য ড্যাশবোর্ড</span>
-                </Link>
+                {isActiveMember && (
+                  <Link
+                    href="/organization/member"
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-brand-emerald font-bold text-sm shadow-lg hover:bg-emerald-50 active:scale-95 transition-all"
+                  >
+                    <Award className="w-4 h-4" />
+                    <span>সদস্য ড্যাশবোর্ড</span>
+                  </Link>
+                )}
                 {isOfficer && (
                   <Link
                     href="/organization/admin"

@@ -51,6 +51,38 @@ const MONTH_NAMES_BN = [
   'ডিসেম্বর',
 ];
 
+export const ORG_OFFICIAL_START_YEAR = 2026;
+export const ORG_OFFICIAL_START_MONTH = 11; // November 2026
+
+function toBengaliNumber(num: number | string): string {
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return Number(num || 0)
+    .toLocaleString('en-US')
+    .replace(/[0-9]/g, (d) => bengaliDigits[+d] || d);
+}
+
+export function isMonthEligibleForContribution(
+  year: number,
+  month: number,
+  joinedAt?: Date | string | null,
+  createdAt?: Date | string | null,
+): boolean {
+  // 1. Organization officially started in November 2026. No contributions prior to November 2026.
+  if (year < ORG_OFFICIAL_START_YEAR || (year === ORG_OFFICIAL_START_YEAR && month < ORG_OFFICIAL_START_MONTH)) {
+    return false;
+  }
+  // 2. Member must have joined on or before this period.
+  const joinedDate = joinedAt ? new Date(joinedAt) : (createdAt ? new Date(createdAt) : null);
+  if (joinedDate) {
+    const joinedYear = joinedDate.getFullYear();
+    const joinedMonth = joinedDate.getMonth() + 1;
+    if (year < joinedYear || (year === joinedYear && month < joinedMonth)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export const INITIAL_ORG_PAYMENT_CONFIGS = [
   {
     method: 'BKASH',
@@ -156,14 +188,23 @@ export class OrganizationService {
   }
 
   // --------------------------------------------------------------------------
-  // Helper: Verify User Officer Role
+  // Helper: Verify User Officer Role & System Admin Privileges
   // --------------------------------------------------------------------------
+  public async isSystemAdmin(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, email: true },
+    });
+    return user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.email === 'itskausarprodhan@gmail.com';
+  }
+
   private async getOfficerRole(userId: string): Promise<string | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { role: true, email: true },
     });
-    if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') return 'PRESIDENT'; // System ADMIN & SUPER_ADMIN have full privileges
+    if (user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com') return 'SUPER_ADMIN';
+    if (user?.role === 'ADMIN') return 'PRESIDENT'; // System ADMIN has President privileges
 
     const membership = await this.prisma.orgMembership.findUnique({
       where: { userId },
@@ -177,7 +218,7 @@ export class OrganizationService {
   }
 
   private requireOfficer(role: string | null, allowed: string[] = ['PRESIDENT', 'TREASURER', 'ADMIN']) {
-    if (role === 'PRESIDENT' || role === 'SUPER_ADMIN') return; // President and Super Admin have all officer privileges
+    if (role === 'SUPER_ADMIN' || role === 'PRESIDENT') return; // President and Super Admin have all officer privileges
     if (!role || !allowed.includes(role)) {
       throw new ForbiddenError('এই কার্যক্রমটি সম্পাদনের জন্য আপনার সাংগঠনিক অনুমতি নেই');
     }
@@ -576,11 +617,21 @@ export class OrganizationService {
       }
     }
 
+    // Disallow paying for months before official organization start (November 2026)
+    if (
+      data.periodYear < ORG_OFFICIAL_START_YEAR ||
+      (data.periodYear === ORG_OFFICIAL_START_YEAR && targetMonths.some((m) => m < ORG_OFFICIAL_START_MONTH))
+    ) {
+      throw new BadRequestError('সংগঠনের কার্যক্রম নভেম্বর ২০২৬ থেকে শুরু হওয়ায় এর পূর্ববর্তী মাসের চাঁদা প্রযোজ্য নয়');
+    }
+
     // 2. Due-first check: no unpaid month earlier than targetMonths[0] in the applicable period
     const joinedDate = membership.joinedAt ? new Date(membership.joinedAt) : new Date(membership.createdAt);
     const joinedYear = joinedDate.getFullYear();
     const joinedMonth = joinedDate.getMonth() + 1;
-    const startMonth = data.periodYear === joinedYear ? joinedMonth : 1;
+    const startMonth = data.periodYear === ORG_OFFICIAL_START_YEAR
+      ? Math.max(ORG_OFFICIAL_START_MONTH, joinedMonth)
+      : (data.periodYear === joinedYear ? joinedMonth : 1);
 
     // Disallow paying for months before membership effective month
     if (data.periodYear < joinedYear || (data.periodYear === joinedYear && targetMonths.some((m) => m < joinedMonth))) {
@@ -588,6 +639,7 @@ export class OrganizationService {
     }
 
     for (let m = startMonth; m < firstSelectedMonth; m++) {
+      if (!isMonthEligibleForContribution(data.periodYear, m, membership.joinedAt, membership.createdAt)) continue;
       if (!paidMonthSet.has(m)) {
         const monthName = MONTH_NAMES_BN[m - 1] || `${m} তম মাস`;
         throw new BadRequestError(
@@ -647,6 +699,118 @@ export class OrganizationService {
         payments: createdPayments,
       };
     });
+  }
+
+  // --------------------------------------------------------------------------
+  // Update Member Monthly Contribution Amount (Effective from Next Month)
+  // --------------------------------------------------------------------------
+  public async updateMonthlyContributionAmount(
+    userId: string,
+    data: { newAmount: number; reason?: string },
+  ) {
+    if (data.newAmount < 50) {
+      throw new BadRequestError('মাসিক অনুদান সর্বনিম্ন ৫০ টাকা হতে হবে');
+    }
+
+    const membership = await this.prisma.orgMembership.findUnique({
+      where: { userId },
+      include: { user: { select: { name: true } } },
+    });
+
+    if (!membership || membership.status !== 'ACTIVE') {
+      throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ মাসিক অনুদানের পরিমাণ পরিবর্তন করতে পারবেন');
+    }
+
+    const currentAmount = membership.monthlyContribution;
+    if (Math.round(currentAmount) === Math.round(data.newAmount)) {
+      throw new BadRequestError('নতুন অনুদানের পরিমাণ বর্তমান পরিমাণের চেয়ে ভিন্ন হতে হবে');
+    }
+
+    // Effective from 1st of next month in Asia/Dhaka time
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+    const effectiveFrom = new Date(Date.UTC(nextYear, nextMonth - 1, 1, 0, 0, 0));
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Mark existing agreements as isCurrent: false
+      await tx.contributionAgreement.updateMany({
+        where: { userId },
+        data: { isCurrent: false },
+      });
+
+      // 2. Create new agreement effective from next month
+      const newAgreement = await tx.contributionAgreement.create({
+        data: {
+          userId,
+          monthlyAmount: data.newAmount,
+          effectiveFrom,
+          isCurrent: true,
+          reason: data.reason?.trim() || 'সদস্য কর্তৃক মাসিক অনুদানের পরিমাণ পরিবর্তন',
+        },
+      });
+
+      // 3. Record change in ContributionChangeRequest for audit & history
+      const changeRequest = await tx.contributionChangeRequest.create({
+        data: {
+          userId,
+          previousAmount: currentAmount,
+          newAmount: data.newAmount,
+          reason: data.reason?.trim() || null,
+          status: 'APPROVED',
+          reviewedBy: userId,
+          reviewedAt: now,
+        },
+      });
+
+      // 4. Update membership monthlyContribution (for current live display & admin view)
+      await tx.orgMembership.update({
+        where: { userId },
+        data: {
+          monthlyContribution: data.newAmount,
+        },
+      });
+
+      // 5. In-app confirmation notification for member
+      const nextMonthName = MONTH_NAMES_BN[nextMonth - 1] || `${nextMonth} তম মাস`;
+      await tx.notification.create({
+        data: {
+          recipientId: userId,
+          type: 'SYSTEM_ANNOUNCEMENT',
+          title: 'মাসিক অনুদানের পরিমাণ হালনাগাদ সম্পন্ন ✅',
+          content: `আপনার মাসিক অনুদানের পরিমাণ সফলভাবে ৳${toBengaliNumber(currentAmount)} থেকে ৳${toBengaliNumber(data.newAmount)}-এ পরিবর্তন করা হয়েছে। এটি আগামী ${nextMonthName} (${toBengaliNumber(nextYear)}) থেকে কার্যকর হবে। পূর্ববর্তী কোনো মাসের হিসাব পরিবর্তিত হয়নি।`,
+        },
+      });
+
+      return {
+        previousAmount: currentAmount,
+        newAmount: data.newAmount,
+        effectiveFrom,
+        effectivePeriod: `${nextMonthName} ${nextYear}`,
+        agreement: newAgreement,
+        changeRequest,
+      };
+    });
+  }
+
+  public async getContributionAgreementsHistory(userId: string) {
+    const [agreements, changeRequests] = await Promise.all([
+      this.prisma.contributionAgreement.findMany({
+        where: { userId },
+        orderBy: { effectiveFrom: 'desc' },
+      }),
+      this.prisma.contributionChangeRequest.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      agreements,
+      changeRequests,
+    };
   }
 
   // --------------------------------------------------------------------------
@@ -822,7 +986,8 @@ export class OrganizationService {
       },
     });
 
-    if (!membership || membership.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!membership || (membership.status !== 'ACTIVE' && !isSysAdmin)) {
       throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ মেম্বার ড্যাশবোর্ড দেখতে পারবেন');
     }
 
@@ -830,7 +995,7 @@ export class OrganizationService {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
 
-    const [allVerifiedPayments, pendingPayments, recentPayments, notices, meetings, upcomingElections] = await Promise.all([
+    const [allVerifiedPayments, pendingPayments, recentPayments, notices, meetings, upcomingElections, agreements] = await Promise.all([
       this.prisma.contributionPayment.findMany({
         where: { userId, status: 'VERIFIED' },
       }),
@@ -860,7 +1025,18 @@ export class OrganizationService {
         },
         take: 2,
       }),
+      this.prisma.contributionAgreement.findMany({
+        where: { userId },
+        orderBy: { effectiveFrom: 'desc' },
+      }),
     ]);
+
+    // Helper: Resolve pledged contribution amount for a specific period (year, month)
+    const getPledgedAmountForPeriod = (year: number, month: number): number => {
+      const endOfPeriod = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+      const agr = agreements.find((a) => new Date(a.effectiveFrom) <= endOfPeriod);
+      return agr ? agr.monthlyAmount : membership.monthlyContribution;
+    };
 
     // Calculate total contributed by member (only verified amounts)
     const totalContributed = allVerifiedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -885,8 +1061,8 @@ export class OrganizationService {
       const isPaid = Boolean(verifiedPayment);
       const isPending = Boolean(pendingPayment);
 
-      // Eligibility: Only months on or after joining month are eligible
-      const isEligible = currentYear > joinedYear || (currentYear === joinedYear && month >= joinedMonth);
+      // Eligibility: Only months on or after November 2026 AND on/after joining month are eligible
+      const isEligible = isMonthEligibleForContribution(currentYear, month, membership.joinedAt, membership.createdAt);
 
       let status: 'VERIFIED' | 'PENDING' | 'DUE' | 'NOT_APPLICABLE' = 'DUE';
       if (isPaid) {
@@ -899,6 +1075,9 @@ export class OrganizationService {
         status = 'DUE';
       }
 
+      const pledgedAmount = getPledgedAmountForPeriod(currentYear, month);
+      const amount = verifiedPayment?.amount || pendingPayment?.amount || (isEligible ? pledgedAmount : 0);
+
       return {
         month,
         year: currentYear,
@@ -906,12 +1085,13 @@ export class OrganizationService {
         isPending,
         isEligible,
         status,
-        amount: verifiedPayment?.amount || pendingPayment?.amount || (isEligible ? membership.monthlyContribution : 0),
+        amount,
         paidAt: (verifiedPayment || pendingPayment)?.paidAt ? (verifiedPayment || pendingPayment)!.paidAt.toISOString() : undefined,
       };
     });
 
     // Calculate pending dues up to the current month across eligible periods (ONLY verified payments count as cleared)
+    // Strictly starting from November 2026 onwards (zero prior dues)
     const dueBreakdown: Array<{
       year: number;
       month: number;
@@ -921,20 +1101,25 @@ export class OrganizationService {
     }> = [];
 
     let pendingDueCount = 0;
-    const evalStartYear = Math.max(joinedYear, currentYear - 1);
+    const evalStartYear = Math.max(ORG_OFFICIAL_START_YEAR, joinedYear);
     for (let y = evalStartYear; y <= currentYear; y++) {
-      const startM = y === joinedYear ? joinedMonth : 1;
+      const startM = y === ORG_OFFICIAL_START_YEAR
+        ? Math.max(ORG_OFFICIAL_START_MONTH, joinedMonth)
+        : (y === joinedYear ? joinedMonth : 1);
       const endM = y === currentYear ? currentMonth : 12;
       for (let m = startM; m <= endM; m++) {
+        if (!isMonthEligibleForContribution(y, m, membership.joinedAt, membership.createdAt)) continue;
+
         const isVerified = allVerifiedPayments.some((p) => p.periodYear === y && p.periodMonth === m);
         if (!isVerified) {
           pendingDueCount++;
           const pendingPay = pendingPayments.find((p) => p.periodYear === y && p.periodMonth === m);
+          const monthAmount = getPledgedAmountForPeriod(y, m);
           dueBreakdown.push({
             year: y,
             month: m,
             monthName: MONTH_NAMES_BN[m - 1] || `${m} তম মাস`,
-            amount: membership.monthlyContribution,
+            amount: monthAmount,
             status: pendingPay ? 'PENDING' : 'DUE',
           });
         }
@@ -943,17 +1128,25 @@ export class OrganizationService {
 
     const totalDueAmount = dueBreakdown.reduce((sum, d) => sum + d.amount, 0);
 
+    const currentAgreement = agreements.find((a) => a.isCurrent) || agreements[0];
+    const nextAgreement = agreements.find(
+      (a) => new Date(a.effectiveFrom) > now && a.monthlyAmount !== (currentAgreement?.monthlyAmount ?? membership.monthlyContribution)
+    );
+
     const agreement = {
-      id: `agr-${membership.id}`,
+      id: currentAgreement ? currentAgreement.id : `agr-${membership.id}`,
       userId,
-      agreedAmount: membership.monthlyContribution,
-      effectiveFrom: membership.joinedAt ? membership.joinedAt.toISOString() : now.toISOString(),
+      agreedAmount: currentAgreement ? currentAgreement.monthlyAmount : membership.monthlyContribution,
+      effectiveFrom: currentAgreement ? currentAgreement.effectiveFrom.toISOString() : (membership.joinedAt ? membership.joinedAt.toISOString() : now.toISOString()),
       isCurrent: true,
+      nextEffectiveAmount: nextAgreement ? nextAgreement.monthlyAmount : null,
+      nextEffectiveDate: nextAgreement ? nextAgreement.effectiveFrom.toISOString() : null,
     };
 
     return {
       membership,
       agreement,
+      agreementsHistory: agreements,
       totalContributed,
       pendingDueCount,
       totalDueAmount,
@@ -1835,8 +2028,7 @@ export class OrganizationService {
   // Financial Transparency & Member Accounts Ledger
   // --------------------------------------------------------------------------
   public async getTransparencyOverview(_userId?: string) {
-    // Ensure sample humanitarian & tree plantation initiatives exist if none yet
-    await this.ensureTransparencySampleData();
+    // Production Launch: strictly authentic database records only (no sample auto-generation)
 
     const [
       funds,
@@ -2078,162 +2270,6 @@ export class OrganizationService {
         })),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     };
-  }
-
-  private async ensureTransparencySampleData() {
-    try {
-      const existingHumanitarian = await this.prisma.orgProject.findFirst({
-        where: { category: 'HUMANITARIAN' },
-      });
-
-      if (!existingHumanitarian) {
-        const reliefFund = await this.prisma.orgFund.findFirst({
-          where: { code: 'EMERGENCY' },
-        }) || await this.prisma.orgFund.findFirst();
-
-        const createdProject = await this.prisma.orgProject.create({
-          data: {
-            title: 'অসহায় পরিবারের জন্য খাদ্য ও জরুরি সহায়তা কর্মসূচি',
-            description: 'মোহাম্মদপুরের অসহায় ও সুবিধাবঞ্চিত পরিবারের মুখে অন্ন তুলে দেওয়ার লক্ষ্যে চাল, ডাল, তেল, অন্যান্য নিত্যপ্রয়োজনীয় খাদ্যসামগ্রী ও শিশুখাদ্য ক্রয়ের বিস্তারিত ব্যয় হিসাব।',
-            category: 'HUMANITARIAN',
-            assistanceType: 'খাদ্য ও নিত্যপণ্য সহায়তা',
-            beneficiaryName: 'রহিমা বেগম ও পরিবার',
-            beneficiaryPhone: '018XXXXXXXX',
-            beneficiaryAddress: 'চাঁনমিয়া হাউজিং, মোহাম্মদপুর',
-            consentGiven: true,
-            budget: 10000,
-            spent: 10000,
-            progress: 100,
-            status: 'COMPLETED',
-            isPublic: true,
-            startDate: new Date('2026-11-01'),
-            endDate: new Date('2026-11-05'),
-            images: [
-              'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800',
-              'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800',
-            ],
-            fundId: reliefFund?.id || null,
-          },
-        });
-
-        // Add the breakdown items from prompt specification:
-        // চাল: ৳২,০০০ | ডাল: ৳৮০০ | তেল: ৳১,০০০ | অন্যান্য খাবার: ৳২,২০০ | যাতায়াত: ৳১,০০০ | অন্যান্য খরচ: ৳৩,০০০ = ৳১০,০০০
-        await this.prisma.expenseItem.createMany({
-          data: [
-            { projectId: createdProject.id, itemName: 'মিনিকেট চাল (৫০ কেজি বস্তা)', amount: 2000, category: 'খাদ্য সামগ্রী', description: 'পুষ্টিকর খাদ্য চাল সরবরাহ', expenseDate: new Date('2026-11-04') },
-            { projectId: createdProject.id, itemName: 'দেশি মসুর ডাল (৮ কেজি)', amount: 800, category: 'খাদ্য সামগ্রী', description: 'উচ্চ প্রোটিন ডাল', expenseDate: new Date('2026-11-04') },
-            { projectId: createdProject.id, itemName: 'তীর সয়াবিন তেল (৫ লিটার জার)', amount: 1000, category: 'খাদ্য সামগ্রী', description: 'ভোজ্য তেল', expenseDate: new Date('2026-11-04') },
-            { projectId: createdProject.id, itemName: 'অন্যান্য শুকনো খাবার ও শিশুখাদ্য', amount: 2200, category: 'খাদ্য সামগ্রী', description: 'লবণ, চিনি, বিস্কুট ও গুঁড়ো দুধ', expenseDate: new Date('2026-11-04') },
-            { projectId: createdProject.id, itemName: 'মালামাল পরিবহন ও রিকশা ভাড়া', amount: 1000, category: 'যাতায়াত ও পরিবহন', description: 'কৃষি মার্কেট হতে বিতরণ স্থান পর্যন্ত পরিবহন', expenseDate: new Date('2026-11-05') },
-            { projectId: createdProject.id, itemName: 'অন্যান্য আনুষঙ্গিক সহায়তা ও ওষুধ', amount: 3000, category: 'অন্যান্য জরুরি খরচ', description: 'পরিবারের অসুস্থ শিশুর প্রাথমিক চিকিৎসা ও প্রেসক্রিপশন ওষুধ', expenseDate: new Date('2026-11-05') },
-          ],
-        });
-      }
-
-      const existingTree = await this.prisma.orgProject.findFirst({
-        where: { category: 'TREE_PLANTATION' },
-      });
-
-      if (!existingTree) {
-        const generalFund = await this.prisma.orgFund.findFirst({
-          where: { code: 'GENERAL' },
-        });
-
-        const createdTreeProject = await this.prisma.orgProject.create({
-          data: {
-            title: 'নবজাতক আরিয়ান আহমেদের জন্ম স্মরণে দুটি বৃক্ষরোপণ',
-            description: 'সংগঠনের বিশেষ পরিবেশবান্ধব মানবিক উদ্যোগ অনুযায়ী মোহাম্মদপুরে জন্মগ্রহণকারী প্রতিটি শিশুর স্মরণে দুটি ফলদ ও ঔষধি গাছ রোপণ কর্মসূচির অংশ।',
-            category: 'TREE_PLANTATION',
-            childName: 'আরিয়ান আহমেদ',
-            fatherName: 'তানভীর আহমেদ',
-            motherName: 'ফারহানা ইসলাম',
-            birthDate: new Date('2026-10-18'),
-            birthPlace: 'মোহাম্মদপুর ফার্টিলিটি কেয়ার হাসপাতাল, ঢাকা',
-            treesPlanted: 'হাড়িভাঙা আম ও ওষধি নিম চারা',
-            plantationLocation: 'তাজমহল রোড কেন্দ্রীয় পার্ক সীমানা',
-            plantationDate: new Date('2026-10-25'),
-            budget: 2500,
-            spent: 2500,
-            progress: 100,
-            status: 'COMPLETED',
-            isPublic: true,
-            images: [
-              'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800',
-              'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800',
-            ],
-            fundId: generalFund?.id || null,
-          },
-        });
-
-        await this.prisma.expenseItem.createMany({
-          data: [
-            { projectId: createdTreeProject.id, itemName: 'উন্নত জাতের ফলদ আম ও নিম গাছের চারা ক্রয়', amount: 1200, category: 'গাছ চারা', description: 'নার্সারি হতে বড় ও সতেজ চারা সংগৃহীত', expenseDate: new Date('2026-10-24') },
-            { projectId: createdTreeProject.id, itemName: 'জৈব সার ও উর্বর মাটি প্রস্তুতকরণ', amount: 600, category: 'কৃষি উপকরণ', description: 'গোবর সার ও কেঁচো কম্পোস্ট সার', expenseDate: new Date('2026-10-25') },
-            { projectId: createdTreeProject.id, itemName: 'বাঁশের খাঁচা ও সুরক্ষা বেষ্টনী স্থাপন', amount: 500, category: 'সুরক্ষা বেষ্টনী', description: 'চারা সুরক্ষায় মজবুত বেড়া', expenseDate: new Date('2026-10-25') },
-            { projectId: createdTreeProject.id, itemName: 'রোপণ শ্রম ও পরিবহন ব্যয়', amount: 200, category: 'শ্রম ও পরিবহন', description: 'চারা পরিবহন ও গর্ত খনন সহায়তা', expenseDate: new Date('2026-10-25') },
-          ],
-        });
-      }
-
-      // Backfill: Ensure every project that has spent > 0 is properly recorded in fundTransaction
-      // and deducted from fund balance so that totalExpense and net cash calculations remain 100% accurate.
-      const unlinkedProjects = await this.prisma.orgProject.findMany({
-        where: {
-          spent: { gt: 0 },
-          transactions: { none: {} },
-        },
-        include: { items: true },
-      });
-
-      if (unlinkedProjects.length > 0) {
-        const defaultGeneralFund =
-          (await this.prisma.orgFund.findFirst({ where: { code: 'GENERAL' } })) ||
-          (await this.prisma.orgFund.findFirst());
-
-        if (defaultGeneralFund) {
-          for (const proj of unlinkedProjects) {
-            const targetFundId = proj.fundId || defaultGeneralFund.id;
-
-            // 1. Decrement fund balance
-            await this.prisma.orgFund.update({
-              where: { id: targetFundId },
-              data: { balance: { decrement: proj.spent } },
-            });
-
-            // 2. Create fund expense transaction
-            const trx = await this.prisma.fundTransaction.create({
-              data: {
-                fundId: targetFundId,
-                type: 'EXPENSE',
-                amount: proj.spent,
-                title: proj.title,
-                description: proj.description,
-                category:
-                  proj.category === 'TREE_PLANTATION'
-                    ? 'বৃক্ষরোপণ'
-                    : proj.category === 'HUMANITARIAN'
-                    ? 'মানবিক সহায়তা'
-                    : 'সাধারণ ব্যয়',
-                receiptUrl: (proj.images && proj.images[0]) || null,
-                performedBy: 'SYSTEM_ADMIN',
-                projectId: proj.id,
-                createdAt: proj.createdAt,
-              },
-            });
-
-            // 3. Link items to this transaction
-            if (proj.items && proj.items.length > 0) {
-              await this.prisma.expenseItem.updateMany({
-                where: { projectId: proj.id },
-                data: { transactionId: trx.id },
-              });
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Transparency sample data notice:', err);
-    }
   }
 
   public async getDocuments(accessRole: string | null) {
@@ -2850,7 +2886,8 @@ export class OrganizationService {
       where: { userId },
     });
 
-    if (!membership || membership.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!isSysAdmin && (!membership || membership.status !== 'ACTIVE')) {
       throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ নির্বাচনে প্রার্থী হতে পারেন');
     }
 
@@ -2919,7 +2956,8 @@ export class OrganizationService {
       where: { userId },
     });
 
-    if (!membership || membership.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!isSysAdmin && (!membership || membership.status !== 'ACTIVE')) {
       throw new ForbiddenError('কেবলমাত্র অনুমোদিত সক্রিয় সদস্যগণ ভোট দিতে পারেন');
     }
 
@@ -3153,7 +3191,8 @@ export class OrganizationService {
       select: { id: true, status: true },
     });
 
-    if (!requester || requester.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!isSysAdmin && (!requester || requester.status !== 'ACTIVE')) {
       throw new ForbiddenError('শুধুমাত্র সংগঠনের সক্রিয় সদস্যরা সদস্য ডিরেক্টরি দেখতে পারবেন');
     }
 
@@ -3256,7 +3295,7 @@ export class OrganizationService {
       search?: string;
       type?: 'ALL' | 'GENERAL_USER' | 'MEMBER';
       provider?: 'ALL' | 'google' | 'credential';
-      role?: 'ALL' | 'USER' | 'ADMIN';
+      role?: 'ALL' | 'USER' | 'ADMIN' | 'SUPER_ADMIN';
       page?: number;
       limit?: number;
     },
@@ -3315,6 +3354,9 @@ export class OrganizationService {
             image: true,
             phone: true,
             role: true,
+            isSuspended: true,
+            suspendedAt: true,
+            suspendedReason: true,
             createdAt: true,
             updatedAt: true,
             accounts: {
@@ -3382,6 +3424,9 @@ export class OrganizationService {
         image: u.image,
         phone: u.phone,
         role: u.role,
+        isSuspended: Boolean(u.isSuspended),
+        suspendedAt: u.suspendedAt,
+        suspendedReason: u.suspendedReason,
         createdAt: u.createdAt,
         lastLoginAt: lastSession?.createdAt || u.updatedAt,
         providers,
@@ -3419,9 +3464,20 @@ export class OrganizationService {
     };
   }
 
-  public async toggleUserSystemRole(adminId: string, targetUserId: string, newRole: 'USER' | 'ADMIN') {
-    const role = await this.getOfficerRole(adminId);
-    this.requireOfficer(role, ['ADMIN']);
+  public async toggleUserSystemRole(adminId: string, targetUserId: string, newRole: 'USER' | 'ADMIN' | 'SUPER_ADMIN') {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('ইউজার রোল পরিবর্তন করার অনুমতি শুধুমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { email: true, role: true },
+    });
+
+    if (targetUser?.email === 'itskausarprodhan@gmail.com' || targetUser?.role === 'SUPER_ADMIN') {
+      throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনের রোল পরিবর্তন করা সম্ভব নয়');
+    }
 
     const updated = await this.prisma.user.update({
       where: { id: targetUserId },
@@ -3429,6 +3485,237 @@ export class OrganizationService {
       select: { id: true, name: true, role: true },
     });
     return updated;
+  }
+
+  public async suspendUser(adminId: string, targetUserId: string, isSuspended: boolean, reason?: string) {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('ব্যবহারকারী স্থগিত (Suspend) করার ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, email: true, role: true, name: true },
+    });
+
+    if (!targetUser) throw new NotFoundError('ব্যবহারকারী পাওয়া যায়নি');
+
+    if (targetUser.id === adminId || targetUser.email === 'itskausarprodhan@gmail.com' || targetUser.role === 'SUPER_ADMIN') {
+      throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনকে স্থগিত করা সম্ভব নয়');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // If suspending, revoke all active sessions immediately
+      if (isSuspended) {
+        await tx.session.deleteMany({
+          where: { userId: targetUserId },
+        });
+      }
+
+      return tx.user.update({
+        where: { id: targetUserId },
+        data: {
+          isSuspended,
+          suspendedAt: isSuspended ? new Date() : null,
+          suspendedReason: isSuspended ? (reason || 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে অ্যাকাউন্ট স্থগিত') : null,
+        },
+        select: { id: true, name: true, email: true, isSuspended: true, suspendedAt: true, suspendedReason: true },
+      });
+    });
+
+    return updated;
+  }
+
+  public async deleteUser(adminId: string, targetUserId: string) {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('ব্যবহারকারী মুছে ফেলার ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, email: true, role: true, name: true },
+    });
+
+    if (!targetUser) throw new NotFoundError('ব্যবহারকারী পাওয়া যায়নি');
+
+    if (targetUser.id === adminId || targetUser.email === 'itskausarprodhan@gmail.com' || targetUser.role === 'SUPER_ADMIN') {
+      throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনের অ্যাকাউন্ট মুছে ফেলা সম্ভব নয়');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Invalidate sessions and accounts
+      await tx.session.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.account.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+
+      // 2. Organization items
+      await tx.orgMeetingAttendance.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.orgCommitteeMember.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.contributionPayment.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.contributionReminder.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.contributionAgreement.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.orgApplication.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.orgMembership.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.electionNomination.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.voterParticipation.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+
+      // 3. Social / Feed relations
+      await tx.postLike.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.comment.deleteMany({ where: { authorId: targetUserId } }).catch(() => {});
+      await tx.savedPost.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.story.deleteMany({ where: { authorId: targetUserId } }).catch(() => {});
+      await tx.post.deleteMany({ where: { authorId: targetUserId } }).catch(() => {});
+      await tx.groupMember.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.groupJoinRequest.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+      await tx.friendRequest.deleteMany({
+        where: { OR: [{ senderId: targetUserId }, { receiverId: targetUserId }] },
+      }).catch(() => {});
+      await tx.friendship.deleteMany({
+        where: { OR: [{ userId: targetUserId }, { friendId: targetUserId }] },
+      }).catch(() => {});
+      await tx.message.deleteMany({
+        where: { OR: [{ senderId: targetUserId }, { recipientId: targetUserId }] },
+      }).catch(() => {});
+      await tx.notification.deleteMany({ where: { recipientId: targetUserId } }).catch(() => {});
+      await tx.blockedUser.deleteMany({
+        where: { OR: [{ blockerId: targetUserId }, { blockedId: targetUserId }] },
+      }).catch(() => {});
+      await tx.report.deleteMany({ where: { reporterId: targetUserId } }).catch(() => {});
+      await tx.pushSubscription.deleteMany({ where: { userId: targetUserId } }).catch(() => {});
+
+      // 4. Finally delete user from database
+      await tx.user.delete({
+        where: { id: targetUserId },
+      });
+    });
+
+    return { success: true, message: 'ব্যবহারকারী স্থায়ীভাবে মুছে ফেলা হয়েছে' };
+  }
+
+  public async appointPresident(adminId: string, targetUserId: string) {
+    const isSysAdmin = await this.isSystemAdmin(adminId);
+    if (!isSysAdmin) {
+      throw new ForbiddenError('সংগঠনের সভাপতি নির্ধারণের ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: { orgMemberships: true },
+    });
+
+    if (!targetUser) throw new NotFoundError('ব্যবহারকারী পাওয়া যায়নি');
+
+    const presidentDesig = await this.prisma.orgDesignation.findFirst({
+      where: { code: 'PRESIDENT' },
+    });
+
+    if (!presidentDesig) throw new NotFoundError('সভাপতি পদবি ডাটাবেজে পাওয়া যায়নি');
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Ensure user has role ADMIN if not SUPER_ADMIN
+      if (targetUser.role !== 'SUPER_ADMIN') {
+        await tx.user.update({
+          where: { id: targetUserId },
+          data: { role: 'ADMIN' },
+        });
+      }
+
+      // 2. Demote existing President who is not System Admin and not the target
+      const existingPresidents = await tx.orgMembership.findMany({
+        where: {
+          orgRole: 'PRESIDENT',
+          userId: { notIn: [targetUserId, adminId] },
+          status: 'ACTIVE',
+        },
+      });
+
+      const memberDesig = await tx.orgDesignation.findFirst({
+        where: { code: 'EXECUTIVE_MEMBER' },
+      });
+
+      for (const p of existingPresidents) {
+        await tx.orgMembership.update({
+          where: { id: p.id },
+          data: {
+            orgRole: 'MEMBER',
+            designationId: memberDesig?.id || null,
+          },
+        });
+      }
+
+      // 3. Update target user's OrgMembership to ACTIVE PRESIDENT
+      const targetMembership = await tx.orgMembership.upsert({
+        where: { userId: targetUserId },
+        update: {
+          status: 'ACTIVE',
+          orgRole: 'PRESIDENT',
+          designationId: presidentDesig.id,
+          joinedAt: targetUser.orgMemberships[0]?.joinedAt || new Date(),
+        },
+        create: {
+          userId: targetUserId,
+          status: 'ACTIVE',
+          orgRole: 'PRESIDENT',
+          designationId: presidentDesig.id,
+          memberNumber: `AMP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+          monthlyContribution: 500,
+          joinedAt: new Date(),
+        },
+      });
+
+      // 4. Update Central Executive Committee
+      const activeCommittee = await tx.orgCommittee.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (activeCommittee) {
+        // Demote previous committee presidents except System Admin
+        await tx.orgCommitteeMember.updateMany({
+          where: {
+            committeeId: activeCommittee.id,
+            designationId: presidentDesig.id,
+            userId: { notIn: [targetUserId, adminId] },
+          },
+          data: {
+            isCurrent: false,
+            endDate: new Date(),
+          },
+        });
+
+        // Assign target to committee as PRESIDENT
+        const existingAssignment = await tx.orgCommitteeMember.findFirst({
+          where: {
+            committeeId: activeCommittee.id,
+            userId: targetUserId,
+          },
+        });
+
+        if (existingAssignment) {
+          await tx.orgCommitteeMember.update({
+            where: { id: existingAssignment.id },
+            data: {
+              designationId: presidentDesig.id,
+              customTitle: 'সভাপতি',
+              isCurrent: true,
+              endDate: null,
+            },
+          });
+        } else {
+          await tx.orgCommitteeMember.create({
+            data: {
+              committeeId: activeCommittee.id,
+              userId: targetUserId,
+              designationId: presidentDesig.id,
+              customTitle: 'সভাপতি',
+              isCurrent: true,
+            },
+          });
+        }
+      }
+
+      return targetMembership;
+    });
   }
 
   // =========================================================================
@@ -3764,6 +4051,9 @@ export class OrganizationService {
             phone: true,
             image: true,
             role: true,
+            isSuspended: true,
+            suspendedAt: true,
+            suspendedReason: true,
             createdAt: true,
           },
         },
@@ -3907,14 +4197,22 @@ export class OrganizationService {
   ) {
     const role = await this.getOfficerRole(reviewerId);
     this.requireOfficer(role, ['PRESIDENT', 'ADMIN']);
+    const isSysAdmin = await this.isSystemAdmin(reviewerId);
 
     const membership = await this.prisma.orgMembership.findUnique({
       where: { id: memberId },
-      select: { id: true, userId: true },
+      select: { id: true, userId: true, user: { select: { email: true, role: true } } },
     });
 
     if (!membership) {
       throw new NotFoundError('সদস্য রেকর্ড খুঁজে পাওয়া যায়নি');
+    }
+
+    // Protection rule: No one can change or demote the System Admin
+    if (membership.user?.role === 'SUPER_ADMIN' || membership.user?.email === 'itskausarprodhan@gmail.com') {
+      if (!isSysAdmin) {
+        throw new ForbiddenError('প্রধান সিস্টেম অ্যাডমিনের পদবি বা রোল পরিবর্তন করার অনুমতি কারো নেই');
+      }
     }
 
     const targetDesignationId = data.designationId === '' ? null : data.designationId;
@@ -3930,8 +4228,13 @@ export class OrganizationService {
         });
         if (designation) {
           const codeUpper = designation.code.toUpperCase();
-          if (['PRESIDENT', 'GENERAL_SECRETARY', 'VICE_PRESIDENT', 'CONVENER'].includes(codeUpper)) {
+          if (['PRESIDENT', 'CONVENER'].includes(codeUpper)) {
+            if (!isSysAdmin) {
+              throw new ForbiddenError('সংগঠনের সভাপতি নির্ধারণের ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+            }
             resolvedOrgRole = 'PRESIDENT';
+          } else if (['GENERAL_SECRETARY', 'VICE_PRESIDENT', 'JOINT_SECRETARY', 'ORGANIZING_SECRETARY', 'PUBLICITY_SECRETARY'].includes(codeUpper)) {
+            resolvedOrgRole = codeUpper;
           } else if (codeUpper === 'TREASURER') {
             resolvedOrgRole = 'TREASURER';
           } else if (codeUpper === 'MODERATOR') {
@@ -4071,8 +4374,10 @@ export class OrganizationService {
     const pendingMembers: any[] = [];
     const overdueMembers: any[] = [];
 
+    const isTargetMonthEligible = isMonthEligibleForContribution(targetYear, targetMonth);
     const isMonthOverdue =
-      targetYear < currentYear || (targetYear === currentYear && targetMonth <= currentMonth);
+      isTargetMonthEligible &&
+      (targetYear < currentYear || (targetYear === currentYear && targetMonth <= currentMonth));
 
     for (const member of activeMembers) {
       const verified = verifiedPaymentMap.get(member.userId);
@@ -4086,8 +4391,12 @@ export class OrganizationService {
       const joinedDate = member.joinedAt ? new Date(member.joinedAt) : new Date(member.createdAt);
       const joinedYear = joinedDate.getFullYear();
       const joinedMonth = joinedDate.getMonth() + 1;
-      const isEligibleForTargetMonth =
-        targetYear > joinedYear || (targetYear === joinedYear && targetMonth >= joinedMonth);
+      const isEligibleForTargetMonth = isMonthEligibleForContribution(
+        targetYear,
+        targetMonth,
+        member.joinedAt,
+        member.createdAt,
+      );
 
       const overdueMonths: Array<{
         year: number;
@@ -4098,11 +4407,15 @@ export class OrganizationService {
         formattedPeriod: string;
       }> = [];
 
-      const evalStartYear = Math.max(joinedYear, currentYear - 1);
+      const evalStartYear = Math.max(ORG_OFFICIAL_START_YEAR, joinedYear);
       for (let y = evalStartYear; y <= currentYear; y++) {
-        const startM = y === joinedYear ? joinedMonth : 1;
+        const startM = y === ORG_OFFICIAL_START_YEAR
+          ? Math.max(ORG_OFFICIAL_START_MONTH, joinedMonth)
+          : (y === joinedYear ? joinedMonth : 1);
         const endM = y === currentYear ? currentMonth : 12;
         for (let m = startM; m <= endM; m++) {
+          if (!isMonthEligibleForContribution(y, m, member.joinedAt, member.createdAt)) continue;
+
           const key = `${y}-${m}`;
           const pStatus = memberPaymentsMap.get(key);
           if (pStatus === 'VERIFIED') continue;
@@ -4358,12 +4671,9 @@ export class OrganizationService {
 
     const actualUserId = membership.userId;
 
-    // Check joining date eligibility
-    const joinedDate = membership.joinedAt ? new Date(membership.joinedAt) : new Date(membership.createdAt);
-    const joinedYear = joinedDate.getFullYear();
-    const joinedMonth = joinedDate.getMonth() + 1;
-    if (periodYear < joinedYear || (periodYear === joinedYear && periodMonth < joinedMonth)) {
-      throw new BadRequestError('সদস্যপদ শুরুর পূর্ববর্তী মাসের জন্য চাঁদার তাগিদ পাঠানো প্রযোজ্য নয়');
+    // Check joining date & organization start date eligibility
+    if (!isMonthEligibleForContribution(periodYear, periodMonth, membership.joinedAt, membership.createdAt)) {
+      throw new BadRequestError('সংগঠন কার্যক্রম শুরু হওয়ার পূর্ববর্তী মাসের জন্য চাঁদার তাগিদ পাঠানো প্রযোজ্য নয়');
     }
 
     // Check if already paid
@@ -4481,12 +4791,9 @@ export class OrganizationService {
           select: { userId: true, joinedAt: true, createdAt: true },
         });
 
-        const eligibleActive = activeMembers.filter((m) => {
-          const jd = m.joinedAt ? new Date(m.joinedAt) : new Date(m.createdAt);
-          const jy = jd.getFullYear();
-          const jm = jd.getMonth() + 1;
-          return jy < periodYear || (jy === periodYear && jm <= periodMonth);
-        });
+        const eligibleActive = activeMembers.filter((m) =>
+          isMonthEligibleForContribution(periodYear, periodMonth, m.joinedAt, m.createdAt),
+        );
 
         const activeIds = eligibleActive.map((m) => m.userId);
         const verifiedPaid = await this.prisma.contributionPayment.findMany({

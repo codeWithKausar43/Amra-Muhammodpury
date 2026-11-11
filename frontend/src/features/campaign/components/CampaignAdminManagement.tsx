@@ -143,7 +143,7 @@ export const CampaignAdminManagement: React.FC = () => {
 
   const handleAddExpItem = () => {
     if (!draftExpItemName.trim() || !draftExpItemAmount || Number(draftExpItemAmount) <= 0) {
-      alert('আইটেম নাম ও সঠিক টাকার পরিমাণ দিন।');
+      toast.warning('আইটেম নাম ও সঠিক টাকার পরিমাণ দিন।');
       return;
     }
     setExpItems((prev) => [
@@ -221,7 +221,7 @@ export const CampaignAdminManagement: React.FC = () => {
   const handleSaveCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!campCoverImage || !campCoverImage.trim()) {
-      alert('ক্যাম্পেইনের জন্য কভার ছবি নির্বাচন বা আপলোড করা আবশ্যক');
+      toast.warning('ক্যাম্পেইনের জন্য কভার ছবি নির্বাচন বা আপলোড করা আবশ্যক');
       return;
     }
     try {
@@ -242,20 +242,23 @@ export const CampaignAdminManagement: React.FC = () => {
 
       if (editingCampaign) {
         await mutations.updateCampaign.mutateAsync({ id: editingCampaign.id, data: payload });
+        toast.success('ক্যাম্পেইন সফলভাবে আপডেট করা হয়েছে');
       } else {
         await mutations.createCampaign.mutateAsync(payload);
+        toast.success('নতুন ক্যাম্পেইন সফলভাবে তৈরি হয়েছে');
       }
       setIsCampaignModalOpen(false);
     } catch (err: any) {
-      alert(err?.message || 'ক্যাম্পেইন সংরক্ষণে সমস্যা হয়েছে');
+      toast.error(err?.message || 'ক্যাম্পেইন সংরক্ষণে সমস্যা হয়েছে');
     }
   };
 
   const handleStatusChange = async (campaignId: string, status: string) => {
     try {
       await mutations.updateCampaignStatus.mutateAsync({ id: campaignId, status });
+      toast.success('ক্যাম্পেইনের স্ট্যাটাস পরিবর্তিত হয়েছে');
     } catch (err: any) {
-      alert(err?.message || 'স্ট্যাটাস পরিবর্তনে সমস্যা হয়েছে');
+      toast.error(err?.message || 'স্ট্যাটাস পরিবর্তনে সমস্যা হয়েছে');
     }
   };
 
@@ -266,15 +269,16 @@ export const CampaignAdminManagement: React.FC = () => {
       setRejectingDonationId(null);
       setApprovingDonation(null);
       setRejectNotes('');
+      toast.success(status === 'VERIFIED' ? 'অনুদানের তথ্য সফলভাবে যাচাই করা হয়েছে' : 'অনুদানের তথ্য বাতিল করা হয়েছে');
     } catch (err: any) {
-      alert(err?.message || 'যাচাই সম্পন্ন করতে সমস্যা হয়েছে');
+      toast.error(err?.message || 'যাচাই সম্পন্ন করতে সমস্যা হয়েছে');
     }
   };
 
   const handleSaveExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!expCampaignId) {
-      alert('অনুগ্রহ করে ক্যাম্পেইন নির্বাচন করুন');
+      toast.warning('অনুগ্রহ করে ক্যাম্পেইন নির্বাচন করুন');
       return;
     }
     try {
@@ -294,8 +298,9 @@ export const CampaignAdminManagement: React.FC = () => {
       setExpVoucherUrl('');
       setExpPerformedBy('');
       setExpItems([]);
+      toast.success('ক্যাম্পেইন খরচ সফলভাবে অন্তর্ভুক্ত করা হয়েছে');
     } catch (err: any) {
-      alert(err?.message || 'খরচ অন্তর্ভুক্তিতে সমস্যা হয়েছে');
+      toast.error(err?.message || 'খরচ অন্তর্ভুক্তিতে সমস্যা হয়েছে');
     }
   };
 
@@ -307,19 +312,21 @@ export const CampaignAdminManagement: React.FC = () => {
           id: editingCategory.id,
           data: { name: catName, description: catDescription, icon: catIcon },
         });
+        toast.success('ক্যাটাগরি আপডেট করা হয়েছে');
       } else {
         await mutations.createCategory.mutateAsync({
           name: catName,
           description: catDescription,
           icon: catIcon,
         });
+        toast.success('নতুন ক্যাটাগরি তৈরি হয়েছে');
       }
       setIsCategoryModalOpen(false);
       setCatName('');
       setCatDescription('');
       setEditingCategory(null);
     } catch (err: any) {
-      alert(err?.message || 'ক্যাটাগরি সংরক্ষণে সমস্যা হয়েছে');
+      toast.error(err?.message || 'ক্যাটাগরি সংরক্ষণে সমস্যা হয়েছে');
     }
   };
 

@@ -20,11 +20,15 @@ import {
   useFriendSuggestionsQuery,
   useSocialMutations,
 } from '@/features/social/hooks/useSocialQueries';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/feedback/Toast';
 
 export default function FriendsPage() {
   const [activeTab, setActiveTab] = React.useState<'ALL' | 'REQUESTS' | 'SUGGESTIONS'>('ALL');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [actionLoadingId, setActionLoadingId] = React.useState<string | null>(null);
+  const [removeFriendTarget, setRemoveFriendTarget] = React.useState<{ id: string; name: string } | null>(null);
+  const [isRemoving, setIsRemoving] = React.useState(false);
 
   // TanStack Cached Queries (Instant Render if Prefetched)
   const { data: friends = [], isLoading: isFriendsLoading } = useFriendsQuery();
@@ -82,14 +86,18 @@ export default function FriendsPage() {
     }
   };
 
-  const handleRemoveFriend = async (friendId: string) => {
-    if (!confirm('আপনি কি এই বন্ধুকে আপনার তালিকা থেকে সরাতে চান?')) return;
-    setActionLoadingId(friendId);
+  const handleConfirmRemoveFriend = async () => {
+    if (!removeFriendTarget) return;
+    setIsRemoving(true);
+    setActionLoadingId(removeFriendTarget.id);
     try {
-      await mutations.removeFriend.mutateAsync(friendId);
+      await mutations.removeFriend.mutateAsync(removeFriendTarget.id);
+      toast.success(`${removeFriendTarget.name}-কে বন্ধুর তালিকা থেকে সরানো হয়েছে`);
+      setRemoveFriendTarget(null);
     } catch {
-      // ignore
+      toast.error('বন্ধু সরাতে ব্যর্থ হয়েছে');
     } finally {
+      setIsRemoving(false);
       setActionLoadingId(null);
     }
   };
@@ -238,7 +246,7 @@ export default function FriendsPage() {
 
                       <button
                         type="button"
-                        onClick={() => handleRemoveFriend(friend.id)}
+                        onClick={() => setRemoveFriendTarget({ id: friend.id, name: friend.name })}
                         disabled={actionLoadingId === friend.id}
                         className="p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
                         title="বন্ধু তালিকা থেকে সরান"
@@ -448,6 +456,24 @@ export default function FriendsPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Professional Remove Friend Modal */}
+      {removeFriendTarget && (
+        <ConfirmDialog
+          isOpen={Boolean(removeFriendTarget)}
+          onClose={() => !isRemoving && setRemoveFriendTarget(null)}
+          onConfirm={handleConfirmRemoveFriend}
+          isLoading={isRemoving}
+          title="বন্ধু তালিকা থেকে অপসারণ"
+          variant="danger"
+          confirmText="তালিকা থেকে সরান"
+          description={
+            <p>
+              আপনি কি নিশ্চিতভাবে <strong className="text-slate-900 dark:text-white">{removeFriendTarget.name}</strong>-কে আপনার বন্ধুর তালিকা থেকে সরাতে চান?
+            </p>
+          }
+        />
       )}
     </div>
   );

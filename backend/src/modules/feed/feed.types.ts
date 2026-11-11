@@ -42,6 +42,7 @@ export interface PostDto {
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
+  status?: string;
   hasLiked: boolean;
   userReaction?: ReactionType | null;
   topReactions?: ReactionType[];

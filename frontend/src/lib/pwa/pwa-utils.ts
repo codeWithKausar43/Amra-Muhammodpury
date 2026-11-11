@@ -66,16 +66,24 @@ export function getPwaPlatformInfo(): PwaPlatformInfo {
 }
 
 /**
- * Attempts to trigger or launch the installed Android PWA/WebAPK
+ * Attempts to launch installed WebAPK on Android devices using Chrome intent scheme.
  */
-export function launchAndroidInstalledApp(): void {
-  if (typeof window === 'undefined') return;
+export function launchAndroidInstalledApp(path = '/'): boolean {
+  if (typeof window === 'undefined') return false;
+  const isAndroid = /Android/i.test(navigator.userAgent || '');
+  if (!isAndroid) return false;
+
   try {
     const host = window.location.host;
-    const path = window.location.pathname;
-    const intentUrl = `intent://${host}${path}#Intent;scheme=https;action=android.intent.action.VIEW;end;`;
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const intentUrl = `intent://${host}${cleanPath}#Intent;scheme=https;package=com.android.chrome;end;`;
     window.location.href = intentUrl;
-  } catch {}
+    return true;
+  } catch (err) {
+    console.warn('[PWA] Could not trigger Android intent:', err);
+    return false;
+  }
+}
 }
 
 

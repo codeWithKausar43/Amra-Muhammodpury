@@ -358,4 +358,9 @@ export const UpdateUserRoleSchema = z.object({
   role: z.enum(['USER', 'ADMIN', 'SUPER_ADMIN']),
 });
 
+export const SuspendUserSchema = z.object({
+  isSuspended: z.boolean(),
+  reason: z.string().max(500).optional(),
+});
+
 

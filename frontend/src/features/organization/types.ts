@@ -69,6 +69,8 @@ export interface ContributionAgreement {
   agreedAmount: number;
   effectiveFrom: string;
   isCurrent: boolean;
+  nextEffectiveAmount?: number | null;
+  nextEffectiveDate?: string | null;
 }
 
 export interface ContributionPayment {
@@ -852,6 +854,9 @@ export interface AdminUserItem {
   image: string | null;
   phone: string | null;
   role: string;
+  isSuspended?: boolean;
+  suspendedAt?: string | null;
+  suspendedReason?: string | null;
   createdAt: string;
   lastLoginAt: string;
   providers: string[];

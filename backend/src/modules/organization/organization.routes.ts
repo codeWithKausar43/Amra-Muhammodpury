@@ -6,6 +6,7 @@ import {
   ApplyMembershipSchema,
   InitialPaymentSchema,
   PayContributionSchema,
+  ChangeContributionSchema,
   ReviewApplicationSchema,
   ReviewPaymentSchema,
   CreateFundSchema,
@@ -36,6 +37,7 @@ import {
   UpdateOrgPaymentConfigSchema,
   AdminUsersQuerySchema,
   UpdateUserRoleSchema,
+  SuspendUserSchema,
 } from './organization.schema.js';
 import { successResponse } from '../../utils/api-response.js';
 
@@ -138,6 +140,23 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(
       successResponse(payment, 'মাসিক অনুদানের তথ্য সফলভাবে জমা দেওয়া হয়েছে। অ্যাডমিন যাচাইয়ের পর এটি অনুমোদিত হবে।'),
     );
+  });
+
+  // Update monthly contribution amount (Effective next month, requires confirmation)
+  fastify.patch('/membership/monthly-contribution', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = ChangeContributionSchema.parse(request.body);
+    const result = await service.updateMonthlyContributionAmount(session.user.id, validatedData);
+    return reply.send(
+      successResponse(result, 'আপনার মাসিক অনুদানের পরিমাণ সফলভাবে আপডেট করা হয়েছে। এটি পরবর্তী মাস থেকে কার্যকর হবে।'),
+    );
+  });
+
+  // View member's contribution agreement & change request history
+  fastify.get('/membership/contribution-history', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const history = await service.getContributionAgreementsHistory(session.user.id);
+    return reply.send(successResponse(history, 'চাঁদা পরিবর্তনের ইতিহাস সফলভাবে লোড হয়েছে'));
   });
 
   // Member Dashboard (Personal membership, stats, financial ledger)
@@ -502,6 +521,36 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const validatedData = UpdateUserRoleSchema.parse(request.body);
     const updated = await service.toggleUserSystemRole(session.user.id, id, validatedData.role);
     return reply.send(successResponse(updated, 'ইউজার রোল সফলভাবে আপডেট হয়েছে'));
+  });
+
+  // System Admin: Suspend / Unsuspend User
+  fastify.patch('/admin/users/:id/suspend', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = SuspendUserSchema.parse(request.body);
+    const updated = await service.suspendUser(session.user.id, id, validatedData.isSuspended, validatedData.reason);
+    return reply.send(
+      successResponse(
+        updated,
+        validatedData.isSuspended ? 'ব্যবহারকারীকে সাময়িকভাবে স্থগিত করা হয়েছে' : 'ব্যবহারকারীর স্থগিতাদেশ প্রত্যাহার করা হয়েছে',
+      ),
+    );
+  });
+
+  // System Admin: Permanently Delete User
+  fastify.delete('/admin/users/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const result = await service.deleteUser(session.user.id, id);
+    return reply.send(successResponse(result, 'ব্যবহারকারী অ্যাকাউন্ট সফলভাবে মুছে ফেলা হয়েছে'));
+  });
+
+  // System Admin: Appoint Organization President (সভাপতি)
+  fastify.post('/admin/users/:id/appoint-president', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const result = await service.appointPresident(session.user.id, id);
+    return reply.send(successResponse(result, 'সফলভাবে সংগঠনের সভাপতি হিসেবে নিযুক্ত করা হয়েছে'));
   });
 
   // ==========================================================================

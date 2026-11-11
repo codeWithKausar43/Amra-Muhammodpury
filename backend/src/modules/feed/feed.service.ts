@@ -6,7 +6,7 @@ import {
   CreateCommentInput,
 } from './feed.schema.js';
 import { PostDto, CommentDto, StoryDto, ReactionType, AuthorSummary } from './feed.types.js';
-import { NotFoundError, UnauthorizedError } from '../../errors/app-error.js';
+import { NotFoundError, UnauthorizedError, ForbiddenError } from '../../errors/app-error.js';
 
 const AUTHOR_SELECT = {
   id: true,
@@ -37,6 +37,8 @@ export class FeedService {
 
     const isOrgMember =
       author.role === 'ADMIN' ||
+      author.role === 'SUPER_ADMIN' ||
+      author.email === 'itskausarprodhan@gmail.com' ||
       (Array.isArray(author.orgMemberships) &&
         author.orgMemberships.some(
           (m: any) => m.status === 'ACTIVE' || m.status === 'APPROVED_PAYMENT_PENDING',
@@ -63,6 +65,7 @@ export class FeedService {
     // Build filter conditions
     const where: Prisma.PostWhereInput = {
       isDeleted: false,
+      status: 'PUBLISHED',
       groupId: null, // General feed shows standalone community posts
     };
 
@@ -71,6 +74,7 @@ export class FeedService {
     } else if (category === 'MY_POSTS' || category === 'MY_BLOCK') {
       if (currentUserId) {
         where.authorId = currentUserId;
+        delete where.status; // Author sees both their published and draft posts
       } else {
         where.authorId = '00000000-0000-0000-0000-000000000000';
       }
@@ -177,6 +181,7 @@ export class FeedService {
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
       sharesCount: post.sharesCount,
+      status: post.status,
       hasLiked: Boolean(userReaction),
         userReaction,
         topReactions,
@@ -241,6 +246,14 @@ export class FeedService {
   }
 
   public async createPost(input: CreatePostInput, authorId: string): Promise<PostDto> {
+    const author = await this.prisma.user.findUnique({
+      where: { id: authorId },
+      select: { isSuspended: true, suspendedReason: true },
+    });
+    if (author?.isSuspended) {
+      throw new ForbiddenError(author.suspendedReason || 'আপনার অ্যাকাউন্টটি সাময়িকভাবে স্থগিত (Suspended) করা হয়েছে। নতুন পোস্ট তৈরি সম্ভব নয়।');
+    }
+
     const blockBadge = input.blockBadge || input.blockName || null;
     const post = await this.prisma.post.create({
       data: {
@@ -427,7 +440,14 @@ export class FeedService {
     });
 
     if (!post) throw new NotFoundError('পোস্টটি পাওয়া যায়নি');
-    if (post.authorId !== userId) {
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, email: true },
+    });
+    const isSystemAdmin = user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com';
+
+    if (post.authorId !== userId && !isSystemAdmin) {
       throw new UnauthorizedError('এই পোস্টটি মুছে ফেলার অনুমতি আপনার নেই');
     }
 
@@ -438,6 +458,34 @@ export class FeedService {
     });
 
     return true;
+  }
+
+  public async togglePostDraft(postId: string, userId: string, targetStatus?: 'PUBLISHED' | 'DRAFT'): Promise<{ id: string; status: string }> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) throw new NotFoundError('পোস্টটি পাওয়া যায়নি');
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, email: true },
+    });
+    const isSystemAdmin = user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com';
+
+    if (post.authorId !== userId && !isSystemAdmin) {
+      throw new UnauthorizedError('পোস্টটির স্থিতি পরিবর্তন করার অনুমতি আপনার নেই');
+    }
+
+    const nextStatus = targetStatus || (post.status === 'DRAFT' ? 'PUBLISHED' : 'DRAFT');
+
+    const updated = await this.prisma.post.update({
+      where: { id: postId },
+      data: { status: nextStatus },
+      select: { id: true, status: true },
+    });
+
+    return updated;
   }
 
   public async toggleLike(

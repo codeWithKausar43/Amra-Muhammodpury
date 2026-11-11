@@ -109,5 +109,3 @@ export function PwaInstallGate({ children }: PwaInstallGateProps) {
   // Non-installed regular browser session: display dedicated installation screen
   return <LazyInstallScreen onUnlock={unlockGate} />;
 }
-
-

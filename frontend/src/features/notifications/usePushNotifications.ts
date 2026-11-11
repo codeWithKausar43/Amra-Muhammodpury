@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { notificationAudio } from '@/lib/audio/notificationSound';
 import { notificationService } from './services/notification.service';
+import { toast } from '@/components/feedback/Toast';
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -45,7 +46,7 @@ export function usePushNotifications() {
    */
   const enableNotifications = React.useCallback(async () => {
     if (!isSupported) {
-      alert('আপনার বর্তমান ডিভাইসে ব্রাউজার পুশ নোটিফিকেশন সমর্থিত নয়।');
+      toast.warning('আপনার বর্তমান ডিভাইসে ব্রাউজার পুশ নোটিফিকেশন সমর্থিত নয়।');
       return false;
     }
 
@@ -99,12 +100,12 @@ export function usePushNotifications() {
 
         return true;
       } else {
-        alert('ফোনে নোটিফিকেশন পেতে হলে ব্রাউজারের সাইট সেটিংসে গিয়ে Notifications Enable করুন।');
+        toast.warning('ফোনে নোটিফিকেশন পেতে হলে ব্রাউজারের সাইট সেটিংসে গিয়ে Notifications Enable করুন।');
         return false;
       }
     } catch (err: any) {
       console.error('Notification enable error:', err);
-      alert('নোটিফিকেশন সক্রিয় করতে সমস্যা হয়েছে: ' + (err?.message || 'Error'));
+      toast.error('নোটিফিকেশন সক্রিয় করতে সমস্যা হয়েছে: ' + (err?.message || 'Error'));
       return false;
     } finally {
       setLoading(false);

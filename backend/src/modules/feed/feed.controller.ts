@@ -73,6 +73,21 @@ export class FeedController {
     return reply.send(successResponse(null, 'পোস্ট সফলভাবে মুছে ফেলা হয়েছে'));
   }
 
+  public static async toggleDraft(request: FastifyRequest, reply: FastifyReply) {
+    const session = await request.server.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const body = (request.body as { status?: 'PUBLISHED' | 'DRAFT' }) || {};
+    const service = new FeedService(request.server.prisma);
+
+    const result = await service.togglePostDraft(id, session.user.id, body.status);
+    return reply.send(
+      successResponse(
+        result,
+        result.status === 'DRAFT' ? 'পোস্টটি সফলভাবে ড্রাফট করা হয়েছে' : 'পোস্টটি সফলভাবে পুনরায় প্রকাশ করা হয়েছে',
+      ),
+    );
+  }
+
   public static async toggleLike(request: FastifyRequest, reply: FastifyReply) {
     const session = await request.server.authenticate(request, reply);
     const { id } = request.params as { id: string };

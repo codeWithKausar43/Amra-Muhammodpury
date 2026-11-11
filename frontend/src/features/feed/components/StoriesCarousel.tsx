@@ -30,10 +30,10 @@ export function StoriesCarousel({
         <button
           type="button"
           onClick={onAddStory}
-          className="w-24 sm:w-28 md:w-32 h-40 sm:h-48 md:h-52 rounded-2xl overflow-hidden shrink-0 relative bg-white dark:bg-brand-charcoal-dark border border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md transition-all group flex flex-col text-left focus:outline-none cursor-pointer"
+          className="w-32 sm:w-36 md:w-40 h-52 sm:h-56 md:h-60 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative bg-white dark:bg-brand-charcoal-dark border border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md transition-all group flex flex-col text-left focus:outline-none cursor-pointer"
         >
-          {/* Top 68% Image Area */}
-          <div className="relative w-full h-[68%] overflow-hidden bg-slate-100 dark:bg-white/5">
+          {/* Top 70% Image Area */}
+          <div className="relative w-full h-[70%] overflow-hidden bg-slate-100 dark:bg-white/5">
             {userImage ? (
               <Image
                 src={userImage}
@@ -50,13 +50,13 @@ export function StoriesCarousel({
           </div>
 
           {/* Elevated Floating Plus Circle */}
-          <div className="absolute top-[68%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-brand-emerald text-white flex items-center justify-center ring-4 ring-white dark:ring-brand-charcoal-dark shadow-md z-10 group-hover:scale-110 transition-transform">
+          <div className="absolute top-[70%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-brand-emerald text-white flex items-center justify-center ring-4 ring-white dark:ring-brand-charcoal-dark shadow-md z-10 group-hover:scale-110 transition-transform">
             <Plus className="w-5 h-5 stroke-[2.5]" />
           </div>
 
-          {/* Bottom 32% Label */}
-          <div className="w-full h-[32%] pt-3.5 pb-2 px-1 flex items-center justify-center text-center">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
+          {/* Bottom 30% Label */}
+          <div className="w-full h-[30%] pt-4 pb-2 px-1.5 flex items-center justify-center text-center">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
               স্টোরি তৈরি করুন
             </span>
           </div>
@@ -73,7 +73,7 @@ export function StoriesCarousel({
             <div
               key={story.id}
               onClick={() => onSelectStory?.(index)}
-              className="w-24 sm:w-28 md:w-32 h-40 sm:h-48 md:h-52 rounded-2xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-slate-900"
+              className="w-32 sm:w-36 md:w-40 h-52 sm:h-56 md:h-60 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-slate-900"
             >
               {/* Full Cover Background */}
               <Image
@@ -87,7 +87,7 @@ export function StoriesCarousel({
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15" />
 
               {/* Top-Left Author Avatar with Ring */}
-              <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-10 overflow-hidden shadow-sm">
+              <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-10 overflow-hidden shadow-sm">
                 {story.author.image ? (
                   <div className="relative w-full h-full rounded-full overflow-hidden">
                     <Image
@@ -105,8 +105,8 @@ export function StoriesCarousel({
               </div>
 
               {/* Bottom Author Name */}
-              <div className="absolute bottom-2 left-2 right-2 sm:bottom-2.5 sm:left-2.5 sm:right-2.5 z-10">
-                <p className="text-[11px] sm:text-xs font-bold text-white leading-tight drop-shadow-md truncate">
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10">
+                <p className="text-xs font-bold text-white leading-tight drop-shadow-md truncate">
                   {story.author.name}
                 </p>
               </div>

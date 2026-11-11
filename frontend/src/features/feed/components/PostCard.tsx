@@ -13,8 +13,12 @@ import {
   Loader2,
   Trash2,
   CornerDownRight,
+  Archive,
 } from 'lucide-react';
+import { useSession } from '@/lib/auth/auth-client';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/feedback/Toast';
 import { Post, Comment, ReactionType } from '../types';
 import { feedService } from '../services/feed.service';
 import { getBgPreset } from '../utils/bgPresets';
@@ -304,7 +308,7 @@ export function PostCard({
       setNewComment('');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'মন্তব্য যোগ করা যায়নি';
-      alert(message);
+      toast.error(message);
     } finally {
       setSubmittingComment(false);
     }
@@ -323,22 +327,49 @@ export function PostCard({
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('পোস্টের লিংক কপি করা হয়েছে!');
+      toast.success('পোস্টের লিংক কপি করা হয়েছে!');
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('আপনি কি নিশ্চিতভাবে এই পোস্টটি মুছে ফেলতে চান?')) return;
+  const { data: session } = useSession();
+  const isSystemAdmin =
+    (session?.user as any)?.role === 'SUPER_ADMIN' ||
+    session?.user?.email === 'itskausarprodhan@gmail.com';
+  const isAuthor = currentUserId === post.author.id;
+  const canManagePost = isAuthor || isSystemAdmin;
+  const [postStatus, setPostStatus] = React.useState((post as any).status || 'PUBLISHED');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const handleToggleDraft = async () => {
+    try {
+      const nextStatus = postStatus === 'DRAFT' ? 'PUBLISHED' : 'DRAFT';
+      await feedService.togglePostDraft(post.id, nextStatus);
+      setPostStatus(nextStatus);
+      toast.success(
+        nextStatus === 'DRAFT'
+          ? 'পোস্টটি সফলভাবে ড্রাফট করা হয়েছে এবং ফিড থেকে লুকানো হয়েছে।'
+          : 'পোস্টটি পুনরায় ফিডে প্রকাশ করা হয়েছে।'
+      );
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'অপারেশন ব্যর্থ হয়েছে');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
     try {
       await feedService.deletePost(post.id);
+      setIsDeleteDialogOpen(false);
+      toast.success('পোস্টটি সফলভাবে মুছে ফেলা হয়েছে');
       onPostDeleted?.(post.id);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'পোস্ট মুছে ফেলা যায়নি';
-      alert(message);
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
-
-  const isAuthor = currentUserId === post.author.id;
   const bgPreset = getBgPreset(post.bgColor);
   const isColoredPost = Boolean(bgPreset && (!post.media || post.media.length === 0));
   const isLongContent = post.content.length > 200;
@@ -407,6 +438,11 @@ export function PostCard({
                   {post.blockBadge}
                 </span>
               )}
+              {postStatus === 'DRAFT' && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  ড্রাফট (ফিড থেকে লুকানো)
+                </span>
+              )}
             </div>
 
             <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
@@ -441,18 +477,31 @@ export function PostCard({
                 <Share2 className="w-3.5 h-3.5" />
                 <span>লিংক কপি করুন</span>
               </button>
-              {isAuthor && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    handleDelete();
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-left"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>পোস্ট মুছুন</span>
-                </button>
+              {canManagePost && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleToggleDraft();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-lg text-left font-medium"
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    <span>{postStatus === 'DRAFT' ? 'প্রকাশ করুন (Publish)' : 'ড্রাফটে রাখুন (Draft)'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-left font-medium cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isSystemAdmin && !isAuthor ? 'অ্যাডমিন ডিলিট' : 'পোস্ট মুছুন'}</span>
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -703,6 +752,27 @@ export function PostCard({
           </div>
         </div>
       )}
+
+      {/* Professional Post Delete Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => !isDeleting && setIsDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title="পোস্ট মুছে ফেলা"
+        variant="danger"
+        confirmText="মুছে ফেলুন"
+        description={
+          <div className="space-y-1">
+            <p>আপনি কি নিশ্চিতভাবে এই পোস্টটি স্থায়ীভাবে মুছে ফেলতে চান?</p>
+            {isSystemAdmin && !isAuthor && (
+              <p className="text-xs text-amber-500 font-medium">
+                (সিস্টেম অ্যাডমিন প্রিভিলেজ দ্বারা এই পোস্টটি মুছে ফেলা হচ্ছে)
+              </p>
+            )}
+          </div>
+        }
+      />
     </article>
   );
 }
@@ -751,7 +821,7 @@ function CommentThreadItem({
       setIsReplying(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'রিপ্লাই পাঠানো সম্ভব হয়নি';
-      alert(message);
+      toast.error(message);
     } finally {
       setSubmittingReply(false);
     }

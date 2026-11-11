@@ -1,5 +1,6 @@
 import { PrismaClient } from '../../config/database.js';
 import { NotificationService } from '../notifications/notification.service.js';
+import { isMonthEligibleForContribution } from './organization.service.js';
 
 const MONTH_NAMES_BN = [
   'জানুয়ারি',
@@ -232,12 +233,9 @@ export class ContributionSchedulerService {
       // Must not already have received this slot's reminder (Deduplication)
       if (alreadyRemindedUserIds.has(member.userId)) continue;
 
-      // Check joining date eligibility
-      const joinedDate = member.joinedAt ? new Date(member.joinedAt) : new Date(member.createdAt);
-      const joinedYear = joinedDate.getFullYear();
-      const joinedMonth = joinedDate.getMonth() + 1;
-      if (periodYear < joinedYear || (periodYear === joinedYear && periodMonth < joinedMonth)) {
-        continue; // Not a member during this period
+      // Check joining date & organization start date eligibility
+      if (!isMonthEligibleForContribution(periodYear, periodMonth, member.joinedAt, member.createdAt)) {
+        continue;
       }
 
       const title = isAdvance

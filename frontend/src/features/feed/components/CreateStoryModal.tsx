@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
+import { toast } from '@/components/feedback/Toast';
 import { feedService } from '../services/feed.service';
 import { Story } from '../types';
 
@@ -56,7 +57,7 @@ export function CreateStoryModal({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল বাছাই করুন');
+      toast.warning('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল বাছাই করুন');
       return;
     }
 
@@ -139,7 +140,7 @@ export function CreateStoryModal({
       onClose();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'স্টোরি প্রকাশ করতে ব্যর্থ হয়েছে';
-      alert(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

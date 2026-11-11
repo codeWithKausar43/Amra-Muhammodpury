@@ -25,6 +25,7 @@ import {
   Shield,
   Eye,
   Landmark,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SettingsDrawerProps {
@@ -211,6 +212,23 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 </div>
                 <ChevronRight className="w-4 h-4 text-brand-emerald group-hover:translate-x-0.5 transition-transform" />
               </Link>
+
+              {/* Dedicated Admin Panel Link for System Admins & Admins */}
+              {((session?.user as any)?.role === 'ADMIN' ||
+                (session?.user as any)?.role === 'SUPER_ADMIN' ||
+                session?.user?.email === 'itskausarprodhan@gmail.com') && (
+                <Link
+                  href="/organization/admin"
+                  onClick={onClose}
+                  className="flex items-center justify-between py-2.5 px-3 rounded-xl text-amber-900 dark:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 transition-colors group cursor-pointer shadow-xs"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="text-sm font-bold">প্রশাসনিক প্যানেল (অ্যাডমিন)</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              )}
 
               <Link
                 href="/explore"
