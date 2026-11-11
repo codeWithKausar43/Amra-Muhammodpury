@@ -339,18 +339,26 @@ export default function MemberDashboardPage() {
   const paidMonthsCount = calendar.filter((c) => c.isPaid).length;
   const payments = dashboard?.payments || [];
 
-  // Unpaid months of current year
+  // Unpaid months of current year (November 2026 onwards)
   const unpaidMonths = React.useMemo(() => {
-    return calendar.filter((c) => !c.isPaid && c.status !== 'NOT_APPLICABLE').map((c) => c.month);
-  }, [calendar]);
+    return calendar
+      .filter((c) => {
+        const isBeforeOrgStart = currentYear < 2026 || (currentYear === 2026 && c.month < 11);
+        return !isBeforeOrgStart && !c.isPaid && c.status !== 'NOT_APPLICABLE' && c.isEligible !== false;
+      })
+      .map((c) => c.month);
+  }, [calendar, currentYear]);
 
-  // Due months up to current month of this year
+  // Due months up to current month of this year (November 2026 onwards)
   const dueMonths = React.useMemo(() => {
     const currentMonthNum = new Date().getMonth() + 1;
     return calendar
-      .filter((c) => !c.isPaid && c.status !== 'NOT_APPLICABLE' && c.month <= currentMonthNum)
+      .filter((c) => {
+        const isBeforeOrgStart = currentYear < 2026 || (currentYear === 2026 && c.month < 11);
+        return !isBeforeOrgStart && !c.isPaid && c.status !== 'NOT_APPLICABLE' && c.isEligible !== false && c.month <= currentMonthNum;
+      })
       .map((c) => c.month);
-  }, [calendar]);
+  }, [calendar, currentYear]);
 
   // Tab switch state: 'dashboard' | 'directory'
   const [activeTab, setActiveTab] = React.useState<'dashboard' | 'directory'>('dashboard');
@@ -982,7 +990,10 @@ export default function MemberDashboardPage() {
       <div className="space-y-3 pt-1 text-slate-900 dark:text-white transition-colors">
         {/* Header: Progress Summary */}
         {(() => {
-          const eligibleMonths = calendar.filter((c) => c.status !== 'NOT_APPLICABLE' && c.isEligible !== false);
+          const eligibleMonths = calendar.filter((c) => {
+            const isBeforeOrgStart = currentYear < 2026 || (currentYear === 2026 && c.month < 11);
+            return !isBeforeOrgStart && c.status !== 'NOT_APPLICABLE' && c.isEligible !== false;
+          });
           const totalEligible = eligibleMonths.length > 0 ? eligibleMonths.length : 12;
           const progressPercent = Math.min(100, Math.round((paidMonthsCount / totalEligible) * 100));
 
@@ -1011,7 +1022,8 @@ export default function MemberDashboardPage() {
         {/* 12-Month Calendar Chips (4 Per Row, Clean Open Layout) */}
         <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 gap-1.5 sm:gap-2 pt-0.5">
           {calendar.map((item) => {
-            const isNotApplicable = item.status === 'NOT_APPLICABLE' || item.isEligible === false;
+            const isBeforeOrgStart = currentYear < 2026 || (currentYear === 2026 && item.month < 11);
+            const isNotApplicable = isBeforeOrgStart || item.status === 'NOT_APPLICABLE' || item.isEligible === false;
             const isDue = !isNotApplicable && !item.isPaid && !item.isPending && item.month <= new Date().getMonth() + 1;
 
             return (

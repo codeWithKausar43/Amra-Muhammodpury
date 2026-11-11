@@ -11,9 +11,6 @@ import {
   ExternalLink,
   ArrowRight,
   Loader2,
-  Sparkles,
-  ShieldCheck,
-  Laptop,
 } from 'lucide-react';
 import { usePwaInstall } from '@/lib/pwa/usePwaInstall';
 import { openInExternalChrome } from '@/lib/pwa/pwa-utils';
@@ -25,32 +22,68 @@ interface PwaInstallScreenProps {
 export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenProps) {
   const {
     isInstalled,
-    canPrompt,
     isPrompting,
     platformInfo,
     promptInstall,
     openInstalledApp,
   } = usePwaInstall();
 
-  const [hasPromptFailed, setHasPromptFailed] = React.useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [isOpeningApp, setIsOpeningApp] = React.useState<boolean>(false);
 
-  const handleInstallClick = async () => {
-    setHasPromptFailed(false);
-    const result = await promptInstall();
+  // Directly generates and downloads the standalone app launcher file
+  const triggerAppDownload = () => {
+    try {
+      const appUrl =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://amra-muhammodpury.vercel.app';
 
-    if (result === 'accepted') {
-      // Prompt accepted by user - automatically attempt launch on Android after brief delay
-      if (platformInfo.isAndroid) {
-        setTimeout(() => {
-          openInstalledApp(targetPath);
-        }, 800);
-      }
-      return;
+      const fileContent = `[InternetShortcut]\r\nURL=${appUrl}/?source=pwa\r\nIconIndex=0\r\nIconFile=${appUrl}/favicon.ico\r\n`;
+      const blob = new Blob([fileContent], { type: 'application/octet-stream;charset=utf-8' });
+      const downloadLink = document.createElement('a');
+      downloadLink.href = URL.createObjectURL(blob);
+      downloadLink.download = 'আমরা মোহাম্মদপুরী.url';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadLink.href);
+    } catch (err) {
+      console.warn('Download error:', err);
     }
+  };
 
-    if (result === 'unavailable' || result === 'dismissed') {
-      setHasPromptFailed(true);
+  const handleInstallClick = async () => {
+    setIsProcessing(true);
+    try {
+      // 1. Try native PWA prompt (Chrome Android & Chromium Desktop)
+      const result = await promptInstall();
+
+      if (result === 'accepted') {
+        if (platformInfo.isAndroid) {
+          setTimeout(() => {
+            openInstalledApp(targetPath);
+          }, 800);
+        }
+        return;
+      }
+
+      if (result === 'dismissed') {
+        return;
+      }
+
+      // 2. If native prompt unavailable or not ready: trigger immediate direct file download!
+      // This guarantees that clicking the download button ALWAYS downloads on any device!
+      triggerAppDownload();
+
+      if (platformInfo.isAndroid) {
+        openInstalledApp(targetPath);
+      }
+    } catch (err) {
+      console.warn('Install/Download error:', err);
+      triggerAppDownload();
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -67,10 +100,6 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
     openInExternalChrome(targetPath);
   };
 
-  const hasSpecificDestination = Boolean(
-    targetPath && targetPath !== '/' && !targetPath.startsWith('/?source=pwa')
-  );
-
   return (
     <div className="relative min-h-[100dvh] w-full flex flex-col justify-between items-center p-3.5 sm:p-6 bg-slate-950 text-white selection:bg-brand-emerald selection:text-white transition-colors duration-300 overflow-x-hidden">
       {/* Background ambient lighting effects (matches Amra Mohammodpury design tokens) */}
@@ -81,7 +110,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
 
       {/* Main Installation Card */}
       <main className="relative z-10 w-full max-w-md my-auto py-4 sm:py-6">
-        <div className="rounded-3xl p-5 sm:p-8 bg-slate-900/90 backdrop-blur-xl border border-white/10 shadow-2xl space-y-5 text-center animate-in fade-in zoom-in-95 duration-300">
+        <div className="rounded-3xl p-6 sm:p-8 bg-slate-900/90 backdrop-blur-xl border border-white/10 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
           
           {/* Logo with glowing emerald aura */}
           <div className="relative mx-auto w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
@@ -100,25 +129,13 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
 
           {/* Title & Organization Identity */}
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-emerald/15 border border-brand-emerald/30 text-brand-mint text-[11px] font-bold">
-              <Sparkles className="w-3 h-3 text-brand-gold" />
-              <span>অফিসিয়াল অ্যাপ ইনস্টল করুন</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               আমরা মোহাম্মদপুরী
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
               মোহাম্মদপুরবাসীর ঐক্য, নাগরিক উন্নয়ন ও সামাজিক সংহতির ডিজিটাল প্ল্যাটফর্ম।
             </p>
           </div>
-
-          {/* Deep link destination indicator badge */}
-          {hasSpecificDestination && (
-            <div className="px-3 py-2 rounded-xl bg-emerald-950/60 border border-emerald-500/25 text-[11px] text-emerald-300 flex items-center justify-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-brand-gold shrink-0" />
-              <span className="truncate">ইনস্টলের পর কাঙ্ক্ষিত লিংকে সরাসরি প্রবেশ করানো হবে</span>
-            </div>
-          )}
 
           {/* =========================================================================
               SECTION 1: In-App Browser Warning (Messenger, Facebook, WhatsApp, Instagram)
@@ -130,7 +147,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                 <span>বাহ্যিক ব্রাউজারে খুলুন</span>
               </div>
               <p className="text-[11px] leading-relaxed text-amber-200/90">
-                আপনি মেসেঞ্জার, ফেসবুক বা হোয়াটসঅ্যাপের অভ্যন্তরীণ ব্রাউজারে আছেন। সঠিক ইনস্টলেশনের জন্য অনুগ্রহ করে সরাসরি মূল ব্রাউজারে খুলুন:
+                আপনি মেসেঞ্জার, ফেসবুক বা হোয়াটসঅ্যাপের অভ্যন্তরীণ ব্রাউজারে আছেন। সঠিক ডাউনলোডের জন্য অনুগ্রহ করে সরাসরি মূল ব্রাউজারে খুলুন:
               </p>
               {platformInfo.isAndroid ? (
                 <button
@@ -170,7 +187,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                 type="button"
                 onClick={handleOpenApp}
                 disabled={isOpeningApp}
-                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-brand-emerald to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-700/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-75"
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-emerald to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-700/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-75"
               >
                 {isOpeningApp ? (
                   <>
@@ -188,10 +205,36 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
           )}
 
           {/* =========================================================================
-              SECTION 3: iOS Safari Installation Instructions (No native prompt API)
+              SECTION 3: Primary Download & Install Action (Both Devices, Small Devices First Priority)
+             ========================================================================= */}
+          {!isInstalled && (
+            <div className="space-y-3 pt-1">
+              <button
+                type="button"
+                onClick={handleInstallClick}
+                disabled={isPrompting || isProcessing}
+                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-80"
+              >
+                {isPrompting || isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>ডাউনলোড হচ্ছে...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    <span>অ্যাপটি ডাউনলোড করুন</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* =========================================================================
+              SECTION 4: iOS Safari Step Instructions
              ========================================================================= */}
           {platformInfo.isIos && !isInstalled && (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-left space-y-3">
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-left space-y-3 mt-2">
               <div className="flex items-center gap-2 text-xs font-bold text-brand-mint">
                 <Smartphone className="w-4 h-4 text-brand-emerald" />
                 <span>আইফোন / আইপ্যাডে ইনস্টল করার নিয়ম:</span>
@@ -233,70 +276,10 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                     ট্যাপ করলেই ইনস্টল সম্পন্ন হবে।
                   </span>
                 </li>
-                <li className="flex items-start gap-2.5 text-[11px] text-brand-mint/90 pt-1 border-t border-white/5">
-                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-brand-gold mt-0.5" />
-                  <span>
-                    ইনস্টল শেষে আপনার হোম স্ক্রিন থেকে <strong>&quot;আমরা মোহাম্মদপুরী&quot;</strong> অ্যাপ আইকনে ট্যাপ করে প্রবেশ করুন।
-                  </span>
-                </li>
               </ol>
             </div>
           )}
 
-          {/* =========================================================================
-              SECTION 4: Android & Chromium Installation Action
-             ========================================================================= */}
-          {!platformInfo.isIos && !isInstalled && (
-            <div className="space-y-3 pt-1">
-              <button
-                type="button"
-                onClick={handleInstallClick}
-                disabled={isPrompting}
-                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-80"
-              >
-                {isPrompting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>ইনস্টলেশন উইন্ডো খোলা হচ্ছে...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5" />
-                    <span>অ্যাপটি ইনস্টল করুন</span>
-                  </>
-                )}
-              </button>
-
-              {/* Helpful fallback instructions if prompt is unavailable or was dismissed */}
-              {(hasPromptFailed || !canPrompt) && (
-                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-left text-xs text-slate-300 space-y-1.5">
-                  <div className="font-semibold text-brand-mint flex items-center gap-1.5">
-                    {platformInfo.isDesktop ? (
-                      <Laptop className="w-4 h-4" />
-                    ) : (
-                      <Smartphone className="w-4 h-4" />
-                    )}
-                    <span>সহজে ইনস্টল করার উপায়:</span>
-                  </div>
-                  {platformInfo.isDesktop ? (
-                    <p className="text-[11px] leading-relaxed text-slate-300">
-                      ব্রাউজারের অ্যাড্রেস বারের ডানপাশে থাকা <strong>ইনস্টল আইকনে</strong> (কম্পিউটার/ডাউনলোড চিহ্ন) ক্লিক করুন অথবা মেনু (⋮) থেকে <strong>&quot;Install আমরা মোহাম্মদপুরী&quot;</strong> নির্বাচন করুন।
-                    </p>
-                  ) : (
-                    <p className="text-[11px] leading-relaxed text-slate-300">
-                      আপনার ব্রাউজারের উপরের ডানপাশে থাকা ৩টি ডট (⋮) মেনুতে চাপুন এবং <strong>&quot;Install app&quot;</strong> বা <strong>&quot;Add to Home screen&quot;</strong> সিলেক্ট করুন।
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Privacy & Security Footnote */}
-          <div className="pt-2 text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-brand-emerald shrink-0" />
-            <span>কোনো প্লে-স্টোর ছাড়াই সরাসরি ও নিরাপদে ডিভাইসে সংযুক্ত হবে</span>
-          </div>
         </div>
       </main>
 

@@ -60,7 +60,7 @@ interface PwaInstallGateProps {
   children: React.ReactNode;
 }
 
-export function PwaInstallGate({ children }: PwaInstallGateProps) {
+function PwaInstallGateInner({ children }: PwaInstallGateProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -171,4 +171,12 @@ export function PwaInstallGate({ children }: PwaInstallGateProps) {
   // Non-installed standard browser session:
   // Strictly display the mandatory installation screen with requested route preserved.
   return <LazyInstallScreen targetPath={currentFullPath} />;
+}
+
+export function PwaInstallGate({ children }: PwaInstallGateProps) {
+  return (
+    <React.Suspense fallback={<PwaSplashPlaceholder />}>
+      <PwaInstallGateInner>{children}</PwaInstallGateInner>
+    </React.Suspense>
+  );
 }
