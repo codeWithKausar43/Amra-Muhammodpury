@@ -7,6 +7,7 @@ import {
   PwaPlatformInfo,
   markAppInstalled,
   isAppInstalledStorage,
+  clearAppInstalledStorage,
   launchAndroidInstalledApp,
   BeforeInstallPromptEvent,
 } from './pwa-utils';
@@ -15,6 +16,7 @@ export function usePwaInstall() {
   const [isStandalone, setIsStandalone] = React.useState<boolean>(false);
   const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = React.useState<boolean>(false);
+  const [hasStoredRecord, setHasStoredRecord] = React.useState<boolean>(false);
   const [platformInfo, setPlatformInfo] = React.useState<PwaPlatformInfo>({
     isIos: false,
     isAndroid: false,
@@ -29,9 +31,12 @@ export function usePwaInstall() {
     setIsStandalone(initialStandalone);
     setPlatformInfo(getPwaPlatformInfo());
 
-    // Check if previously installed via storage or standalone
-    const storedInstalled = isAppInstalledStorage() || initialStandalone;
-    if (storedInstalled) {
+    // Check if previously recorded in storage
+    const hasRecord = isAppInstalledStorage();
+    setHasStoredRecord(hasRecord);
+
+    // Only set isInstalled to true if confirmed running in standalone PWA
+    if (initialStandalone) {
       setIsInstalled(true);
     }
 
@@ -126,13 +131,13 @@ export function usePwaInstall() {
     // If prompt is not yet ready, wait briefly for browser event heuristic
     if (!promptEvent && typeof window !== 'undefined') {
       const start = Date.now();
-      while (Date.now() - start < 1200) {
+      while (Date.now() - start < 2500) {
         if (window.__deferredPwaPrompt) {
           promptEvent = window.__deferredPwaPrompt;
           setDeferredPrompt(promptEvent);
           break;
         }
-        await new Promise((r) => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 120));
       }
     }
 
@@ -171,6 +176,15 @@ export function usePwaInstall() {
     return false;
   }, [platformInfo.isAndroid]);
 
+  /**
+   * Clears the stored installation flag so the user can re-install.
+   */
+  const clearInstallRecord = React.useCallback(() => {
+    clearAppInstalledStorage();
+    setHasStoredRecord(false);
+    setIsInstalled(false);
+  }, []);
+
   const canPrompt = Boolean(
     deferredPrompt || (typeof window !== 'undefined' && window.__deferredPwaPrompt)
   );
@@ -178,6 +192,8 @@ export function usePwaInstall() {
   return {
     isStandalone,
     isInstalled,
+    hasStoredRecord,
+    clearInstallRecord,
     canPrompt,
     isPrompting,
     platformInfo,

@@ -11,6 +11,7 @@ import {
   ExternalLink,
   ArrowRight,
   Loader2,
+  RotateCcw,
 } from 'lucide-react';
 import { usePwaInstall } from '@/lib/pwa/usePwaInstall';
 import { openInExternalChrome } from '@/lib/pwa/pwa-utils';
@@ -22,6 +23,8 @@ interface PwaInstallScreenProps {
 export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenProps) {
   const {
     isInstalled,
+    hasStoredRecord,
+    clearInstallRecord,
     isPrompting,
     platformInfo,
     promptInstall,
@@ -30,9 +33,14 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
 
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [isOpeningApp, setIsOpeningApp] = React.useState<boolean>(false);
+  const [showAndroidGuide, setShowAndroidGuide] = React.useState<boolean>(false);
+  const [installedSuccess, setInstalledSuccess] = React.useState<boolean>(false);
 
-  // Directly generates and downloads the standalone app launcher file
-  const triggerAppDownload = () => {
+  // Directly generates and downloads the standalone app launcher file ONLY on Desktop PC
+  const triggerDesktopDownload = () => {
+    // Strictly for Desktop! NEVER download .url on Android/iOS (unsupported file type on mobile)
+    if (!platformInfo.isDesktop) return;
+
     try {
       const appUrl =
         typeof window !== 'undefined'
@@ -55,33 +63,43 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
 
   const handleInstallClick = async () => {
     setIsProcessing(true);
+    setShowAndroidGuide(false);
     try {
       // 1. Try native PWA prompt (Chrome Android & Chromium Desktop)
       const result = await promptInstall();
 
       if (result === 'accepted') {
+        setInstalledSuccess(true);
         if (platformInfo.isAndroid) {
           setTimeout(() => {
             openInstalledApp(targetPath);
-          }, 800);
+          }, 1200);
         }
         return;
       }
 
       if (result === 'dismissed') {
+        if (platformInfo.isAndroid) {
+          setShowAndroidGuide(true);
+        }
         return;
       }
 
-      // 2. If native prompt unavailable or not ready: trigger immediate direct file download!
-      // This guarantees that clicking the download button ALWAYS downloads on any device!
-      triggerAppDownload();
-
+      // 2. If native prompt unavailable or not ready:
       if (platformInfo.isAndroid) {
-        openInstalledApp(targetPath);
+        // Mobile Android: Never download .url file! Show clear 1-tap browser install instructions
+        setShowAndroidGuide(true);
+      } else if (platformInfo.isIos) {
+        // iOS instructions are already rendered
+      } else {
+        // Desktop PC fallback
+        triggerDesktopDownload();
       }
     } catch (err) {
-      console.warn('Install/Download error:', err);
-      triggerAppDownload();
+      console.warn('Install error:', err);
+      if (platformInfo.isAndroid) {
+        setShowAndroidGuide(true);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -96,13 +114,20 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
     return launched;
   };
 
+  const handleForceReinstall = () => {
+    clearInstallRecord();
+    setShowAndroidGuide(false);
+    setInstalledSuccess(false);
+    handleInstallClick();
+  };
+
   const handleOpenChrome = () => {
     openInExternalChrome(targetPath);
   };
 
   return (
     <div className="relative min-h-[100dvh] w-full flex flex-col justify-between items-center p-3.5 sm:p-6 bg-slate-950 text-white selection:bg-brand-emerald selection:text-white transition-colors duration-300 overflow-x-hidden">
-      {/* Background ambient lighting effects (matches Amra Mohammodpury design tokens) */}
+      {/* Background ambient lighting effects (matches design tokens) */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className="absolute -top-[20%] -left-[10%] w-[75vw] h-[75vw] max-w-[540px] max-h-[540px] rounded-full bg-brand-emerald/20 blur-[120px]" />
         <div className="absolute -bottom-[20%] -right-[10%] w-[75vw] h-[75vw] max-w-[540px] max-h-[540px] rounded-full bg-emerald-600/15 blur-[130px]" />
@@ -172,16 +197,16 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
           )}
 
           {/* =========================================================================
-              SECTION 2: App Already Installed on Device State
+              SECTION 2: Installation Success State
              ========================================================================= */}
-          {isInstalled && (
+          {installedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 space-y-3 animate-in fade-in">
               <div className="flex items-center justify-center gap-2 font-bold text-sm text-brand-mint">
                 <Check className="w-5 h-5 text-emerald-400" />
-                <span>অ্যাপটি আপনার ডিভাইসে ইনস্টল রয়েছে!</span>
+                <span>অ্যাপ ইনস্টল সম্পন্ন হয়েছে!</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                সম্পূর্ণ অভিজ্ঞতার জন্য আপনার হোম স্ক্রিন থেকে <strong>&quot;মোহাম্মদপুর কমিউনিটি&quot;</strong> অ্যাপটি খুলুন অথবা নিচের বাটনে চাপুন:
+                আপনার ডিভাইসের হোম স্ক্রিনে <strong>&quot;মোহাম্মদপুর কমিউনিটি&quot;</strong> অ্যাপটি যুক্ত হয়েছে। সম্পূর্ণ অভিজ্ঞতার জন্য হোম স্ক্রিন থেকে অ্যাপটি খুলুন।
               </p>
               <button
                 type="button"
@@ -205,9 +230,54 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
           )}
 
           {/* =========================================================================
-              SECTION 3: Primary Download & Install Action (Both Devices, Small Devices First Priority)
+              SECTION 3: App Previously Recorded State (With Guaranteed Re-install Option)
              ========================================================================= */}
-          {!isInstalled && (
+          {(hasStoredRecord || isInstalled) && !installedSuccess && (
+            <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-center gap-2 font-bold text-sm text-brand-mint">
+                <Check className="w-5 h-5 text-emerald-400" />
+                <span>অ্যাপটি আপনার ডিভাইসে ইনস্টল রয়েছে!</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                আপনার হোম স্ক্রিন থেকে <strong>&quot;মোহাম্মদপুর কমিউনিটি&quot;</strong> অ্যাপটি খুলুন অথবা নিচের বাটনে চাপুন:
+              </p>
+              <button
+                type="button"
+                onClick={handleOpenApp}
+                disabled={isOpeningApp}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-emerald to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-700/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-75"
+              >
+                {isOpeningApp ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>অ্যাপ খোলা হচ্ছে...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>অ্যাপটি ওপেন করুন</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+              
+              {/* Escape hatch for users who never actually got the app installed or whose intent failed */}
+              <div className="pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={handleForceReinstall}
+                  className="w-full text-center text-xs text-emerald-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer py-1"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>অ্যাপটি ফোনে খুঁজে পাচ্ছেন না? সরাসরি নতুন করে ইনস্টল করুন</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              SECTION 4: Primary Install Action (Never downloads invalid files on Mobile)
+             ========================================================================= */}
+          {!installedSuccess && !hasStoredRecord && !isInstalled && (
             <div className="space-y-3 pt-1">
               <button
                 type="button"
@@ -218,12 +288,12 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                 {isPrompting || isProcessing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>ডাউনলোড হচ্ছে...</span>
+                    <span>ইনস্টলেশন প্রস্তুত হচ্ছে...</span>
                   </>
                 ) : (
                   <>
                     <Download className="w-5 h-5" />
-                    <span>অ্যাপটি ডাউনলোড করুন</span>
+                    <span>অ্যাপটি ইনস্টল করুন</span>
                   </>
                 )}
               </button>
@@ -231,9 +301,58 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
           )}
 
           {/* =========================================================================
-              SECTION 4: iOS Safari Step Instructions
+              SECTION 5: Android Installation Helper (One-tap Chrome Install)
              ========================================================================= */}
-          {platformInfo.isIos && !isInstalled && (
+          {platformInfo.isAndroid && !installedSuccess && (showAndroidGuide || (!hasStoredRecord && !isInstalled)) && (
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-left space-y-3 mt-2 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-mint">
+                <Smartphone className="w-4 h-4 text-brand-emerald" />
+                <span>অ্যান্ড্রয়েডে সহজে ইনস্টল করার নিয়ম:</span>
+              </div>
+              <ol className="space-y-2.5 text-xs text-slate-200 font-medium pl-0.5">
+                <li className="flex items-start gap-2.5">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-emerald/30 border border-brand-emerald/40 text-brand-mint text-[10px] font-bold shrink-0 mt-0.5">
+                    ১
+                  </span>
+                  <span>
+                    ব্রাউজারের অ্যাড্রেস বারের ডানে থাকা{' '}
+                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
+                      (+) প্লাস চিহ্ন
+                    </span>{' '}
+                    অথবা উপরের ডানপাশে ৩টি ডট{' '}
+                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
+                      ⋮ মেনু
+                    </span>-তে চাপুন।
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-emerald/30 border border-brand-emerald/40 text-brand-mint text-[10px] font-bold shrink-0 mt-0.5">
+                    ২
+                  </span>
+                  <span>
+                    মেনু থেকে{' '}
+                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
+                      <Download className="w-3 h-3 inline text-brand-mint" /> Install app
+                    </span>{' '}
+                    বা <strong>&quot;হোম স্ক্রিনে যোগ করুন&quot;</strong> চাপুন।
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-emerald/30 border border-brand-emerald/40 text-brand-mint text-[10px] font-bold shrink-0 mt-0.5">
+                    ৩
+                  </span>
+                  <span>
+                    <strong>&quot;Install&quot;</strong> চাপলেই সরাসরি আপনার ফোনে অফিসিয়াল অ্যাপটি ইনস্টল হয়ে যাবে!
+                  </span>
+                </li>
+              </ol>
+            </div>
+          )}
+
+          {/* =========================================================================
+              SECTION 6: iOS Safari Step Instructions
+             ========================================================================= */}
+          {platformInfo.isIos && !installedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-left space-y-3 mt-2">
               <div className="flex items-center gap-2 text-xs font-bold text-brand-mint">
                 <Smartphone className="w-4 h-4 text-brand-emerald" />

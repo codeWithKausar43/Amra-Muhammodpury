@@ -168,6 +168,16 @@ export function markAppInstalled(): void {
 }
 
 /**
+ * Clears the stored installation flag so the user can re-install.
+ */
+export function clearAppInstalledStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(PWA_INSTALLED_KEY);
+  } catch {}
+}
+
+/**
  * Checks if the application was previously marked as installed.
  */
 export function isAppInstalledStorage(): boolean {
