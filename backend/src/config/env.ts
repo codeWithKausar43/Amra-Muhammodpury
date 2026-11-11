@@ -9,7 +9,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   DATABASE_URL: z
     .string()
-    .default('postgresql://postgres:postgres@localhost:5432/amra_muhammadpuri_dev?schema=public'),
+    .default('postgresql://postgres:postgres@localhost:5433/amra_muhammadpuri_dev?schema=public'),
 
   // Better Auth
   BETTER_AUTH_SECRET: z
