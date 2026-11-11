@@ -12,6 +12,84 @@ interface StoriesCarouselProps {
   onSelectStory?: (index: number) => void;
 }
 
+interface CommunityStoryCardProps {
+  story: Story;
+  index: number;
+  onSelectStory?: (index: number) => void;
+}
+
+function CommunityStoryCard({ story, index, onSelectStory }: CommunityStoryCardProps) {
+  const [bgError, setBgError] = React.useState(false);
+  const [avatarError, setAvatarError] = React.useState(false);
+
+  const authorName = story.author?.name || story.title || 'কমিউনিটি সদস্য';
+  const initial = (authorName.trim().charAt(0) || 'ম').toUpperCase();
+  const backgroundPhoto =
+    story.mediaUrl ||
+    story.author?.image ||
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80';
+
+  return (
+    <div
+      onClick={() => onSelectStory?.(index)}
+      className="w-32 sm:w-36 md:w-40 h-52 sm:h-56 md:h-60 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900"
+    >
+      {/* Full Cover Background */}
+      {backgroundPhoto && !bgError ? (
+        <Image
+          src={backgroundPhoto}
+          alt={story.title || authorName}
+          fill
+          unoptimized
+          sizes="(max-width: 640px) 128px, 160px"
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={() => setBgError(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-700 via-teal-800 to-slate-950 flex flex-col items-center justify-center p-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white text-lg font-bold mb-1 shadow-sm">
+            {initial}
+          </div>
+          <span className="text-[11px] font-semibold text-emerald-100 line-clamp-2 px-1">
+            {story.title || authorName}
+          </span>
+        </div>
+      )}
+
+      {/* Dark Gradient Overlay for Readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15 pointer-events-none" />
+
+      {/* Top-Left Author Avatar with Ring */}
+      <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-20 overflow-hidden shadow-sm">
+        {story.author?.image && !avatarError ? (
+          <div className="relative w-full h-full rounded-full overflow-hidden">
+            <Image
+              src={story.author.image}
+              alt={authorName}
+              fill
+              unoptimized
+              sizes="36px"
+              className="object-cover"
+              onError={() => setAvatarError(true)}
+            />
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-brand-emerald text-white text-[11px] font-bold">
+            {initial}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Author Name */}
+      <div className="absolute bottom-2.5 left-2.5 right-2.5 z-20 pointer-events-none">
+        <p className="text-xs font-bold text-white leading-tight drop-shadow-md truncate">
+          {authorName}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function StoriesCarousel({
   stories,
   userImage,
@@ -65,61 +143,16 @@ export function StoriesCarousel({
         </button>
 
         {/* Community Stories (Facebook Vertical Cards) */}
-        {communityStories.map((story, index) => {
-          const backgroundPhoto =
-            story.mediaUrl ||
-            story.author.image ||
-            'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80';
-
-          return (
-            <div
-              key={story.id}
-              onClick={() => onSelectStory?.(index)}
-              className="w-32 sm:w-36 md:w-40 h-52 sm:h-56 md:h-60 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-slate-900"
-            >
-              {/* Full Cover Background */}
-              <Image
-                src={backgroundPhoto}
-                alt={story.title || story.author.name}
-                fill
-                unoptimized
-                sizes="(max-width: 640px) 128px, 160px"
-                className="object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-
-              {/* Dark Gradient Overlay for Readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15" />
-
-              {/* Top-Left Author Avatar with Ring */}
-              <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-10 overflow-hidden shadow-sm">
-                {story.author.image ? (
-                  <div className="relative w-full h-full rounded-full overflow-hidden">
-                    <Image
-                      src={story.author.image}
-                      alt={story.author.name}
-                      fill
-                      unoptimized
-                      sizes="36px"
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-brand-emerald text-white text-[11px] font-bold">
-                    {story.author.name.charAt(0)}
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Author Name */}
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10">
-                <p className="text-xs font-bold text-white leading-tight drop-shadow-md truncate">
-                  {story.author.name}
-                </p>
-              </div>
-            </div>
-          );
-        })}
+        {communityStories.map((story, index) => (
+          <CommunityStoryCard
+            key={story.id}
+            story={story}
+            index={index}
+            onSelectStory={onSelectStory}
+          />
+        ))}
       </div>
     </div>
   );
 }
+
