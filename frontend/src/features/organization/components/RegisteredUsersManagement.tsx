@@ -83,7 +83,7 @@ export function RegisteredUsersManagement() {
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [selectedType, setSelectedType] = React.useState<'ALL' | 'GENERAL_USER' | 'MEMBER'>('ALL');
   const [selectedProvider, setSelectedProvider] = React.useState<'ALL' | 'google' | 'credential'>('ALL');
-  const [selectedRole, setSelectedRole] = React.useState<'ALL' | 'USER' | 'ADMIN'>('ALL');
+  const [selectedRole, setSelectedRole] = React.useState<'ALL' | 'USER' | 'ADMIN' | 'SUPER_ADMIN'>('ALL');
   const [page, setPage] = React.useState(1);
 
   // Debounce search input
@@ -260,6 +260,9 @@ export function RegisteredUsersManagement() {
               <option value="ADMIN" className="bg-white dark:bg-[#162420] text-slate-900 dark:text-white">
                 প্রশাসক (ADMIN)
               </option>
+              <option value="SUPER_ADMIN" className="bg-white dark:bg-[#162420] text-slate-900 dark:text-white">
+                সুপার এডমিন (SUPER_ADMIN)
+              </option>
             </select>
           </div>
         </div>
@@ -360,6 +363,11 @@ export function RegisteredUsersManagement() {
                                 {user.name}
                               </span>
                               {isMember && <VerifiedBadge size="xs" />}
+                              {user.role === 'SUPER_ADMIN' && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 shrink-0">
+                                  সুপার এডমিন
+                                </span>
+                              )}
                               {user.role === 'ADMIN' && (
                                 <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
                                   এডমিন

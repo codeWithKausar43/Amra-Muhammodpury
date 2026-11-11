@@ -47,7 +47,7 @@ export const INITIAL_PAYMENT_CONFIGS = [
     title: 'ব্যাংক হিসাব',
     accountNumber: '১২৩.১০১.৪৫৬৭৮৯ (ডাচ্-বাংলা ব্যাংক)',
     accountType: 'চলতি হিসাব (মোহাম্মদপুর শাখা)',
-    instructions: 'ব্যাংক একাউন্টে জমা দিয়ে জমা স্লিপের ছবি বা অনলাইন ট্রানজেকশন রেফারেন্স প্রদান করুন। অ্যাকাউন্ট নাম: আমরা মুহাম্মদপুরী ফাউন্ডেশন।',
+    instructions: 'ব্যাংক একাউন্টে জমা দিয়ে জমা স্লিপের ছবি বা অনলাইন ট্রানজেকশন রেফারেন্স প্রদান করুন। অ্যাকাউন্ট নাম: আমরা মোহাম্মদপুরী ফাউন্ডেশন।',
     isActive: true,
   },
 ];
@@ -103,19 +103,21 @@ export class CampaignService {
       where: { id: userId },
       select: { role: true },
     });
-    if (user?.role === 'ADMIN') return 'PRESIDENT';
+    if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') return 'PRESIDENT';
 
     const membership = await this.prisma.orgMembership.findUnique({
       where: { userId },
       select: { orgRole: true, status: true },
     });
     if (membership && membership.status === 'ACTIVE') {
+      if (membership.orgRole === 'SUPER_ADMIN') return 'PRESIDENT';
       return membership.orgRole;
     }
     return null;
   }
 
   private requireOfficer(role: string | null, allowed: string[] = ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN']) {
+    if (role === 'PRESIDENT' || role === 'SUPER_ADMIN') return;
     if (!role || !allowed.includes(role)) {
       throw new ForbiddenError('ক্যাম্পেইন ব্যবস্থাপনার জন্য প্রয়োজনীয় প্রশাসনিক অনুমতি আপনার নেই');
     }

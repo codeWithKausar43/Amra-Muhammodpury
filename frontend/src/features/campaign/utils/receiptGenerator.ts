@@ -53,7 +53,7 @@ export function downloadCampaignDonationReceipt(data: CampaignReceiptData): void
   ctx.fillStyle = 'rgba(5, 150, 105, 0.06)';
   ctx.textAlign = 'center';
   for (let y = -460; y <= 460; y += 80) {
-    ctx.fillText('আমরা মুহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা • OFFICIAL CAMPAIGN DONATION RECEIPT', 0, y);
+    ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা • OFFICIAL CAMPAIGN DONATION RECEIPT', 0, y);
   }
   ctx.restore();
 
@@ -80,7 +80,7 @@ export function downloadCampaignDonationReceipt(data: CampaignReceiptData): void
   // Organization Title
   ctx.fillStyle = '#064e3b';
   ctx.font = `bold 30px ${fontSans}`;
-  ctx.fillText('আমরা মুহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা', canvas.width / 2, 132);
+  ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা', canvas.width / 2, 132);
 
   ctx.fillStyle = '#475569';
   ctx.font = `bold 15px ${fontSans}`;
@@ -88,7 +88,7 @@ export function downloadCampaignDonationReceipt(data: CampaignReceiptData): void
 
   ctx.fillStyle = '#64748b';
   ctx.font = `13px ${fontSans}`;
-  ctx.fillText('রেজিস্টার্ড সামাজিক ও নাগরিক কল্যাণ সোসাইটি • মুহাম্মদপুর, ঢাকা', canvas.width / 2, 183);
+  ctx.fillText('রেজিস্টার্ড সামাজিক ও নাগরিক কল্যাণ সোসাইটি • মোহাম্মদপুর, ঢাকা', canvas.width / 2, 183);
 
   // Dividing Line
   ctx.strokeStyle = '#e2e8f0';
@@ -225,7 +225,7 @@ export function downloadCampaignDonationReceipt(data: CampaignReceiptData): void
   ctx.font = `12px ${fontSans}`;
   ctx.fillStyle = '#475569';
   ctx.fillText('সাধারণ সম্পাদক / দপ্তর সম্পাদক', 200, bottomY + 20);
-  ctx.fillText('আমরা মুহাম্মদপুরী', 200, bottomY + 36);
+  ctx.fillText('আমরা মোহাম্মদপুরী', 200, bottomY + 36);
 
   // Center: Official Stamp Box
   ctx.strokeStyle = '#059669';
@@ -236,7 +236,7 @@ export function downloadCampaignDonationReceipt(data: CampaignReceiptData): void
   ctx.fillText('অফিসিয়াল ডিজিটাল ভেরিফাইড', canvas.width / 2, bottomY - 12);
   ctx.font = `11px ${fontSans}`;
   ctx.fillStyle = '#059669';
-  ctx.fillText('আমরা মুহাম্মদপুরী কেন্দ্রীয় ফান্ড', canvas.width / 2, bottomY + 8);
+  ctx.fillText('আমরা মোহাম্মদপুরী কেন্দ্রীয় ফান্ড', canvas.width / 2, bottomY + 8);
 
   // Right: Finance Secretary Signature
   ctx.beginPath();
@@ -248,7 +248,7 @@ export function downloadCampaignDonationReceipt(data: CampaignReceiptData): void
   ctx.font = `12px ${fontSans}`;
   ctx.fillStyle = '#475569';
   ctx.fillText('অর্থ ও তহবিল বিষয়ক সম্পাদক', canvas.width - 200, bottomY + 20);
-  ctx.fillText('আমরা মুহাম্মদপুরী', canvas.width - 200, bottomY + 36);
+  ctx.fillText('আমরা মোহাম্মদপুরী', canvas.width - 200, bottomY + 36);
 
   // Footer Disclaimer
   ctx.fillStyle = '#94a3b8';

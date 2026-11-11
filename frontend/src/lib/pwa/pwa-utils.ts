@@ -65,3 +65,17 @@ export function getPwaPlatformInfo(): PwaPlatformInfo {
   };
 }
 
+/**
+ * Attempts to trigger or launch the installed Android PWA/WebAPK
+ */
+export function launchAndroidInstalledApp(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const host = window.location.host;
+    const path = window.location.pathname;
+    const intentUrl = `intent://${host}${path}#Intent;scheme=https;action=android.intent.action.VIEW;end;`;
+    window.location.href = intentUrl;
+  } catch {}
+}
+
+

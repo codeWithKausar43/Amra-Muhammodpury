@@ -11,23 +11,87 @@ import {
   ExternalLink,
   ArrowRight,
   Loader2,
-  Laptop,
 } from 'lucide-react';
 import { usePwaInstall } from '@/lib/pwa/usePwaInstall';
+import { launchAndroidInstalledApp } from '@/lib/pwa/pwa-utils';
 
-export default function PwaInstallScreen() {
+interface PwaInstallScreenProps {
+  onUnlock?: () => void;
+}
+
+export default function PwaInstallScreen({ onUnlock }: PwaInstallScreenProps) {
   const { isInstalled, platformInfo, isPrompting, promptInstall } =
     usePwaInstall();
-  const [showDesktopGuide, setShowDesktopGuide] = React.useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
+
+  const downloadDesktopShortcut = () => {
+    try {
+      const appUrl =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://amra-muhammodpury.vercel.app';
+      const fileContent = `[InternetShortcut]\r\nURL=${appUrl}/\r\nIconIndex=0\r\nIconFile=${appUrl}/favicon.ico\r\n`;
+      const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+      const downloadLink = document.createElement('a');
+      downloadLink.href = URL.createObjectURL(blob);
+      downloadLink.download = 'আমরা মোহাম্মদপুরী.url';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadLink.href);
+    } catch (err) {
+      console.warn('Failed to download shortcut:', err);
+    }
+  };
 
   const handleInstallClick = async () => {
-    const result = await promptInstall();
-    if (result === 'accepted') {
-      setShowDesktopGuide(false);
-    } else if (result === 'dismissed') {
-      // User dismissed native prompt
-    } else {
-      setShowDesktopGuide(true);
+    setIsProcessing(true);
+
+    try {
+      // 1. Try native PWA prompt if available (Chrome / Edge / Android)
+      const result = await promptInstall();
+
+      if (result === 'accepted') {
+        if (platformInfo.isAndroid) {
+          launchAndroidInstalledApp();
+        }
+        setTimeout(() => {
+          onUnlock?.();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
+          }
+        }, 500);
+        return;
+      }
+
+      if (result === 'dismissed') {
+        setIsProcessing(false);
+        return;
+      }
+
+      // 2. Native prompt unavailable (Desktop browser / already installed / Firefox / Edge)
+      if (platformInfo.isDesktop) {
+        // Automatically download Windows desktop shortcut file so user gets the app file on PC!
+        downloadDesktopShortcut();
+      } else if (platformInfo.isAndroid) {
+        launchAndroidInstalledApp();
+      }
+
+      // 3. Smoothly unlock and enter the app
+      setTimeout(() => {
+        onUnlock?.();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
+        }
+      }, 600);
+    } catch (err) {
+      console.warn('Install error:', err);
+      onUnlock?.();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -137,13 +201,13 @@ export default function PwaInstallScreen() {
               <button
                 type="button"
                 onClick={handleInstallClick}
-                disabled={isPrompting}
-                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60"
+                disabled={isPrompting || isProcessing}
+                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-80"
               >
-                {isPrompting ? (
+                {isPrompting || isProcessing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>প্রসেসিং হচ্ছে...</span>
+                    <span>অ্যাপে নিয়ে যাওয়া হচ্ছে...</span>
                   </>
                 ) : (
                   <>
@@ -152,40 +216,6 @@ export default function PwaInstallScreen() {
                   </>
                 )}
               </button>
-
-              {/* Desktop Installation Guide when browser does not open popup directly */}
-              {showDesktopGuide && (
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-left space-y-3 animate-in fade-in duration-200">
-                  <div className="flex items-center gap-2 text-xs font-bold text-brand-emerald dark:text-brand-mint">
-                    <Laptop className="w-4 h-4 text-brand-emerald shrink-0" />
-                    <span>কম্পিউটারে ইনস্টল করার নিয়ম:</span>
-                  </div>
-                  <ol className="space-y-2 text-xs text-slate-700 dark:text-slate-200 font-medium pl-1">
-                    <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-[10px] font-bold shrink-0 mt-0.5">
-                        ১
-                      </span>
-                      <span>
-                        আপনার ব্রাউজারের ওপরের <strong>অ্যাড্রেস বার (URL Bar)</strong>-এর ডানপাশে থাকা{' '}
-                        <span className="inline-flex items-center gap-0.5 font-bold text-brand-emerald bg-white dark:bg-white/10 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-white/10">
-                          ইনস্টল আইকন (💻 ⬇️ বা ⊕)
-                        </span>{' '}
-                        এ ক্লিক করুন।
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-[10px] font-bold shrink-0 mt-0.5">
-                        ২
-                      </span>
-                      <span>
-                        অথবা ব্রাউজারের থ্রি-ডট (<strong>⋮</strong>) মেনু থেকে{' '}
-                        <strong>&quot;Save and share&quot;</strong> বা <strong>&quot;Apps&quot;</strong> &gt;{' '}
-                        <strong>&quot;Install আমরা মোহাম্মদপুরী&quot;</strong> সিলেক্ট করুন।
-                      </span>
-                    </li>
-                  </ol>
-                </div>
-              )}
             </div>
           )}
 
@@ -198,12 +228,21 @@ export default function PwaInstallScreen() {
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                 আপনার ডিভাইসের হোম স্ক্রিন থেকে <strong>&quot;আমরা মোহাম্মদপুরী&quot;</strong> অ্যাপটি
-                খুলুন এবং সম্পূর্ণ ফিচারে প্রবেশ করুন।
+                খুলুন অথবা সরাসরি ভেতরে প্রবেশ করুন।
               </p>
-              <div className="pt-1 flex items-center justify-center gap-1.5 text-xs text-brand-emerald dark:text-brand-mint font-bold">
-                <span>হোম স্ক্রিন অ্যাপ আইকন দেখুন</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onUnlock?.();
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
+                  }
+                }}
+                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow hover:bg-emerald-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>এখনই অ্যাপে যান</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </div>
+              </button>
             </div>
           )}
         </div>
@@ -216,4 +255,3 @@ export default function PwaInstallScreen() {
     </div>
   );
 }
-

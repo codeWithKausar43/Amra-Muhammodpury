@@ -298,7 +298,7 @@ export default function OrganizationAdminPage() {
         const title = trxTitle.trim() || 'অসহায় পরিবারের জন্য মানবিক সহায়তা';
         await mutations.createProject.mutateAsync({
           title,
-          description: trxDesc.trim() || 'মুহাম্মদপুরের অসহায় ও সুবিধাবঞ্চিত পরিবারের জন্য মানবিক সহায়তা কার্যক্রম।',
+          description: trxDesc.trim() || 'মোহাম্মদপুরের অসহায় ও সুবিধাবঞ্চিত পরিবারের জন্য মানবিক সহায়তা কার্যক্রম।',
           category: 'HUMANITARIAN',
           assistanceType: assistanceType.trim() || 'খাদ্য ও নিত্যপণ্য সহায়তা',
           beneficiaryName: beneficiaryName.trim() || 'অসহায় পরিবার',

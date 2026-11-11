@@ -349,13 +349,13 @@ export const AdminUsersQuerySchema = z.object({
   search: z.string().optional(),
   type: z.enum(['ALL', 'GENERAL_USER', 'MEMBER']).default('ALL'),
   provider: z.enum(['ALL', 'google', 'credential']).default('ALL'),
-  role: z.enum(['ALL', 'USER', 'ADMIN']).default('ALL'),
+  role: z.enum(['ALL', 'USER', 'ADMIN', 'SUPER_ADMIN']).default('ALL'),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
 });
 
 export const UpdateUserRoleSchema = z.object({
-  role: z.enum(['USER', 'ADMIN']),
+  role: z.enum(['USER', 'ADMIN', 'SUPER_ADMIN']),
 });
 
 

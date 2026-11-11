@@ -163,19 +163,21 @@ export class OrganizationService {
       where: { id: userId },
       select: { role: true },
     });
-    if (user?.role === 'ADMIN') return 'PRESIDENT'; // System ADMIN has President privileges
+    if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') return 'PRESIDENT'; // System ADMIN & SUPER_ADMIN have full privileges
 
     const membership = await this.prisma.orgMembership.findUnique({
       where: { userId },
       select: { orgRole: true, status: true },
     });
     if (membership && membership.status === 'ACTIVE') {
+      if (membership.orgRole === 'SUPER_ADMIN') return 'PRESIDENT';
       return membership.orgRole;
     }
     return null;
   }
 
   private requireOfficer(role: string | null, allowed: string[] = ['PRESIDENT', 'TREASURER', 'ADMIN']) {
+    if (role === 'PRESIDENT' || role === 'SUPER_ADMIN') return; // President and Super Admin have all officer privileges
     if (!role || !allowed.includes(role)) {
       throw new ForbiddenError('এই কার্যক্রমটি সম্পাদনের জন্য আপনার সাংগঠনিক অনুমতি নেই');
     }
@@ -2092,7 +2094,7 @@ export class OrganizationService {
         const createdProject = await this.prisma.orgProject.create({
           data: {
             title: 'অসহায় পরিবারের জন্য খাদ্য ও জরুরি সহায়তা কর্মসূচি',
-            description: 'মুহাম্মদপুরের অসহায় ও সুবিধাবঞ্চিত পরিবারের মুখে অন্ন তুলে দেওয়ার লক্ষ্যে চাল, ডাল, তেল, অন্যান্য নিত্যপ্রয়োজনীয় খাদ্যসামগ্রী ও শিশুখাদ্য ক্রয়ের বিস্তারিত ব্যয় হিসাব।',
+            description: 'মোহাম্মদপুরের অসহায় ও সুবিধাবঞ্চিত পরিবারের মুখে অন্ন তুলে দেওয়ার লক্ষ্যে চাল, ডাল, তেল, অন্যান্য নিত্যপ্রয়োজনীয় খাদ্যসামগ্রী ও শিশুখাদ্য ক্রয়ের বিস্তারিত ব্যয় হিসাব।',
             category: 'HUMANITARIAN',
             assistanceType: 'খাদ্য ও নিত্যপণ্য সহায়তা',
             beneficiaryName: 'রহিমা বেগম ও পরিবার',
