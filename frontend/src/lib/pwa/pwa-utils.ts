@@ -84,6 +84,5 @@ export function launchAndroidInstalledApp(path = '/'): boolean {
     return false;
   }
 }
-}
 
 
