@@ -1,23 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { isPwaStandalone, getPwaPlatformInfo, PwaPlatformInfo } from './pwa-utils';
-
-export interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[];
-  readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed';
-    platform: string;
-  }>;
-  prompt(): Promise<void>;
-}
-
-declare global {
-  interface Window {
-    __deferredPwaPrompt?: BeforeInstallPromptEvent | null;
-    __onPwaPromptReady?: ((e: BeforeInstallPromptEvent) => void) | null;
-  }
-}
+import {
+  isPwaStandalone,
+  getPwaPlatformInfo,
+  PwaPlatformInfo,
+  markAppInstalled,
+  isAppInstalledStorage,
+  launchAndroidInstalledApp,
+  BeforeInstallPromptEvent,
+} from './pwa-utils';
 
 export function usePwaInstall() {
   const [isStandalone, setIsStandalone] = React.useState<boolean>(false);
@@ -32,13 +24,31 @@ export function usePwaInstall() {
   const [isPrompting, setIsPrompting] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    // 1. Initial check
+    // 1. Initial checks
     const initialStandalone = isPwaStandalone();
     setIsStandalone(initialStandalone);
-    setIsInstalled(initialStandalone);
     setPlatformInfo(getPwaPlatformInfo());
 
-    // Check early captured prompt from head script
+    // Check if previously installed via storage or standalone
+    const storedInstalled = isAppInstalledStorage() || initialStandalone;
+    if (storedInstalled) {
+      setIsInstalled(true);
+    }
+
+    // Modern Chrome API to detect if WebAPK is installed
+    if (typeof navigator !== 'undefined' && 'getInstalledRelatedApps' in navigator) {
+      (navigator as any)
+        .getInstalledRelatedApps()
+        .then((relatedApps: any[]) => {
+          if (Array.isArray(relatedApps) && relatedApps.length > 0) {
+            setIsInstalled(true);
+            markAppInstalled();
+          }
+        })
+        .catch(() => {});
+    }
+
+    // 2. Check early captured prompt from <head> script
     if (typeof window !== 'undefined') {
       if (window.__deferredPwaPrompt) {
         setDeferredPrompt(window.__deferredPwaPrompt);
@@ -48,22 +58,22 @@ export function usePwaInstall() {
       };
     }
 
-    // 2. Listen to display-mode changes
+    // 3. Listen to display-mode changes (e.g. user opens standalone window)
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleMediaChange = (e: MediaQueryListEvent) => {
       if (e.matches) {
         setIsStandalone(true);
         setIsInstalled(true);
+        markAppInstalled();
       }
     };
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', handleMediaChange);
     } else {
-      // Fallback for older browsers
       mediaQuery.addListener(handleMediaChange);
     }
 
-    // 3. Capture native install prompt
+    // 4. Capture native install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       // Prevent automatic mini-infobar on mobile Chrome
       e.preventDefault();
@@ -74,18 +84,19 @@ export function usePwaInstall() {
       setDeferredPrompt(promptEvent);
     };
 
-    // 4. Listen for successful installation event
+    // 5. Listen for successful installation event from OS/Browser
     const handleAppInstalled = () => {
       if (typeof window !== 'undefined') {
         window.__deferredPwaPrompt = null;
-        window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
       }
       setDeferredPrompt(null);
       setIsInstalled(true);
-      // Wait a moment for OS shortcut to register, then check standalone
-      setTimeout(() => {
-        setIsStandalone(isPwaStandalone());
-      }, 1000);
+      markAppInstalled();
+
+      // Notify any listeners
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pwa-installed-success'));
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -135,9 +146,7 @@ export function usePwaInstall() {
       const choice = await promptEvent.userChoice;
       if (choice.outcome === 'accepted') {
         setIsInstalled(true);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
-        }
+        markAppInstalled();
       }
       setDeferredPrompt(null);
       if (typeof window !== 'undefined') {
@@ -152,15 +161,27 @@ export function usePwaInstall() {
     }
   }, [deferredPrompt]);
 
+  /**
+   * Attempts to launch the installed application
+   */
+  const openInstalledApp = React.useCallback((targetPath = '/') => {
+    if (platformInfo.isAndroid) {
+      return launchAndroidInstalledApp(targetPath);
+    }
+    return false;
+  }, [platformInfo.isAndroid]);
+
+  const canPrompt = Boolean(
+    deferredPrompt || (typeof window !== 'undefined' && window.__deferredPwaPrompt)
+  );
+
   return {
     isStandalone,
     isInstalled,
-    canInstallNatively: Boolean(
-      deferredPrompt || (typeof window !== 'undefined' && window.__deferredPwaPrompt)
-    ),
-    platformInfo,
+    canPrompt,
     isPrompting,
+    platformInfo,
     promptInstall,
+    openInstalledApp,
   };
 }
-

@@ -121,9 +121,15 @@ export default function RootLayout({
                 } catch(e) {}
               })();
 
-              // Early PWA Install Prompt Capture & Service Worker Registration
+              // Early PWA Standalone Detection, Install Prompt Capture & Service Worker Registration
               (function() {
                 try {
+                  var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                                     window.matchMedia('(display-mode: fullscreen)').matches ||
+                                     window.matchMedia('(display-mode: minimal-ui)').matches ||
+                                     navigator.standalone === true ||
+                                     (document.referrer && document.referrer.indexOf('android-app://') === 0);
+                  window.__IS_PWA_STANDALONE__ = isStandalone;
                   window.__deferredPwaPrompt = null;
                   window.addEventListener('beforeinstallprompt', function(e) {
                     e.preventDefault();
