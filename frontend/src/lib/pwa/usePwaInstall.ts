@@ -17,11 +17,12 @@ export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = React.useState<boolean>(false);
   const [hasStoredRecord, setHasStoredRecord] = React.useState<boolean>(false);
-  const [platformInfo, setPlatformInfo] = React.useState<PwaPlatformInfo>({
-    isIos: false,
-    isAndroid: false,
-    isDesktop: false,
-    isInAppBrowser: false,
+  // Initialise synchronously (lazy initialiser runs once on client, avoids race with button click)
+  const [platformInfo, setPlatformInfo] = React.useState<PwaPlatformInfo>(() => {
+    if (typeof window === 'undefined') {
+      return { isIos: false, isAndroid: false, isDesktop: true, isInAppBrowser: false };
+    }
+    return getPwaPlatformInfo();
   });
   const [isPrompting, setIsPrompting] = React.useState<boolean>(false);
 

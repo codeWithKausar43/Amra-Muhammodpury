@@ -39,7 +39,15 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
   // Directly generates and downloads the standalone app launcher file ONLY on Desktop PC
   const triggerDesktopDownload = () => {
     // Strictly for Desktop! NEVER download .url on Android/iOS (unsupported file type on mobile)
-    if (!platformInfo.isDesktop) return;
+    // Triple-check: platformInfo state, UA, and touch capabilities
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isActuallyMobile =
+      platformInfo.isAndroid ||
+      platformInfo.isIos ||
+      /Android|iPhone|iPad|iPod/i.test(ua) ||
+      (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 &&
+        typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches);
+    if (!platformInfo.isDesktop || isActuallyMobile) return;
 
     try {
       const appUrl =
@@ -64,13 +72,19 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
   const handleInstallClick = async () => {
     setIsProcessing(true);
     setShowAndroidGuide(false);
+    // Safety: determine mobile status at click time via UA (protects against stale state)
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isMobileAtClickTime =
+      platformInfo.isAndroid ||
+      platformInfo.isIos ||
+      /Android|iPhone|iPad|iPod/i.test(ua);
     try {
       // 1. Try native PWA prompt (Chrome Android & Chromium Desktop)
       const result = await promptInstall();
 
       if (result === 'accepted') {
         setInstalledSuccess(true);
-        if (platformInfo.isAndroid) {
+        if (platformInfo.isAndroid || isMobileAtClickTime) {
           setTimeout(() => {
             openInstalledApp(targetPath);
           }, 1200);
@@ -79,25 +93,25 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
       }
 
       if (result === 'dismissed') {
-        if (platformInfo.isAndroid) {
+        if (platformInfo.isAndroid || isMobileAtClickTime) {
           setShowAndroidGuide(true);
         }
         return;
       }
 
       // 2. If native prompt unavailable or not ready:
-      if (platformInfo.isAndroid) {
+      if (platformInfo.isAndroid || isMobileAtClickTime) {
         // Mobile Android: Never download .url file! Show clear 1-tap browser install instructions
         setShowAndroidGuide(true);
       } else if (platformInfo.isIos) {
         // iOS instructions are already rendered
       } else {
-        // Desktop PC fallback
+        // Desktop PC only fallback
         triggerDesktopDownload();
       }
     } catch (err) {
       console.warn('Install error:', err);
-      if (platformInfo.isAndroid) {
+      if (platformInfo.isAndroid || isMobileAtClickTime) {
         setShowAndroidGuide(true);
       }
     } finally {

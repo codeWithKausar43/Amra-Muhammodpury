@@ -81,7 +81,17 @@ export function getPwaPlatformInfo(): PwaPlatformInfo {
   const isIos =
     /iPad|iPhone|iPod/.test(ua) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const isAndroid = /Android/i.test(ua);
+  // Broaden Android detection: include common Android UA variants and touch-based mobile hint
+  const isAndroidUa = /Android/i.test(ua);
+  // Extra fallback: coarse pointer + touch = likely mobile (catches some Android tablets with uncommon UA)
+  const isTouchMobile =
+    !isIos &&
+    typeof navigator !== 'undefined' &&
+    navigator.maxTouchPoints > 0 &&
+    window.matchMedia('(pointer: coarse)').matches &&
+    // Exclude large-screen touch desktops (e.g. Surface)
+    window.screen.width <= 1024;
+  const isAndroid = isAndroidUa || isTouchMobile;
   const isDesktop = !isIos && !isAndroid;
 
   // In-app browsers restrict or break PWA installation (Facebook, Messenger, Instagram, Line, WhatsApp)
