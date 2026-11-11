@@ -23,7 +23,7 @@ const AUTHOR_SELECT = {
 } as const;
 
 export class FeedService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) { }
 
   private mapAuthor(author: any): AuthorSummary {
     if (!author) {
@@ -135,9 +135,9 @@ export class FeedService {
           },
           savedBy: currentUserId
             ? {
-                where: { userId: currentUserId },
-                select: { id: true },
-              }
+              where: { userId: currentUserId },
+              select: { id: true },
+            }
             : false,
           comments: {
             where: { isDeleted: false },
@@ -155,12 +155,12 @@ export class FeedService {
 
     const userLikes = currentUserId
       ? await this.prisma.postLike.findMany({
-          where: {
-            postId: { in: posts.map((p) => p.id) },
-            userId: currentUserId,
-          },
-          select: { postId: true, type: true },
-        })
+        where: {
+          postId: { in: posts.map((p) => p.id) },
+          userId: currentUserId,
+        },
+        select: { postId: true, type: true },
+      })
       : [];
     const userLikeMap = new Map(userLikes.map((l) => [l.postId, l.type as ReactionType]));
 
@@ -170,29 +170,29 @@ export class FeedService {
       const recentLikers = post.likes.map((l) => l.user.name);
 
       return {
-      id: post.id,
-      content: post.content,
-      bgColor: post.bgColor,
-      location: post.location,
-      category: post.category,
-      blockBadge: post.blockBadge,
-      privacy: post.privacy,
-      groupId: post.groupId,
-      likesCount: post._count.likes,
-      commentsCount: post._count.comments,
-      sharesCount: post.sharesCount,
-      status: post.status,
-      hasLiked: Boolean(userReaction),
+        id: post.id,
+        content: post.content,
+        bgColor: post.bgColor,
+        location: post.location,
+        category: post.category,
+        blockBadge: post.blockBadge,
+        privacy: post.privacy,
+        groupId: post.groupId,
+        likesCount: post._count.likes,
+        commentsCount: post._count.comments,
+        sharesCount: post.sharesCount,
+        status: post.status,
+        hasLiked: Boolean(userReaction),
         userReaction,
         topReactions,
         recentLikers,
-      hasSaved: Boolean(post.savedBy && post.savedBy.length > 0),
-      isEmergency: post.isEmergency,
-      emergencyData: post.emergencyData,
-      createdAt: post.createdAt,
-      author: this.mapAuthor(post.author),
-      sharedPost: post.sharedPost
-        ? {
+        hasSaved: Boolean(post.savedBy && post.savedBy.length > 0),
+        isEmergency: post.isEmergency,
+        emergencyData: post.emergencyData,
+        createdAt: post.createdAt,
+        author: this.mapAuthor(post.author),
+        sharedPost: post.sharedPost
+          ? {
             id: post.sharedPost.id,
             content: post.sharedPost.content,
             location: post.sharedPost.location,
@@ -217,25 +217,25 @@ export class FeedService {
             })),
             recentComments: [],
           }
-        : null,
-      media: post.media.map((pm) => ({
-        id: pm.media.id,
-        publicId: pm.media.publicId,
-        secureUrl: pm.media.secureUrl,
-        resourceType: pm.media.resourceType,
-        format: pm.media.format,
-        width: pm.media.width,
-        height: pm.media.height,
-      })),
-      recentComments: post.comments.map((c) => ({
-        id: c.id,
-        content: c.content,
-        parentId: c.parentId,
-        createdAt: c.createdAt,
-        author: this.mapAuthor(c.author),
-      })),
-    };
-  });
+          : null,
+        media: post.media.map((pm) => ({
+          id: pm.media.id,
+          publicId: pm.media.publicId,
+          secureUrl: pm.media.secureUrl,
+          resourceType: pm.media.resourceType,
+          format: pm.media.format,
+          width: pm.media.width,
+          height: pm.media.height,
+        })),
+        recentComments: post.comments.map((c) => ({
+          id: c.id,
+          content: c.content,
+          parentId: c.parentId,
+          createdAt: c.createdAt,
+          author: this.mapAuthor(c.author),
+        })),
+      };
+    });
 
     return {
       posts: formattedPosts,
@@ -398,18 +398,18 @@ export class FeedService {
       }),
       ...(originalPost.authorId !== userId
         ? [
-            this.prisma.notification.create({
-              data: {
-                recipientId: originalPost.authorId,
-                actorId: userId,
-                type: 'POST_SHARE',
-                title: 'পোস্ট শেয়ার',
-                content: `একজন সদস্য আপনার পোস্টটি শেয়ার করেছেন।`,
-                entityId: postId,
-                entityType: 'post',
-              },
-            }),
-          ]
+          this.prisma.notification.create({
+            data: {
+              recipientId: originalPost.authorId,
+              actorId: userId,
+              type: 'POST_SHARE',
+              title: 'পোস্ট শেয়ার',
+              content: `একজন সদস্য আপনার পোস্টটি শেয়ার করেছেন।`,
+              entityId: postId,
+              entityType: 'post',
+            },
+          }),
+        ]
         : []),
     ]);
 

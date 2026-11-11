@@ -1,6 +1,7 @@
 import { buildApp } from './app.js';
 import { env } from './config/env.js';
 
+// Amra Mohammodpury API entrypoint
 const startServer = async () => {
   try {
     const app = await buildApp();
