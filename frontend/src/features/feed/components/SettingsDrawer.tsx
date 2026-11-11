@@ -116,7 +116,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
             <div className="w-8 h-8 rounded-xl overflow-hidden shadow-xs border border-emerald-500/20 bg-emerald-50 dark:bg-white/5 p-0.5 shrink-0">
               <Image
                 src="/logos/logo.png"
-                alt="আমরা মোহাম্মদপুরী লোগো"
+                alt="মোহাম্মদপুর কমিউনিটি লোগো"
                 width={32}
                 height={32}
                 className="w-full h-full object-contain rounded-lg"
@@ -127,7 +127,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 মেনু ও সেটিংস
               </h2>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                আমরা মোহাম্মদপুরী
+                মোহাম্মদপুর কমিউনিটি
               </p>
             </div>
           </div>
@@ -372,7 +372,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[11px] text-slate-400">
-          <span>আমরা মোহাম্মদপুরী • v১.০</span>
+          <span>মোহাম্মদপুর কমিউনিটি • v১.০</span>
           <span>© ২০২৬</span>
         </div>
       </div>

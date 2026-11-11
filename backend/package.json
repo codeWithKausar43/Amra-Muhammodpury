@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "0.1.0",
   "private": true,
-  "description": "আমরা মোহাম্মদপুরী - REST API Backend Service",
+  "description": "মোহাম্মদপুর কমিউনিটি - REST API Backend Service",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

@@ -61,7 +61,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
                 ? 'text-brand-emerald dark:text-brand-mint font-bold'
                 : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
             }`}
-            title="আমরা মোহাম্মদপুরী সংগঠন"
+            title="মোহাম্মদপুর কমিউনিটি সংগঠন"
           >
             <Landmark className="w-5 h-5" />
             <span className="text-[11px] leading-none">সংগঠন</span>

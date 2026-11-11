@@ -310,7 +310,7 @@ export default function DigitalElectionPage() {
               <span>ডিজিটাল নির্বাচন ও সম্পূর্ণ গোপন ব্যালট ভোটিং</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              {currentElection?.title || 'আমরা মোহাম্মদপুরী পরিষদ নির্বাচন'}
+              {currentElection?.title || 'মোহাম্মদপুর কমিউনিটি পরিষদ নির্বাচন'}
             </h1>
             <p className="text-xs sm:text-sm text-amber-100 max-w-xl">
               সক্রিয় সদস্যদের প্রত্যক্ষ ভোটের মাধ্যমে গণতান্ত্রিক নেতৃত্ব নির্বাচন। সম্পূর্ণ নিরপেক্ষ, স্বচ্ছ ও ক্রিপ্টোগ্রাফিক গোপন ব্যালট।

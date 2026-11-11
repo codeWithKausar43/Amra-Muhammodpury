@@ -1,4 +1,4 @@
-// Service Worker for আমরা মোহাম্মদপুরী (Amra Mohammodpury)
+// Service Worker for মোহাম্মদপুর কমিউনিটি (Amra Mohammodpury)
 // Enables Web Push Notifications, Background Notifications, Safe Static Asset Caching, and PWA Support.
 const SW_VERSION = 'v3-clean';
 const STATIC_CACHE_NAME = `amra-static-${SW_VERSION}`;
@@ -117,7 +117,7 @@ self.addEventListener('fetch', (event) => {
 // Push notification event (triggered when app is closed or in background)
 self.addEventListener('push', (event) => {
   let data = {
-    title: 'আমরা মোহাম্মদপুরী',
+    title: 'মোহাম্মদপুর কমিউনিটি',
     body: 'আপনার অ্যাকাউন্টে নতুন আপডেট এসেছে!',
     url: '/organization/member',
   };
@@ -130,7 +130,7 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const title = data.title || 'আমরা মোহাম্মদপুরী';
+  const title = data.title || 'মোহাম্মদপুর কমিউনিটি';
   const options = {
     body: data.body || 'নতুন নোটিফিকেশন!',
     icon: data.icon || '/icons/icon-192x192.png',
@@ -185,7 +185,7 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, url, tag } = event.data;
-    self.registration.showNotification(title || 'আমরা মোহাম্মদপুরী', {
+    self.registration.showNotification(title || 'মোহাম্মদপুর কমিউনিটি', {
       body: body || 'নতুন নোটিফিকেশন',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/badge-72x72.png',

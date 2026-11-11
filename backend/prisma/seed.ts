@@ -17,7 +17,7 @@ async function main() {
     console.error('💡 If you genuinely need to seed a staging database, pass the "--allow-production" flag explicitly.');
     process.exit(1);
   }
-  console.info('🌱 Starting comprehensive database seeding for আমরা মোহাম্মদপুরী...');
+  console.info('🌱 Starting comprehensive database seeding for মোহাম্মদপুর কমিউনিটি...');
 
   const authCtx = await auth.$context;
   const passwordHash = await authCtx.password.hash('Password123!');
@@ -120,7 +120,7 @@ async function main() {
       name: 'সভাপতি - ড. সাইদুর রহমান',
       role: 'USER',
       phone: '01711000010',
-      bio: 'নির্বাহী সভাপতি, আমরা মোহাম্মদপুরী পরিষদ। নীতি নির্ধারণ ও প্রাতিষ্ঠানিক উন্নয়নে নিবেদিত।',
+      bio: 'নির্বাহী সভাপতি, মোহাম্মদপুর কমিউনিটি পরিষদ। নীতি নির্ধারণ ও প্রাতিষ্ঠানিক উন্নয়নে নিবেদিত।',
       image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
       coverImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&h=400&fit=crop',
       orgRole: 'PRESIDENT',
@@ -218,7 +218,7 @@ async function main() {
       name: 'Md Kausar',
       role: 'ADMIN',
       phone: '01711000000',
-      bio: 'সফটওয়্যার স্থপতি ও প্রতিষ্ঠাতা সভাপতি, আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন পরিষদ।',
+      bio: 'সফটওয়্যার স্থপতি ও প্রতিষ্ঠাতা সভাপতি, মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন পরিষদ।',
       image: 'https://res.cloudinary.com/rim6yblt/image/upload/v1793589750/amra-muhammadpuri/profiles/si06kruhb8tpfsyky1ed.png',
       coverImage: 'https://res.cloudinary.com/rim6yblt/image/upload/v1793589754/amra-muhammadpuri/profiles/of4semfr7yvwqn8buku2.png',
       orgRole: 'PRESIDENT',
@@ -619,7 +619,7 @@ async function main() {
     const committee = await prisma.orgCommittee.create({
       data: {
         name: '২০২৬-২০২৮ কেন্দ্রীয় কার্যনির্বাহী পরিষদ',
-        description: 'আমরা মোহাম্মদপুরী সংগঠনের নির্বাচিত ও অনুমোদিত কেন্দ্রীয় কার্যনির্বাহী কমিটি।',
+        description: 'মোহাম্মদপুর কমিউনিটি সংগঠনের নির্বাচিত ও অনুমোদিত কেন্দ্রীয় কার্যনির্বাহী কমিটি।',
         startDate: new Date('2026-01-01'),
         isActive: true,
       },
@@ -709,7 +709,7 @@ async function main() {
   if (!existingElection && userAdmin && userTreasurer) {
     const election = await prisma.election.create({
       data: {
-        title: 'আমরা মোহাম্মদপুরী কার্যনির্বাহী পরিষদ নির্বাচন ২০২৬',
+        title: 'মোহাম্মদপুর কমিউনিটি কার্যনির্বাহী পরিষদ নির্বাচন ২০২৬',
         description: 'সক্রিয় প্রাতিষ্ঠানিক সদস্যদের প্রত্যক্ষ গোপন ব্যালট ভোটে ২০২৬-২০২৮ মেয়াদের নেতৃত্ব নির্বাচন।',
         nominationStartDate: new Date(Date.now() - 86400000 * 5),
         nominationEndDate: new Date(Date.now() - 86400000 * 2),

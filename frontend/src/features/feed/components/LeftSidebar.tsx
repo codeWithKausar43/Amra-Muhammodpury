@@ -71,7 +71,7 @@ export function LeftSidebar({ activeBlock, onSelectBlock }: LeftSidebarProps) {
             <div className="w-8 h-8 rounded-xl overflow-hidden shadow-xs border border-brand-emerald/30 shrink-0 bg-white dark:bg-white/5 p-0.5">
               <Image
                 src="/logos/logo.png"
-                alt="আমরা মোহাম্মদপুরী লোগো"
+                alt="মোহাম্মদপুর কমিউনিটি লোগো"
                 width={32}
                 height={32}
                 className="w-full h-full object-contain rounded-lg"

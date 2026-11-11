@@ -12,15 +12,15 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'আমরা মোহাম্মদপুরী',
-    template: '%s | আমরা মোহাম্মদপুরী',
+    default: 'মোহাম্মদপুর কমিউনিটি',
+    template: '%s | মোহাম্মদপুর কমিউনিটি',
   },
-  description: 'আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা ও সামাজিক প্ল্যাটফর্ম।',
+  description: 'মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা ও সামাজিক প্ল্যাটফর্ম।',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'আমরা মোহাম্মদপুরী',
+    title: 'মোহাম্মদপুর কমিউনিটি',
   },
   icons: {
     icon: [

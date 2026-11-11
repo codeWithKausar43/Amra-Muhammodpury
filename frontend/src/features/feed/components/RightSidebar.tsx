@@ -101,7 +101,7 @@ export function RightSidebar() {
           <Link href="/privacy" className="hover:underline">গোপনীয়তা</Link>
           <Link href="/terms" className="hover:underline">শর্তাবলী</Link>
         </div>
-        <p>© ২০২৬ আমরা মোহাম্মদপুরী। সর্বস্বত্ব সংরক্ষিত।</p>
+        <p>© ২০২৬ মোহাম্মদপুর কমিউনিটি। সর্বস্বত্ব সংরক্ষিত।</p>
       </div>
     </aside>
   );

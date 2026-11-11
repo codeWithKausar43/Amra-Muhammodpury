@@ -174,7 +174,7 @@ export function AdminDrawer({
             <div className="w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-emerald-500/20 bg-white dark:bg-white/5 p-0.5 shrink-0">
               <Image
                 src="/logos/logo.png"
-                alt="আমরা মোহাম্মদপুরী লোগো"
+                alt="মোহাম্মদপুর কমিউনিটি লোগো"
                 width={36}
                 height={36}
                 className="w-full h-full object-contain rounded-lg"
@@ -185,7 +185,7 @@ export function AdminDrawer({
                 <span>অ্যাডমিন কন্ট্রোল মেনু</span>
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                আমরা মোহাম্মদপুরী • নির্বাহী পরিষদ
+                মোহাম্মদপুর কমিউনিটি • নির্বাহী পরিষদ
               </p>
             </div>
           </div>

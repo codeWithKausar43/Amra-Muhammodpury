@@ -22,14 +22,14 @@ export function HeroBanner() {
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shadow-lg border border-white/25 bg-emerald-950/40 p-0.5 shrink-0">
             <Image
               src="/logos/logo.png"
-              alt="আমরা মোহাম্মদপুরী লোগো"
+              alt="মোহাম্মদপুর কমিউনিটি লোগো"
               width={56}
               height={56}
               className="w-full h-full object-contain rounded-xl"
             />
           </div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight leading-tight">
-            আমরা মোহাম্মদপুরী — সম্প্রীতি, উন্নয়ন ও ঐক্যের বন্ধন
+            মোহাম্মদপুর কমিউনিটি — সম্প্রীতি, উন্নয়ন ও ঐক্যের বন্ধন
           </h1>
         </div>
 

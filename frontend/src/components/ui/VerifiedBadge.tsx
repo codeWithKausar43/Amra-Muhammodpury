@@ -18,7 +18,7 @@ export interface VerifiedBadgeProps {
 export const VerifiedBadge: React.FC<VerifiedBadgeProps> = ({
   size = 'md',
   className = '',
-  title = 'আমরা মোহাম্মদপুরী সক্রিয় সদস্য (ভেরিফাইড)',
+  title = 'মোহাম্মদপুর কমিউনিটি সক্রিয় সদস্য (ভেরিফাইড)',
 }) => {
   const sizeClasses = {
     xs: 'w-3 h-3',

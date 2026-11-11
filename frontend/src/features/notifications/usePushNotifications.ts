@@ -88,7 +88,7 @@ export function usePushNotifications() {
         }
 
         // 3. Show instant system push notification
-        reg.showNotification('আমরা মোহাম্মদপুরী 🔔', {
+        reg.showNotification('মোহাম্মদপুর কমিউনিটি 🔔', {
           body: '🎵 নোটিফিকেশন সফলভাবে চালু হয়েছে! অ্যাপ বন্ধ থাকলেও মোবাইল ডাটা অন থাকলেই আপনার ফোনে সাউন্ড সহ নোটিফিকেশন আসবে।',
           icon: '/icons/icon-192x192.png',
           badge: '/icons/badge-72x72.png',
@@ -125,7 +125,7 @@ export function usePushNotifications() {
         if ('serviceWorker' in navigator) {
           try {
             const reg = await navigator.serviceWorker.ready;
-            reg.showNotification('আমরা মোহাম্মদপুরী • সাউন্ড টেস্ট 🎵', {
+            reg.showNotification('মোহাম্মদপুর কমিউনিটি • সাউন্ড টেস্ট 🎵', {
               body: 'মিষ্টি নোটিফিকেশন সাউন্ড এবং পুশ অ্যালার্ট সফলভাবে বাজছে!',
               icon: '/icons/icon-192x192.png',
               badge: '/icons/badge-72x72.png',
@@ -140,7 +140,7 @@ export function usePushNotifications() {
             // fallback
           }
         }
-        new Notification('আমরা মোহাম্মদপুরী • সাউন্ড টেস্ট 🎵', {
+        new Notification('মোহাম্মদপুর কমিউনিটি • সাউন্ড টেস্ট 🎵', {
           body: 'মিষ্টি নোটিফিকেশন সাউন্ড বাজছে!',
           icon: '/icons/icon-192x192.png',
         });

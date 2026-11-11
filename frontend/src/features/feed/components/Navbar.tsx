@@ -111,7 +111,7 @@ export function Navbar({ onSearch }: NavbarProps) {
             <div className="hidden sm:block relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-sm shrink-0 group-hover:scale-105 transition-transform">
               <Image
                 src="/logos/logo.png"
-                alt="আমরা মোহাম্মদপুরী লোগো"
+                alt="মোহাম্মদপুর কমিউনিটি লোগো"
                 width={40}
                 height={40}
                 className="w-full h-full object-contain"
@@ -120,7 +120,7 @@ export function Navbar({ onSearch }: NavbarProps) {
             </div>
             <div className="flex flex-col text-left min-w-0">
               <span className="text-[19px] sm:text-lg md:text-xl font-extrabold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate">
-                আমরা মোহাম্মদপুরী
+                মোহাম্মদপুর কমিউনিটি
               </span>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
                 Community Timeline

@@ -25,7 +25,7 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/notifications/test-push', async (request, reply) => {
     const session = await fastify.authenticate(request, reply);
     const result = await service.sendPushToUser(session.user.id, {
-      title: 'আমরা মোহাম্মদপুরী 🔔',
+      title: 'মোহাম্মদপুর কমিউনিটি 🔔',
       body: '🎵 মিষ্টি নোটিফিকেশন সাউন্ড ও পুশ অ্যালার্ট সফলভাবে কাজ করছে!',
       url: '/organization/member',
       sound: '/sounds/notification.wav',

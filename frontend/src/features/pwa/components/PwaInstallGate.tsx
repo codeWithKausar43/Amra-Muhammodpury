@@ -40,7 +40,7 @@ function PwaSplashPlaceholder() {
         <div className="relative w-full h-full rounded-3xl overflow-hidden bg-brand-charcoal p-2 border border-brand-emerald/40 shadow-2xl flex items-center justify-center">
           <Image
             src="/logos/app-logo.png"
-            alt="আমরা মোহাম্মদপুরী"
+            alt="মোহাম্মদপুর কমিউনিটি"
             fill
             sizes="96px"
             className="object-contain p-2"
@@ -50,7 +50,7 @@ function PwaSplashPlaceholder() {
       </div>
       <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-brand-mint/90 tracking-wide">
         <div className="w-1.5 h-1.5 rounded-full bg-brand-emerald animate-ping" />
-        <span>আমরা মোহাম্মদপুরী</span>
+        <span>মোহাম্মদপুর কমিউনিটি</span>
       </div>
     </div>
   );

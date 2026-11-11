@@ -7,7 +7,7 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: 'আমরা মোহাম্মদপুরী API',
+        title: 'মোহাম্মদপুর কমিউনিটি API',
         description: 'REST API service for the Amra Muhammadpuri community platform',
         version: '1.0.0',
         contact: {

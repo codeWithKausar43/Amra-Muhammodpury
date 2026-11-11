@@ -45,7 +45,7 @@ export const MembershipInvitationPopup: React.FC<MembershipInvitationPopupProps>
           <div className="w-full h-full rounded-full bg-white p-1.5 flex items-center justify-center overflow-hidden shadow-inner">
             <Image
               src="/logos/logo.png"
-              alt="আমরা মোহাম্মদপুরী লোগো"
+              alt="মোহাম্মদপুর কমিউনিটি লোগো"
               width={120}
               height={120}
               className="w-full h-full object-contain rounded-full"
@@ -59,7 +59,7 @@ export const MembershipInvitationPopup: React.FC<MembershipInvitationPopupProps>
           id="membership-invitation-title"
           className="text-2xl sm:text-[26px] font-black text-white tracking-tight flex items-center justify-center gap-2"
         >
-          <span>আমরা মোহাম্মদপুরী</span>
+          <span>মোহাম্মদপুর কমিউনিটি</span>
           <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 fill-red-500 shrink-0 inline-block animate-pulse" />
         </h2>
         <p className="text-xs sm:text-[13px] text-emerald-100/90 font-medium mt-1">

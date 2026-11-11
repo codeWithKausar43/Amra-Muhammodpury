@@ -43,7 +43,7 @@ const PAYMENT_INFO: Record<PaymentMethod, { title: string; number: string; type:
     title: 'ব্যাংক ট্রান্সফার',
     number: '১২৩.১০১.৪৫৬৭৮ (Meghna ব্যাংক)',
     type: 'কর্পোরেট একাউন্ট',
-    instructions: 'অ্যাকাউন্টের নাম: "আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা"। জমার স্লিপ সংরক্ষণ করুন।',
+    instructions: 'অ্যাকাউন্টের নাম: "মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা"। জমার স্লিপ সংরক্ষণ করুন।',
   },
   CASH: {
     title: 'সরাসরি নগদ (ক্যাশ)',
@@ -146,7 +146,7 @@ export default function OrganizationPaymentPage() {
             অভিনন্দন! আপনার সদস্যপদ সক্রিয় হয়েছে
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
-            আপনার প্রারম্ভিক কিস্তি (৳{agreementAmount}) সফলভাবে যাচাই হয়েছে। আপনি এখন আমরা মোহাম্মদপুরী সংগঠনের একজন পূর্ণাঙ্গ সক্রিয় সদস্য।
+            আপনার প্রারম্ভিক কিস্তি (৳{agreementAmount}) সফলভাবে যাচাই হয়েছে। আপনি এখন মোহাম্মদপুর কমিউনিটি সংগঠনের একজন পূর্ণাঙ্গ সক্রিয় সদস্য।
           </p>
         </div>
         <div className="pt-3">
@@ -180,7 +180,7 @@ export default function OrganizationPaymentPage() {
           <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-xs border border-brand-emerald/30 bg-white dark:bg-white/5 p-0.5 shrink-0">
             <Image
               src="/logos/logo.png"
-              alt="আমরা মোহাম্মদপুরী লোগো"
+              alt="মোহাম্মদপুর কমিউনিটি লোগো"
               width={48}
               height={48}
               className="w-full h-full object-contain rounded-xl"

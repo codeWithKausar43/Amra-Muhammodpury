@@ -48,7 +48,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Footer copyright */}
       <footer className="relative z-10 mt-6 pb-2 text-center text-xs text-slate-400 dark:text-slate-500">
-        &copy; {new Date().getFullYear()} আমরা মোহাম্মদপুরী। সর্বস্বত্ব সংরক্ষিত।
+        &copy; {new Date().getFullYear()} মোহাম্মদপুর কমিউনিটি। সর্বস্বত্ব সংরক্ষিত।
       </footer>
     </div>
   );

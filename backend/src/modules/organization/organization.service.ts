@@ -113,7 +113,7 @@ export const INITIAL_ORG_PAYMENT_CONFIGS = [
     title: 'ব্যাংক ট্রান্সফার',
     accountNumber: '১২৩.১০১.৪৫৬৭৮ (Meghna ব্যাংক)',
     accountType: 'কর্পোরেট একাউন্ট',
-    instructions: 'অ্যাকাউন্টের নাম: "আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা"। জমার স্লিপ সংরক্ষণ করুন।',
+    instructions: 'অ্যাকাউন্টের নাম: "মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা"। জমার স্লিপ সংরক্ষণ করুন।',
     isActive: true,
   },
   {
@@ -253,7 +253,7 @@ export class OrganizationService {
     ]);
 
     return {
-      organizationName: 'আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন ও সামাজিক সংগঠন',
+      organizationName: 'মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন ও সামাজিক সংগঠন',
       tagline: 'মোহাম্মদপুরের উন্নয়ন, নিরাপত্তা ও সামাজিক ঐক্যের মঞ্চ',
       established: 2026,
       stats: {

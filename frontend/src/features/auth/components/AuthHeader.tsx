@@ -21,7 +21,7 @@ export function AuthHeader(_props: AuthHeaderProps) {
         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shadow-md group-hover:scale-105 transition-transform border border-emerald-500/20 bg-emerald-50/50 dark:bg-white/5 p-0.5">
           <Image
             src="/logos/logo.png"
-            alt="আমরা মোহাম্মদপুরী লোগো"
+            alt="মোহাম্মদপুর কমিউনিটি লোগো"
             width={64}
             height={64}
             className="w-full h-full object-contain rounded-xl"
@@ -29,7 +29,7 @@ export function AuthHeader(_props: AuthHeaderProps) {
           />
         </div>
         <span className="text-2xl sm:text-3xl font-bold tracking-tight text-brand-emerald dark:text-brand-mint">
-          আমরা মোহাম্মদপুরী
+          মোহাম্মদপুর কমিউনিটি
         </span>
       </Link>
     </div>

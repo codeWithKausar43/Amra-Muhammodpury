@@ -5,7 +5,7 @@ import { RegisterForm } from '@/features/auth/components/RegisterForm';
 
 export const metadata: Metadata = {
   title: 'অ্যাকাউন্ট তৈরি করুন',
-  description: 'আমরা মোহাম্মদপুরী প্ল্যাটফর্মে নতুন অ্যাকাউন্ট খুলুন',
+  description: 'মোহাম্মদপুর কমিউনিটি প্ল্যাটফর্মে নতুন অ্যাকাউন্ট খুলুন',
 };
 
 export default function RegisterPage() {

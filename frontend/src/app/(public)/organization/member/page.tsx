@@ -93,7 +93,7 @@ function downloadReceiptCanvas(receipt: any, membership: any) {
   ctx.fillStyle = 'rgba(5, 150, 105, 0.08)'; // 8% opacity watermark
   ctx.textAlign = 'center';
   for (let y = -460; y <= 460; y += 85) {
-    ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT', 0, y);
+    ctx.fillText('মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT', 0, y);
   }
   ctx.restore();
 
@@ -131,7 +131,7 @@ function downloadReceiptCanvas(receipt: any, membership: any) {
   // Organization Title
   ctx.fillStyle = '#064e3b';
   ctx.font = `bold 30px ${fontSans}`;
-  ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা', canvas.width / 2, 134);
+  ctx.fillText('মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা', canvas.width / 2, 134);
 
   ctx.fillStyle = '#475569';
   ctx.font = `bold 15px ${fontSans}`;
@@ -271,7 +271,7 @@ function downloadReceiptCanvas(receipt: any, membership: any) {
   ctx.fillText('অর্থ সম্পাদক / কোষাধ্যক্ষ', 220, currentY + 20);
   ctx.fillStyle = '#64748b';
   ctx.font = `12px ${fontSans}`;
-  ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা', 220, currentY + 38);
+  ctx.fillText('মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা', 220, currentY + 38);
 
   // Center Seal Stamp Box
   ctx.strokeStyle = '#10b981';
@@ -303,7 +303,7 @@ function downloadReceiptCanvas(receipt: any, membership: any) {
   ctx.fillText('সাধারণ সম্পাদক / সভাপতি', canvas.width - 220, currentY + 20);
   ctx.fillStyle = '#64748b';
   ctx.font = `12px ${fontSans}`;
-  ctx.fillText('আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা', canvas.width - 220, currentY + 38);
+  ctx.fillText('মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা', canvas.width - 220, currentY + 38);
 
   // Bottom Notice
   ctx.fillStyle = '#94a3b8';
@@ -706,7 +706,7 @@ export default function MemberDashboardPage() {
         </div>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white">সদস্যপদ খুঁজে পাওয়া যায়নি</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          এই ড্যাশবোর্ডটি শুধুমাত্র আমরা মোহাম্মদপুরী সংগঠনের সক্রিয় সদস্যদের জন্য।
+          এই ড্যাশবোর্ডটি শুধুমাত্র মোহাম্মদপুর কমিউনিটি সংগঠনের সক্রিয় সদস্যদের জন্য।
         </p>
         <Link
           href="/organization/apply"
@@ -1642,10 +1642,10 @@ export default function MemberDashboardPage() {
                   aria-hidden="true"
                 >
                   <div className="text-center font-black text-xl sm:text-2xl leading-loose text-emerald-900 tracking-wider">
-                    আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
-                    আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
-                    আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
-                    আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
+                    মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
+                    মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
+                    মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
+                    মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা • OFFICIAL VERIFIED RECEIPT<br />
                   </div>
                 </div>
 
@@ -1654,14 +1654,14 @@ export default function MemberDashboardPage() {
                   <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto shadow-sm border border-emerald-500/20 bg-emerald-50/50 p-0.5">
                     <Image
                       src="/logos/logo.png"
-                      alt="আমরা মোহাম্মদপুরী লোগো"
+                      alt="মোহাম্মদপুর কমিউনিটি লোগো"
                       width={56}
                       height={56}
                       className="w-full h-full object-contain rounded-xl"
                     />
                   </div>
                   <h2 className="text-base sm:text-xl font-black text-emerald-950 tracking-tight">
-                    আমরা মোহাম্মদপুরী নাগরিক উন্নয়ন সংস্থা
+                    মোহাম্মদপুর কমিউনিটি নাগরিক উন্নয়ন সংস্থা
                   </h2>
                   <p className="text-xs font-bold text-slate-600">
                     অফিসিয়াল ডিজিটাল সদস্য অনুদান রসিদ

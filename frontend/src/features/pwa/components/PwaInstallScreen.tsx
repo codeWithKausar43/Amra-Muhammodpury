@@ -43,7 +43,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
       const blob = new Blob([fileContent], { type: 'application/octet-stream;charset=utf-8' });
       const downloadLink = document.createElement('a');
       downloadLink.href = URL.createObjectURL(blob);
-      downloadLink.download = 'আমরা মোহাম্মদপুরী.url';
+      downloadLink.download = 'মোহাম্মদপুর কমিউনিটি.url';
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
@@ -118,7 +118,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
             <div className="relative w-full h-full rounded-3xl overflow-hidden bg-brand-charcoal p-2 border-2 border-brand-emerald/40 shadow-xl flex items-center justify-center">
               <Image
                 src="/logos/app-logo.png"
-                alt="আমরা মোহাম্মদপুরী"
+                alt="মোহাম্মদপুর কমিউনিটি"
                 fill
                 sizes="(max-width: 640px) 96px, 112px"
                 className="object-contain p-2"
@@ -130,7 +130,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
           {/* Title & Organization Identity */}
           <div className="space-y-1.5">
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              আমরা মোহাম্মদপুরী
+              মোহাম্মদপুর কমিউনিটি
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
               মোহাম্মদপুরবাসীর ঐক্য, নাগরিক উন্নয়ন ও সামাজিক সংহতির ডিজিটাল প্ল্যাটফর্ম।
@@ -181,7 +181,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                 <span>অ্যাপটি আপনার ডিভাইসে ইনস্টল রয়েছে!</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                সম্পূর্ণ অভিজ্ঞতার জন্য আপনার হোম স্ক্রিন থেকে <strong>&quot;আমরা মোহাম্মদপুরী&quot;</strong> অ্যাপটি খুলুন অথবা নিচের বাটনে চাপুন:
+                সম্পূর্ণ অভিজ্ঞতার জন্য আপনার হোম স্ক্রিন থেকে <strong>&quot;মোহাম্মদপুর কমিউনিটি&quot;</strong> অ্যাপটি খুলুন অথবা নিচের বাটনে চাপুন:
               </p>
               <button
                 type="button"
@@ -285,7 +285,7 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
 
       {/* Footer */}
       <footer className="relative z-10 w-full max-w-md text-center py-2 text-[11px] text-slate-500">
-        &copy; {new Date().getFullYear()} আমরা মোহাম্মদপুরী। সর্বস্বত্ব সংরক্ষিত।
+        &copy; {new Date().getFullYear()} মোহাম্মদপুর কমিউনিটি। সর্বস্বত্ব সংরক্ষিত।
       </footer>
     </div>
   );

@@ -319,7 +319,7 @@ export function PostCard({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `আমরা মোহাম্মদপুরী - ${post.author.name}-এর পোস্ট`,
+          title: `মোহাম্মদপুর কমিউনিটি - ${post.author.name}-এর পোস্ট`,
           text: post.content.slice(0, 100),
           url: window.location.href,
         });

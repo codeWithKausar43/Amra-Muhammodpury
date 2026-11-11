@@ -136,7 +136,7 @@ export default function MembershipApplyPage() {
           <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-xs border border-brand-emerald/30 bg-white dark:bg-white/5 p-0.5 shrink-0">
             <Image
               src="/logos/logo.png"
-              alt="আমরা মোহাম্মদপুরী লোগো"
+              alt="মোহাম্মদপুর কমিউনিটি লোগো"
               width={48}
               height={48}
               className="w-full h-full object-contain rounded-xl"
@@ -278,7 +278,7 @@ export default function MembershipApplyPage() {
               className="mt-1 w-4 h-4 rounded text-brand-emerald focus:ring-brand-emerald cursor-pointer"
             />
             <span className="text-xs text-slate-700 dark:text-slate-300 leading-snug">
-              আমি স্বেচ্ছায় ঘোষণা করছি যে প্রতি মাসে নির্ধারিত <strong>৳{monthlyContribution}</strong> অনুদান নিয়মিত পরিশোধ করব এবং <strong>আমরা মোহাম্মদপুরী</strong> সংগঠনের গঠনতন্ত্র ও নাগরিক সংহতি নীতি মেনে চলব।
+              আমি স্বেচ্ছায় ঘোষণা করছি যে প্রতি মাসে নির্ধারিত <strong>৳{monthlyContribution}</strong> অনুদান নিয়মিত পরিশোধ করব এবং <strong>মোহাম্মদপুর কমিউনিটি</strong> সংগঠনের গঠনতন্ত্র ও নাগরিক সংহতি নীতি মেনে চলব।
             </span>
           </label>
         </div>

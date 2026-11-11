@@ -381,7 +381,7 @@ export default function DashboardPage() {
           >
             <Image
               src="/logos/logo.png"
-              alt="আমরা মোহাম্মদপুরী লোগো"
+              alt="মোহাম্মদপুর কমিউনিটি লোগো"
               width={40}
               height={40}
               className="w-full h-full object-contain rounded-xl"
@@ -393,7 +393,7 @@ export default function DashboardPage() {
               অ্যাকাউন্ট সেটিংস ও ড্যাশবোর্ড
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              আমরা মোহাম্মদপুরী • আপনার তথ্যাদি নিয়ন্ত্রণ ও আপডেট করুন
+              মোহাম্মদপুর কমিউনিটি • আপনার তথ্যাদি নিয়ন্ত্রণ ও আপডেট করুন
             </p>
           </div>
         </div>
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                     : 'সাধারণ ইউজার'}
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  • আমরা মোহাম্মদপুরী পরিবার
+                  • মোহাম্মদপুর কমিউনিটি পরিবার
                 </span>
               </div>
             </div>
@@ -893,7 +893,7 @@ export default function DashboardPage() {
                   ? 'সংগঠনের সক্রিয় সদস্য'
                   : 'সাধারণ ইউজার'}
               </p>
-              <p className="text-[11px] text-slate-400">আমরা মোহাম্মদপুরী ভেরিফাইড ইউজার</p>
+              <p className="text-[11px] text-slate-400">মোহাম্মদপুর কমিউনিটি ভেরিফাইড ইউজার</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 space-y-1">

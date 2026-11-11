@@ -55,7 +55,7 @@ export default function OrganizationPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2.5 max-w-2xl">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-              আমরা মোহাম্মদপুরী
+              মোহাম্মদপুর কমিউনিটি
             </h1>
             <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed font-normal">
               মোহাম্মদপুরের নাগরিক উন্নয়ন, নিরাপত্তা, সামাজিক ঐক্য ও জবাবদিহিতা নিশ্চিতকরণে স্থানীয় বাসিন্দাদের প্রাতিষ্ঠানিক সংগঠন।
