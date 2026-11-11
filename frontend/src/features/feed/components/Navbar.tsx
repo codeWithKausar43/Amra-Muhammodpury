@@ -119,7 +119,7 @@ export function Navbar({ onSearch }: NavbarProps) {
               />
             </div>
             <div className="flex flex-col text-left min-w-0">
-              <span className="text-[17px] sm:text-base md:text-lg font-black sm:font-bold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate">
+              <span className="text-[19px] sm:text-lg md:text-xl font-extrabold tracking-tight text-brand-emerald dark:text-brand-mint leading-tight truncate">
                 আমরা মোহাম্মদপুরী
               </span>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">

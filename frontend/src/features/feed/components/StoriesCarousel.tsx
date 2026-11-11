@@ -30,7 +30,7 @@ export function StoriesCarousel({
         <button
           type="button"
           onClick={onAddStory}
-          className="w-28 sm:w-32 md:w-36 h-48 sm:h-52 md:h-56 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative bg-white dark:bg-brand-charcoal-dark border border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md transition-all group flex flex-col text-left focus:outline-none cursor-pointer"
+          className="w-32 sm:w-36 md:w-40 h-52 sm:h-56 md:h-60 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative bg-white dark:bg-brand-charcoal-dark border border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md transition-all group flex flex-col text-left focus:outline-none cursor-pointer"
         >
           {/* Top 70% Image Area */}
           <div className="relative w-full h-[70%] overflow-hidden bg-slate-100 dark:bg-white/5">
@@ -73,7 +73,7 @@ export function StoriesCarousel({
             <div
               key={story.id}
               onClick={() => onSelectStory?.(index)}
-              className="w-28 sm:w-32 md:w-36 h-48 sm:h-52 md:h-56 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-slate-900"
+              className="w-32 sm:w-36 md:w-40 h-52 sm:h-56 md:h-60 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 relative shadow-sm hover:shadow-md transition-all cursor-pointer group border border-slate-200/60 dark:border-white/10 bg-slate-900"
             >
               {/* Full Cover Background */}
               <Image

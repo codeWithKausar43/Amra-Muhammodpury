@@ -27,6 +27,7 @@ import {
 import { socialService, UserProfileData } from '@/features/social/services/social.service';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
+import { toast } from '@/components/feedback/Toast';
 import { useOrgMembershipStatusQuery } from '@/features/organization/hooks/useOrganizationQueries';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 
@@ -193,7 +194,7 @@ export default function DashboardPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন');
+      toast.warning('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন');
       return;
     }
     setAvatarFile(file);
@@ -204,7 +205,7 @@ export default function DashboardPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন');
+      toast.warning('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন');
       return;
     }
     setCoverFile(file);
@@ -359,6 +360,8 @@ export default function DashboardPage() {
 
   const isOrgMember =
     currentUser?.role === 'ADMIN' ||
+    currentUser?.role === 'SUPER_ADMIN' ||
+    currentUser?.email === 'itskausarprodhan@gmail.com' ||
     membershipData?.membership?.status === 'ACTIVE' ||
     membershipData?.membership?.status === 'APPROVED_PAYMENT_PENDING';
 
@@ -479,7 +482,9 @@ export default function DashboardPage() {
               </p>
               <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-brand-emerald dark:text-brand-mint border border-emerald-500/20">
-                  {currentUser?.role === 'ADMIN'
+                  {currentUser?.role === 'SUPER_ADMIN' || currentUser?.email === 'itskausarprodhan@gmail.com'
+                    ? 'সিস্টেম অ্যাডমিন'
+                    : currentUser?.role === 'ADMIN'
                     ? 'অ্যাডমিন'
                     : isOrgMember
                     ? 'সংগঠনের সক্রিয় সদস্য'
@@ -876,7 +881,9 @@ export default function DashboardPage() {
                 <span>অ্যাকাউন্ট রোল</span>
               </div>
               <p className="text-sm font-bold text-slate-900 dark:text-white">
-                {currentUser?.role === 'ADMIN'
+                {currentUser?.role === 'SUPER_ADMIN' || currentUser?.email === 'itskausarprodhan@gmail.com'
+                  ? 'সিস্টেম অ্যাডমিন'
+                  : currentUser?.role === 'ADMIN'
                   ? 'অ্যাডমিনিস্ট্রেটর'
                   : isOrgMember
                   ? 'সংগঠনের সক্রিয় সদস্য'

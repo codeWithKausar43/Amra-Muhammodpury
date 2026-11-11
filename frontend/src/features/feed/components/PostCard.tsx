@@ -308,7 +308,7 @@ export function PostCard({
       setNewComment('');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'মন্তব্য যোগ করা যায়নি';
-      alert(message);
+      toast.error(message);
     } finally {
       setSubmittingComment(false);
     }
@@ -327,7 +327,7 @@ export function PostCard({
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('পোস্টের লিংক কপি করা হয়েছে!');
+      toast.success('পোস্টের লিংক কপি করা হয়েছে!');
     }
   };
 
@@ -821,7 +821,7 @@ function CommentThreadItem({
       setIsReplying(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'রিপ্লাই পাঠানো সম্ভব হয়নি';
-      alert(message);
+      toast.error(message);
     } finally {
       setSubmittingReply(false);
     }

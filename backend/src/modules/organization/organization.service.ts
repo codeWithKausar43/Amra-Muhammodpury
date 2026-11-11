@@ -163,7 +163,7 @@ export class OrganizationService {
       where: { id: userId },
       select: { role: true, email: true },
     });
-    return user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com';
+    return user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.email === 'itskausarprodhan@gmail.com';
   }
 
   private async getOfficerRole(userId: string): Promise<string | null> {
@@ -829,7 +829,8 @@ export class OrganizationService {
       },
     });
 
-    if (!membership || membership.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!membership || (membership.status !== 'ACTIVE' && !isSysAdmin)) {
       throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ মেম্বার ড্যাশবোর্ড দেখতে পারবেন');
     }
 
@@ -2701,7 +2702,8 @@ export class OrganizationService {
       where: { userId },
     });
 
-    if (!membership || membership.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!isSysAdmin && (!membership || membership.status !== 'ACTIVE')) {
       throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ নির্বাচনে প্রার্থী হতে পারেন');
     }
 
@@ -2770,7 +2772,8 @@ export class OrganizationService {
       where: { userId },
     });
 
-    if (!membership || membership.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!isSysAdmin && (!membership || membership.status !== 'ACTIVE')) {
       throw new ForbiddenError('কেবলমাত্র অনুমোদিত সক্রিয় সদস্যগণ ভোট দিতে পারেন');
     }
 
@@ -3004,7 +3007,8 @@ export class OrganizationService {
       select: { id: true, status: true },
     });
 
-    if (!requester || requester.status !== 'ACTIVE') {
+    const isSysAdmin = await this.isSystemAdmin(userId);
+    if (!isSysAdmin && (!requester || requester.status !== 'ACTIVE')) {
       throw new ForbiddenError('শুধুমাত্র সংগঠনের সক্রিয় সদস্যরা সদস্য ডিরেক্টরি দেখতে পারবেন');
     }
 

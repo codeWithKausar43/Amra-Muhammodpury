@@ -215,12 +215,12 @@ export default function AdminModulePage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন।');
+      toast.warning('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন।');
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('ছবির আকার সর্বোচ্চ ১০ মেগাবাইট (10MB) হতে পারবে।');
+      toast.warning('ছবির আকার সর্বোচ্চ ১০ মেগাবাইট (10MB) হতে পারবে।');
       return;
     }
 
@@ -287,7 +287,7 @@ export default function AdminModulePage() {
       setReceiptImageUrl(asset.secure_url);
     } catch (err: any) {
       console.error('Image upload failed:', err);
-      alert(err?.message || 'ছবি আপলোড করতে সমস্যা হয়েছে। আপনি সরাসরি ছবির ওয়েব লিংকও দিতে পারেন।');
+      toast.error(err?.message || 'ছবি আপলোড করতে সমস্যা হয়েছে। আপনি সরাসরি ছবির ওয়েব লিংকও দিতে পারেন।');
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
@@ -296,7 +296,7 @@ export default function AdminModulePage() {
 
   const handleAddExpenseItem = () => {
     if (!draftItemName.trim() || !draftItemAmount || Number(draftItemAmount) <= 0) {
-      alert(
+      toast.warning(
         entryCategory === 'TREE_PLANTATION'
           ? 'গাছের নাম ও সঠিক টাকার পরিমাণ দিন।'
           : 'আইটেমের নাম ও সঠিক টাকার পরিমাণ দিন।'
@@ -388,8 +388,9 @@ export default function AdminModulePage() {
       });
       setReviewModalApp(null);
       setRejectionReason('');
+      toast.success(status === 'APPROVED' ? 'আবেদনটি সফলভাবে অনুমোদিত হয়েছে।' : 'আবেদনটি বাতিল করা হয়েছে।');
     } catch (err: any) {
-      alert(err.message || 'পর্যালোচনা সম্পন্ন করতে ব্যর্থ হয়েছে।');
+      toast.error(err.message || 'পর্যালোচনা সম্পন্ন করতে ব্যর্থ হয়েছে।');
     }
   };
 
@@ -399,8 +400,9 @@ export default function AdminModulePage() {
         id: appId,
         status: 'APPROVED',
       });
+      toast.success('আবেদনটি দ্রুত অনুমোদন করা হয়েছে।');
     } catch (err: any) {
-      alert(err.message || 'অনুমোদন ব্যর্থ হয়েছে।');
+      toast.error(err.message || 'অনুমোদন ব্যর্থ হয়েছে।');
     }
   };
 
@@ -409,7 +411,7 @@ export default function AdminModulePage() {
     const calculatedItemsTotal = expenseItems.reduce((s, it) => s + it.amount, 0);
     const finalAmount = expenseItems.length > 0 ? calculatedItemsTotal : (Number(trxAmount) || 0);
     if (finalAmount <= 0) {
-      alert('অনুগ্রহ করে সঠিক টাকার পরিমাণ দিন।');
+      toast.warning('অনুগ্রহ করে সঠিক টাকার পরিমাণ দিন।');
       return;
     }
 
@@ -461,7 +463,7 @@ export default function AdminModulePage() {
         });
       } else if (entryCategory === 'GENERAL_EXPENSE') {
         if (!defaultFundId) {
-          alert('কোনো সক্রিয় তহবিল পাওয়া যায়নি।');
+          toast.error('কোনো সক্রিয় তহবিল পাওয়া যায়নি।');
           return;
         }
         await mutations.recordTransaction.mutateAsync({
@@ -475,7 +477,7 @@ export default function AdminModulePage() {
         });
       } else if (entryCategory === 'INCOME') {
         if (!defaultFundId) {
-          alert('কোনো সক্রিয় তহবিল পাওয়া যায়নি।');
+          toast.error('কোনো সক্রিয় তহবিল পাওয়া যায়নি।');
           return;
         }
         await mutations.recordTransaction.mutateAsync({
@@ -501,8 +503,9 @@ export default function AdminModulePage() {
       setExpenseItems([]);
       setDraftItemName('');
       setDraftItemAmount('');
+      toast.success('সফলভাবে সংরক্ষিত হয়েছে!');
     } catch (err: any) {
-      alert(err.message || 'সংরক্ষণে সমস্যা হয়েছে।');
+      toast.error(err.message || 'সংরক্ষণে সমস্যা হয়েছে।');
     } finally {
       setIsSubmittingTrx(false);
     }
@@ -529,7 +532,7 @@ export default function AdminModulePage() {
   const handleSubmitNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noticeTitle.trim() || !noticeContent.trim()) {
-      alert('শিরোনাম ও বিবরণ আবশ্যক।');
+      toast.warning('শিরোনাম ও বিবরণ আবশ্যক।');
       return;
     }
     setIsSubmittingNotice(true);
@@ -544,6 +547,7 @@ export default function AdminModulePage() {
             isPublic: noticeIsPublic,
           },
         });
+        toast.success('বিজ্ঞপ্তি হালনাগাদ করা হয়েছে।');
       } else {
         await mutations.createNotice.mutateAsync({
           title: noticeTitle.trim(),
@@ -552,13 +556,14 @@ export default function AdminModulePage() {
           isPinned: false,
           isPublic: noticeIsPublic,
         });
+        toast.success('নতুন বিজ্ঞপ্তি প্রকাশ করা হয়েছে।');
       }
       setNoticeModalOpen(false);
       setEditingNotice(null);
       setNoticeTitle('');
       setNoticeContent('');
     } catch (err: any) {
-      alert(err.message || 'বিজ্ঞপ্তি সংরক্ষণ করা যায়নি।');
+      toast.error(err.message || 'বিজ্ঞপ্তি সংরক্ষণ করা যায়নি।');
     } finally {
       setIsSubmittingNotice(false);
     }
@@ -568,18 +573,19 @@ export default function AdminModulePage() {
     const nextState = !isVotingEnabled;
     try {
       await mutations.updateVotingConfig.mutateAsync({ isVotingEnabled: nextState });
+      toast.success(nextState ? 'ভোটিং সিস্টেম সক্রিয় করা হয়েছে' : 'ভোটিং সিস্টেম সাময়িকভাবে স্থগিত করা হয়েছে');
     } catch (err: any) {
-      alert(err.message || 'ভোট সিস্টেম কনফিগারেশন আপডেট ব্যর্থ হয়েছে');
+      toast.error(err.message || 'ভোট সিস্টেম কনফিগারেশন আপডেট ব্যর্থ হয়েছে');
     }
   };
 
   const handleUploadCandidateImage = async (file: File, index: number) => {
     if (!file.type.startsWith('image/')) {
-      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল (JPG, PNG, WebP) নির্বাচন করুন।');
+      toast.warning('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল (JPG, PNG, WebP) নির্বাচন করুন।');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      alert('ছবির আকার সর্বোচ্চ ১০ মেগাবাইট হতে পারবে।');
+      toast.warning('ছবির আকার সর্বোচ্চ ১০ মেগাবাইট হতে পারবে।');
       return;
     }
 
@@ -666,28 +672,28 @@ export default function AdminModulePage() {
 
   const handleCreateVotingPoll = async (isDraft: boolean) => {
     if (!isVotingEnabled) {
-      alert('ভোটিং সিস্টেম বর্তমানে স্থগিত রয়েছে। নতুন নির্বাচন তৈরি করতে প্রথমে উপরে ভোটিং সিস্টেম সক্রিয় করুন।');
+      toast.error('ভোটিং সিস্টেম বর্তমানে স্থগিত রয়েছে। নতুন নির্বাচন তৈরি করতে প্রথমে উপরে ভোটিং সিস্টেম সক্রিয় করুন।');
       return;
     }
     if (!pollTitle.trim()) {
-      alert('ভোটের শিরোনাম আবশ্যক।');
+      toast.warning('ভোটের শিরোনাম আবশ্যক।');
       return;
     }
     if (!pollPosition.trim()) {
-      alert('পদের নাম আবশ্যক।');
+      toast.warning('পদের নাম আবশ্যক।');
       return;
     }
     const validCandidates = pollCandidates.filter((c) => c.name.trim().length > 0);
     if (validCandidates.length < 2) {
-      alert('কমপক্ষে ২ জন প্রার্থীর নাম আবশ্যক।');
+      toast.warning('কমপক্ষে ২ জন প্রার্থীর নাম আবশ্যক।');
       return;
     }
     if (!pollStartDate || !pollEndDate) {
-      alert('ভোটের শুরু ও সমাপ্তির সময় নির্ধারণ করুন।');
+      toast.warning('ভোটের শুরু ও সমাপ্তির সময় নির্ধারণ করুন।');
       return;
     }
     if (new Date(pollEndDate) <= new Date(pollStartDate)) {
-      alert('সমাপ্তির সময় অবশ্যই শুরুর সময়ের পরবর্তী হতে হবে।');
+      toast.warning('সমাপ্তির সময় অবশ্যই শুরুর সময়ের পরবর্তী হতে হবে।');
       return;
     }
 
@@ -711,6 +717,7 @@ export default function AdminModulePage() {
         isDraft,
       });
 
+      toast.success(isDraft ? 'নির্বাচনের খসড়া সংরক্ষিত হয়েছে' : 'নতুন নির্বাচন সফলভাবে তৈরি হয়েছে');
       setElectionModalOpen(false);
       setPollTitle('');
       setPollPosition('সভাপতি');
@@ -720,7 +727,7 @@ export default function AdminModulePage() {
         { name: '', image: '', bio: '' },
       ]);
     } catch (err: any) {
-      alert(err.message || 'ভোট তৈরি করতে ব্যর্থ হয়েছে');
+      toast.error(err.message || 'ভোট তৈরি করতে ব্যর্থ হয়েছে');
     } finally {
       setIsSubmittingPoll(false);
     }
@@ -738,9 +745,10 @@ export default function AdminModulePage() {
         electionId: scheduleModalElection.id,
         data,
       });
+      toast.success('সময়সূচি সফলভাবে হালনাগাদ করা হয়েছে');
       setScheduleModalElection(null);
     } catch (err: any) {
-      alert(err.message || 'সময়সূচি হালনাগাদ করতে ব্যর্থ হয়েছে');
+      toast.error(err.message || 'সময়সূচি হালনাগাদ করতে ব্যর্থ হয়েছে');
     } finally {
       setIsUpdatingSchedule(false);
     }
@@ -1547,7 +1555,7 @@ export default function AdminModulePage() {
               type="button"
               onClick={() => {
                 if (!isVotingEnabled) {
-                  alert('ভোটিং সিস্টেম বর্তমানে স্থগিত রয়েছে। নতুন নির্বাচন তৈরি করতে প্রথমে ভোটিং সিস্টেম সক্রিয় করুন।');
+                  toast.warning('ভোটিং সিস্টেম বর্তমানে স্থগিত রয়েছে। নতুন নির্বাচন তৈরি করতে প্রথমে ভোটিং সিস্টেম সক্রিয় করুন।');
                   return;
                 }
                 setElectionModalOpen(true);
@@ -2821,7 +2829,7 @@ export default function AdminModulePage() {
                     const s = (document.getElementById('newStartDate') as HTMLInputElement)?.value;
                     const e = (document.getElementById('newEndDate') as HTMLInputElement)?.value;
                     if (!s || !e) {
-                      alert('সময় নির্ধারণ করুন');
+                      toast.warning('শুরু ও সমাপ্তির সঠিক সময় নির্ধারণ করুন');
                       return;
                     }
                     handleSaveSchedule({

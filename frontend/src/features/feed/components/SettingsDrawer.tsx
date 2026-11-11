@@ -213,8 +213,10 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 <ChevronRight className="w-4 h-4 text-brand-emerald group-hover:translate-x-0.5 transition-transform" />
               </Link>
 
-              {/* Dedicated Admin Panel Link for System Admins */}
-              {(session?.user as any)?.role === 'ADMIN' && (
+              {/* Dedicated Admin Panel Link for System Admins & Admins */}
+              {((session?.user as any)?.role === 'ADMIN' ||
+                (session?.user as any)?.role === 'SUPER_ADMIN' ||
+                session?.user?.email === 'itskausarprodhan@gmail.com') && (
                 <Link
                   href="/organization/admin"
                   onClick={onClose}

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
+import { toast } from '@/components/feedback/Toast';
 import {
   useOrgAdminStatsQuery,
   useOrgApplicationsQuery,
@@ -63,6 +64,7 @@ export default function OrganizationAdminPage() {
 
   // Role translation mapping
   const ORG_ROLE_MAP: Record<string, string> = {
+    SUPER_ADMIN: 'সিস্টেম অ্যাডমিন',
     PRESIDENT: 'সভাপতি',
     VICE_PRESIDENT: 'সহ-সভাপতি',
     GENERAL_SECRETARY: 'সাধারণ সম্পাদক',
@@ -76,6 +78,13 @@ export default function OrganizationAdminPage() {
 
   // Determine user's official position in the organization
   const userPosition = React.useMemo(() => {
+    // 0. Super Admin / Platform Owner has highest precedence
+    const systemRole = (session?.user as any)?.role;
+    const userEmail = session?.user?.email;
+    if (systemRole === 'SUPER_ADMIN' || userEmail === 'itskausarprodhan@gmail.com') {
+      return 'সিস্টেম অ্যাডমিন';
+    }
+
     // 1. Check committee designation
     if (session?.user && committees.length > 0) {
       const uId = session.user.id;
@@ -113,7 +122,6 @@ export default function OrganizationAdminPage() {
     }
 
     // 3. Check system user role
-    const systemRole = (session?.user as any)?.role;
     if (systemRole === 'ADMIN') {
       return 'প্রধান প্রশাসক';
     }
@@ -159,12 +167,12 @@ export default function OrganizationAdminPage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন।');
+      toast.warning('অনুগ্রহ করে শুধুমাত্র ছবি ফাইল নির্বাচন করুন।');
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('ছবির আকার সর্বোচ্চ ১০ মেগাবাইট (10MB) হতে পারবে।');
+      toast.warning('ছবির আকার সর্বোচ্চ ১০ মেগাবাইট (10MB) হতে পারবে।');
       return;
     }
 
@@ -231,7 +239,7 @@ export default function OrganizationAdminPage() {
       setReceiptImageUrl(asset.secure_url);
     } catch (err: any) {
       console.error('Image upload failed:', err);
-      alert(err?.message || 'ছবি আপলোড করতে সমস্যা হয়েছে। আপনি সরাসরি ছবির ওয়েব লিংকও দিতে পারেন।');
+      toast.error(err?.message || 'ছবি আপলোড করতে সমস্যা হয়েছে। আপনি সরাসরি ছবির ওয়েব লিংকও দিতে পারেন।');
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
@@ -240,7 +248,7 @@ export default function OrganizationAdminPage() {
 
   const handleAddExpenseItem = () => {
     if (!draftItemName.trim() || !draftItemAmount || Number(draftItemAmount) <= 0) {
-      alert(
+      toast.warning(
         entryCategory === 'TREE_PLANTATION'
           ? 'গাছের নাম ও সঠিক টাকার পরিমাণ দিন।'
           : 'আইটেমের নাম ও সঠিক টাকার পরিমাণ দিন।'
@@ -285,7 +293,7 @@ export default function OrganizationAdminPage() {
     const calculatedItemsTotal = expenseItems.reduce((s, it) => s + it.amount, 0);
     const finalAmount = expenseItems.length > 0 ? calculatedItemsTotal : (Number(trxAmount) || 0);
     if (finalAmount <= 0) {
-      alert('অনুগ্রহ করে সঠিক টাকার পরিমাণ দিন।');
+      toast.warning('অনুগ্রহ করে সঠিক টাকার পরিমাণ দিন।');
       return;
     }
 
@@ -375,9 +383,9 @@ export default function OrganizationAdminPage() {
       setExpenseItems([]);
       setDraftItemName('');
       setDraftItemAmount('');
-      alert('সফলভাবে সংরক্ষিত হয়েছে!');
+      toast.success('সফলভাবে সংরক্ষিত হয়েছে!');
     } catch (err: any) {
-      alert(err.message || 'সংরক্ষণ করা যায়নি।');
+      toast.error(err.message || 'সংরক্ষণ করা যায়নি।');
     } finally {
       setIsSubmittingTrx(false);
     }
@@ -531,10 +539,10 @@ export default function OrganizationAdminPage() {
           <div className="pt-2 border-t border-slate-100 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 text-brand-emerald dark:text-brand-mint font-semibold">
               <TrendingUp className="w-3.5 h-3.5 text-brand-emerald dark:text-brand-mint" />
-              <span>আয় +১২.৫% বৃদ্ধি</span>
+              <span>{totalBalance > 0 ? 'তহবিল ব্যালেন্স নিরীক্ষিত' : 'তহবিল প্রারম্ভিক শূন্য অবস্থায় প্রস্তুত'}</span>
             </div>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-              সর্বশেষ আপডেট: আজ ৩:৩০ PM
+              রিয়েলটাইম লাইভ ডাটা
             </span>
           </div>
         </div>
@@ -552,8 +560,8 @@ export default function OrganizationAdminPage() {
             <div className="text-base sm:text-2xl md:text-3xl font-black text-brand-emerald dark:text-brand-mint tracking-tight whitespace-nowrap">
               ৳ {toBengaliNumber(totalIncome)}
             </div>
-            <p className="text-[10px] sm:text-[11px] text-brand-emerald dark:text-emerald-400 font-medium flex items-center gap-1 truncate">
-              <span>▲ ৳১৫,০০০ গত সপ্তাহ</span>
+            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1 truncate">
+              <span>{totalIncome > 0 ? '▲ মোট সংগৃহীত আয়' : 'কোনো জমা রেকর্ড নেই'}</span>
             </p>
           </div>
 
@@ -568,8 +576,8 @@ export default function OrganizationAdminPage() {
             <div className="text-base sm:text-2xl md:text-3xl font-black text-rose-600 dark:text-rose-300 tracking-tight whitespace-nowrap">
               ৳ {toBengaliNumber(totalExpense)}
             </div>
-            <p className="text-[10px] sm:text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1 truncate">
-              <span>▼ -৫% বাজেট এর মধ্যে</span>
+            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1 truncate">
+              <span>{totalExpense > 0 ? '▼ মোট অনুমোদিত ব্যয়' : 'কোনো খরচ রেকর্ড নেই'}</span>
             </p>
           </div>
         </div>
