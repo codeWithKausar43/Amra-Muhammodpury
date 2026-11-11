@@ -605,7 +605,7 @@ export function PostCard({
               className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[620px] overflow-hidden cursor-pointer group bg-slate-900/10"
             >
               <Image
-                src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1200 })}
+                src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1920 })}
                 alt="পোস্ট ছবি"
                 fill
                 sizes="(max-width: 640px) 100vw, 680px"
@@ -626,7 +626,7 @@ export function PostCard({
                   className="relative aspect-[4/5] sm:aspect-square overflow-hidden cursor-pointer group bg-slate-900/10"
                 >
                   <Image
-                    src={getOptimizedImageUrl(m.secureUrl, { width: 900 })}
+                    src={getOptimizedImageUrl(m.secureUrl, { width: 1200 })}
                     alt={`পোস্ট ছবি ${idx + 1}`}
                     fill
                     sizes="(max-width: 640px) 50vw, 340px"
@@ -647,7 +647,7 @@ export function PostCard({
                 className="col-span-2 relative aspect-[16/10] sm:aspect-[16/9] overflow-hidden cursor-pointer group bg-slate-900/10"
               >
                 <Image
-                  src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1200 })}
+                  src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1920 })}
                   alt="পোস্ট ছবি ১"
                   fill
                   sizes="(max-width: 640px) 100vw, 680px"
@@ -1045,7 +1045,7 @@ export function PostCard({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={getOptimizedImageUrl(post.media[lightboxIndex].secureUrl, { width: 1920 })}
+                src={post.media[lightboxIndex].secureUrl}
                 alt={`পোস্ট ছবি ${lightboxIndex + 1}`}
                 className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
               />
