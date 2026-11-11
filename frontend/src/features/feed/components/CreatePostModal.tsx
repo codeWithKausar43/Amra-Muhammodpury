@@ -10,6 +10,7 @@ import {
   Trash2,
   Globe,
   UploadCloud,
+  Plus,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { ApiResponse } from '@/types';
@@ -113,8 +114,10 @@ export function CreatePostModal({
 
       // 1. Upload files to Cloudinary if user attached any
       if (selectedFiles.length > 0) {
-        setStatusText('ছবি আপলোড হচ্ছে...');
-        for (const file of selectedFiles) {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          if (!file) continue;
+          setStatusText(`ছবি আপলোড হচ্ছে (${i + 1}/${selectedFiles.length})...`);
           // Get upload signature
           const sigRes = await apiClient<
             ApiResponse<{
@@ -189,6 +192,7 @@ export function CreatePostModal({
         mediaIds,
       });
 
+      toast.success('পোস্ট সফলভাবে প্রকাশিত হয়েছে!');
       onPostCreated(created);
 
       // Clean up & Close
@@ -400,26 +404,46 @@ export function CreatePostModal({
             </div>
           )}
 
-          {/* Instant Photo Previews */}
+          {/* Instant Photo Previews with Add More button */}
           {previewUrls.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {previewUrls.map((url, idx) => (
                 <div
                   key={url}
-                  className="relative aspect-video rounded-xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10"
+                  className="relative aspect-video rounded-xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 group shadow-xs"
                 >
-                  <Image src={url} alt="Selected photo" fill className="object-cover" />
+                  <Image
+                    src={url}
+                    alt={`Selected photo ${idx + 1}`}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => handleRemovePhoto(idx)}
                     disabled={submitting}
-                    className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors cursor-pointer"
+                    className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-black/60 text-white hover:bg-red-600 transition-colors cursor-pointer z-10 shadow-sm"
                     title="ছবি মুছুন"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
+
+              {/* Add more photos button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={submitting}
+                className="relative aspect-video rounded-xl border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-brand-emerald dark:hover:border-brand-emerald flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 hover:text-brand-emerald dark:hover:text-brand-emerald bg-slate-50/50 dark:bg-white/[0.02] transition-colors cursor-pointer group"
+                title="আরও ছবি যোগ করুন"
+              >
+                <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/10 group-hover:bg-brand-emerald/10 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:text-brand-emerald transition-colors">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <span className="text-[11px] font-semibold">আরও ছবি যোগ করুন</span>
+              </button>
             </div>
           )}
 

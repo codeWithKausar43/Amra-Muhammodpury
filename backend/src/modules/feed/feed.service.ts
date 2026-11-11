@@ -210,27 +210,31 @@ export class FeedService {
             isEmergency: post.sharedPost.isEmergency,
             createdAt: post.sharedPost.createdAt,
             author: this.mapAuthor(post.sharedPost.author),
-            media: post.sharedPost.media.map((pm) => ({
-              id: pm.media.id,
-              publicId: pm.media.publicId,
-              secureUrl: pm.media.secureUrl,
-              resourceType: pm.media.resourceType,
-              format: pm.media.format,
-              width: pm.media.width,
-              height: pm.media.height,
-            })),
+            media: post.sharedPost.media
+              .filter((pm) => Boolean(pm.media))
+              .map((pm) => ({
+                id: pm.media.id,
+                publicId: pm.media.publicId,
+                secureUrl: pm.media.secureUrl,
+                resourceType: pm.media.resourceType,
+                format: pm.media.format,
+                width: pm.media.width,
+                height: pm.media.height,
+              })),
             recentComments: [],
           }
           : null,
-        media: post.media.map((pm) => ({
-          id: pm.media.id,
-          publicId: pm.media.publicId,
-          secureUrl: pm.media.secureUrl,
-          resourceType: pm.media.resourceType,
-          format: pm.media.format,
-          width: pm.media.width,
-          height: pm.media.height,
-        })),
+        media: post.media
+          .filter((pm) => Boolean(pm.media))
+          .map((pm) => ({
+            id: pm.media.id,
+            publicId: pm.media.publicId,
+            secureUrl: pm.media.secureUrl,
+            resourceType: pm.media.resourceType,
+            format: pm.media.format,
+            width: pm.media.width,
+            height: pm.media.height,
+          })),
         recentComments: post.comments.map((c) => ({
           id: c.id,
           content: c.content,
@@ -317,15 +321,17 @@ export class FeedService {
       emergencyData: post.emergencyData,
       createdAt: post.createdAt,
       author: this.mapAuthor(post.author),
-      media: post.media.map((pm) => ({
-        id: pm.media.id,
-        publicId: pm.media.publicId,
-        secureUrl: pm.media.secureUrl,
-        resourceType: pm.media.resourceType,
-        format: pm.media.format,
-        width: pm.media.width,
-        height: pm.media.height,
-      })),
+      media: post.media
+        .filter((pm) => Boolean(pm.media))
+        .map((pm) => ({
+          id: pm.media.id,
+          publicId: pm.media.publicId,
+          secureUrl: pm.media.secureUrl,
+          resourceType: pm.media.resourceType,
+          format: pm.media.format,
+          width: pm.media.width,
+          height: pm.media.height,
+        })),
       recentComments: [],
     };
   }

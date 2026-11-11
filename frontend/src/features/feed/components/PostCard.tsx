@@ -14,6 +14,10 @@ import {
   Trash2,
   CornerDownRight,
   Archive,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Download,
 } from 'lucide-react';
 import { useSession } from '@/lib/auth/auth-client';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
@@ -76,6 +80,43 @@ export function PostCard({
   const [submittingComment, setSubmittingComment] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [expandedContent, setExpandedContent] = React.useState(false);
+  const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null);
+  const [failedImages, setFailedImages] = React.useState<Set<number>>(new Set());
+
+  const handleImageError = (idx: number) => {
+    setFailedImages((prev) => {
+      const next = new Set(prev);
+      next.add(idx);
+      return next;
+    });
+  };
+
+  // Keyboard navigation & Esc to close for photo lightbox
+  React.useEffect(() => {
+    if (lightboxIndex === null) return;
+    const mediaCount = post.media?.length || 1;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLightboxIndex(null);
+      } else if (e.key === 'ArrowLeft') {
+        setLightboxIndex((prev) => (prev !== null ? (prev - 1 + mediaCount) % mediaCount : 0));
+      } else if (e.key === 'ArrowRight') {
+        setLightboxIndex((prev) => (prev !== null ? (prev + 1) % mediaCount : 0));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxIndex, post.media?.length]);
+
+  // Lock body scroll when lightbox is active
+  React.useEffect(() => {
+    if (lightboxIndex === null) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [lightboxIndex]);
 
   const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = React.useRef(false);
@@ -554,19 +595,158 @@ export function PostCard({
         </div>
       )}
 
-      {/* Attached Media Photo/Video */}
-      {post.media && post.media.length > 0 && post.media[0] && (
+      {/* Attached Media Photo/Video (Facebook Style Multi-Image Layout) */}
+      {post.media && post.media.length > 0 && (
         <div className="relative w-full rounded-2xl overflow-hidden mb-3 bg-slate-100 dark:bg-black/30 border border-slate-200/60 dark:border-white/5">
-          <div className="relative w-full aspect-16/10 sm:aspect-16/9">
-            <Image
-              src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1200 })}
-              alt="Post attachment"
-              fill
-              className="object-cover"
-            />
-          </div>
+          {/* 1 Photo */}
+          {post.media.length === 1 && post.media[0] && (
+            <div
+              onClick={() => setLightboxIndex(0)}
+              className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[620px] overflow-hidden cursor-pointer group bg-slate-900/10"
+            >
+              <Image
+                src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1200 })}
+                alt="পোস্ট ছবি"
+                fill
+                sizes="(max-width: 640px) 100vw, 680px"
+                className="object-cover group-hover:scale-[1.01] transition-transform duration-300"
+                onError={() => handleImageError(0)}
+                unoptimized={failedImages.has(0)}
+              />
+            </div>
+          )}
+
+          {/* 2 Photos: Side-by-side 50/50 split */}
+          {post.media.length === 2 && (
+            <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
+              {post.media.map((m, idx) => (
+                <div
+                  key={m.id || idx}
+                  onClick={() => setLightboxIndex(idx)}
+                  className="relative aspect-[4/5] sm:aspect-square overflow-hidden cursor-pointer group bg-slate-900/10"
+                >
+                  <Image
+                    src={getOptimizedImageUrl(m.secureUrl, { width: 900 })}
+                    alt={`পোস্ট ছবি ${idx + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 340px"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={() => handleImageError(idx)}
+                    unoptimized={failedImages.has(idx)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 3 Photos: 1 wide on top + 2 equal on bottom */}
+          {post.media.length === 3 && post.media[0] && (
+            <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
+              <div
+                onClick={() => setLightboxIndex(0)}
+                className="col-span-2 relative aspect-[16/10] sm:aspect-[16/9] overflow-hidden cursor-pointer group bg-slate-900/10"
+              >
+                <Image
+                  src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1200 })}
+                  alt="পোস্ট ছবি ১"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 680px"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={() => handleImageError(0)}
+                  unoptimized={failedImages.has(0)}
+                />
+              </div>
+              {post.media.slice(1, 3).map((m, i) => {
+                const idx = i + 1;
+                return (
+                  <div
+                    key={m.id || idx}
+                    onClick={() => setLightboxIndex(idx)}
+                    className="col-span-1 relative aspect-square overflow-hidden cursor-pointer group bg-slate-900/10"
+                  >
+                    <Image
+                      src={getOptimizedImageUrl(m.secureUrl, { width: 800 })}
+                      alt={`পোস্ট ছবি ${idx + 1}`}
+                      fill
+                      sizes="(max-width: 640px) 50vw, 340px"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={() => handleImageError(idx)}
+                      unoptimized={failedImages.has(idx)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 4 Photos: 2x2 grid */}
+          {post.media.length === 4 && (
+            <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
+              {post.media.map((m, idx) => (
+                <div
+                  key={m.id || idx}
+                  onClick={() => setLightboxIndex(idx)}
+                  className="relative aspect-square overflow-hidden cursor-pointer group bg-slate-900/10"
+                >
+                  <Image
+                    src={getOptimizedImageUrl(m.secureUrl, { width: 800 })}
+                    alt={`পোস্ট ছবি ${idx + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 340px"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={() => handleImageError(idx)}
+                    unoptimized={failedImages.has(idx)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 5+ Photos: 2x2 grid with +N counter on the 4th image */}
+          {post.media.length >= 5 && (
+            <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
+              {post.media.slice(0, 3).map((m, idx) => (
+                <div
+                  key={m.id || idx}
+                  onClick={() => setLightboxIndex(idx)}
+                  className="relative aspect-square overflow-hidden cursor-pointer group bg-slate-900/10"
+                >
+                  <Image
+                    src={getOptimizedImageUrl(m.secureUrl, { width: 800 })}
+                    alt={`পোস্ট ছবি ${idx + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 340px"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={() => handleImageError(idx)}
+                    unoptimized={failedImages.has(idx)}
+                  />
+                </div>
+              ))}
+              {post.media[3] && (
+                <div
+                  onClick={() => setLightboxIndex(3)}
+                  className="relative aspect-square overflow-hidden cursor-pointer group bg-slate-900/10"
+                >
+                  <Image
+                    src={getOptimizedImageUrl(post.media[3].secureUrl, { width: 800 })}
+                    alt="পোস্ট ছবি ৪"
+                    fill
+                    sizes="(max-width: 640px) 50vw, 340px"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={() => handleImageError(3)}
+                    unoptimized={failedImages.has(3)}
+                  />
+                  <div className="absolute inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center text-white font-extrabold text-2xl sm:text-3xl transition-colors hover:bg-black/75">
+                    +{post.media.length - 3}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Location Pin Tag (if attached) */}
           {post.location && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-medium">
+            <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-medium z-10 pointer-events-none">
               <MapPin className="w-3 h-3 text-red-400" />
               <span>{post.location}</span>
             </div>
@@ -774,6 +954,150 @@ export function PostCard({
           </div>
         }
       />
+
+      {/* Full-Screen Facebook-Style Lightbox Image Viewer */}
+      {lightboxIndex !== null && post.media && post.media[lightboxIndex] && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between select-none animate-in fade-in duration-200"
+          onClick={() => setLightboxIndex(null)}
+        >
+          {/* Top Bar: Author Info, Counter & Controls */}
+          <div
+            className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-black/40 backdrop-blur-sm z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full overflow-hidden relative ring-1 ring-white/20 bg-white/10">
+                {post.author.image ? (
+                  <Image
+                    src={getOptimizedImageUrl(post.author.image, { width: 120 })}
+                    alt={post.author.name}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs bg-brand-emerald">
+                    {post.author.name.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-white text-sm font-semibold leading-tight">{post.author.name}</p>
+                <p className="text-white/60 text-xs mt-0.5">
+                  {post.media.length > 1
+                    ? `ছবি ${lightboxIndex + 1} / ${post.media.length}`
+                    : getRelativeTime(post.createdAt)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <a
+                href={post.media[lightboxIndex].secureUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                title="মূল ছবি ডাউনলোড/দেখুন"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Download className="w-5 h-5" />
+              </a>
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(null)}
+                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="বন্ধ করুন"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* Center Image Container with Prev/Next Navigation */}
+          <div
+            className="relative flex-1 flex items-center justify-center p-2 sm:p-6 min-h-0"
+            onClick={() => setLightboxIndex(null)}
+          >
+            {/* Prev Button */}
+            {post.media.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) =>
+                    prev !== null ? (prev - 1 + post.media.length) % post.media.length : 0,
+                  );
+                }}
+                className="absolute left-2 sm:left-4 z-20 p-2.5 sm:p-3 rounded-full bg-black/60 hover:bg-black/90 text-white/90 hover:text-white border border-white/10 transition-all cursor-pointer shadow-lg active:scale-95"
+                title="পূর্ববর্তী ছবি"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Main Full Photo */}
+            <div
+              className="relative max-w-full max-h-[82vh] w-auto h-auto flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getOptimizedImageUrl(post.media[lightboxIndex].secureUrl, { width: 1920 })}
+                alt={`পোস্ট ছবি ${lightboxIndex + 1}`}
+                className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
+              />
+            </div>
+
+            {/* Next Button */}
+            {post.media.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) =>
+                    prev !== null ? (prev + 1) % post.media.length : 0,
+                  );
+                }}
+                className="absolute right-2 sm:right-4 z-20 p-2.5 sm:p-3 rounded-full bg-black/60 hover:bg-black/90 text-white/90 hover:text-white border border-white/10 transition-all cursor-pointer shadow-lg active:scale-95"
+                title="পরবর্তী ছবি"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Thumbnails Strip (if multiple photos) */}
+          {post.media.length > 1 && (
+            <div
+              className="px-4 py-3 bg-black/40 backdrop-blur-sm flex items-center justify-center gap-2 overflow-x-auto no-scrollbar z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {post.media.map((m, idx) => (
+                <button
+                  key={m.id || idx}
+                  type="button"
+                  onClick={() => setLightboxIndex(idx)}
+                  className={`relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                    lightboxIndex === idx
+                      ? 'border-brand-emerald scale-110 shadow-lg'
+                      : 'border-white/20 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getOptimizedImageUrl(m.secureUrl, { width: 160 })}
+                    alt={`ছবি ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 }
