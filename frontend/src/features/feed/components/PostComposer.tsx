@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { Image as ImageIcon } from 'lucide-react';
+import { getOptimizedImageUrl } from '@/lib/utils/image';
 import { Post } from '../types';
 
 interface PostComposerProps {
@@ -50,7 +51,7 @@ export function PostComposer({
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 relative ring-2 ring-slate-200/60 dark:ring-white/10">
             {user?.image ? (
               <Image
-                src={user.image}
+                src={getOptimizedImageUrl(user.image, { width: 160 })}
                 alt={user.name || 'User'}
                 fill
                 className="object-cover"

@@ -26,7 +26,7 @@ export const fallbackMockStories: Story[] = [
       id: 'k07XjrZCXv8SoR1eUjMrhAubA9EX9rRF',
       name: 'Kausar Ahammed',
       image:
-        'https://lh3.googleusercontent.com/a/ACg8ocID0L8Ifl4dlp2shk7t3yWH88CJy-rArDjUqDYfj3Xl1g1OXt67=s96-c',
+        'https://lh3.googleusercontent.com/a/ACg8ocID0L8Ifl4dlp2shk7t3yWH88CJy-rArDjUqDYfj3Xl1g1OXt67=s800-c',
       role: 'USER',
     },
     createdAt: new Date().toISOString(),
@@ -35,12 +35,12 @@ export const fallbackMockStories: Story[] = [
     id: 'story-md-kausar',
     title: 'Md Kausar',
     mediaUrl:
-      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&auto=format&fit=crop&q=85',
     author: {
       id: 'GmjKUrDCXPKJ1X69B6U0eWTNIsFWXf7c',
       name: 'Md Kausar',
       image:
-        'https://lh3.googleusercontent.com/a/ACg8ocIgqga7zhPfwELQ10ThkIUGSLTPvV_EgKnT-eyYRHt96O2XZx0=s96-c',
+        'https://lh3.googleusercontent.com/a/ACg8ocIgqga7zhPfwELQ10ThkIUGSLTPvV_EgKnT-eyYRHt96O2XZx0=s800-c',
       role: 'USER',
     },
     createdAt: new Date().toISOString(),

@@ -12,6 +12,7 @@ import {
   Play,
 } from 'lucide-react';
 import { Story } from '../types';
+import { getOptimizedImageUrl } from '@/lib/utils/image';
 
 interface StoryViewerModalProps {
   isOpen: boolean;
@@ -138,10 +139,11 @@ export function StoryViewerModal({
   if (!isOpen || !currentStory) return null;
 
   const currentViews = viewsMap[currentStory.id] || currentStory.viewsCount || 120;
-  const storyImage =
+  const rawStoryImage =
     currentStory.mediaUrl ||
     currentStory.author.image ||
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop&q=80';
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1200&auto=format&fit=crop&q=85';
+  const storyImage = getOptimizedImageUrl(rawStoryImage, { width: 1200 });
 
   const handleReaction = (emoji: string) => {
     setFloatingReaction(emoji);
@@ -231,7 +233,7 @@ export function StoryViewerModal({
               <div className="relative w-9 h-9 rounded-full ring-2 ring-brand-emerald overflow-hidden shrink-0 bg-white/10">
                 {currentStory.author.image ? (
                   <Image
-                    src={currentStory.author.image}
+                    src={getOptimizedImageUrl(currentStory.author.image, { width: 160 })}
                     alt={currentStory.author.name}
                     fill
                     unoptimized

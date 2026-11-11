@@ -10,6 +10,9 @@ export function cleanImageUrl(url?: string | null): string | null {
   if (!trimmed) return null;
 
   try {
+    if (trimmed.includes('googleusercontent.com')) {
+      return trimmed.replace(/=s\d+(-c)?/gi, '=s800-c');
+    }
     if (trimmed.includes('google.') && trimmed.includes('/imgres')) {
       const parsed = new URL(trimmed);
       const directImg = parsed.searchParams.get('imgurl');

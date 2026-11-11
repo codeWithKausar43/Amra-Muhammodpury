@@ -22,6 +22,7 @@ import { toast } from '@/components/feedback/Toast';
 import { Post, Comment, ReactionType } from '../types';
 import { feedService } from '../services/feed.service';
 import { getBgPreset } from '../utils/bgPresets';
+import { getOptimizedImageUrl } from '@/lib/utils/image';
 
 interface PostCardProps {
   post: Post;
@@ -411,7 +412,7 @@ export function PostCard({
             <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 relative">
               {post.author.image ? (
                 <Image
-                  src={post.author.image}
+                  src={getOptimizedImageUrl(post.author.image, { width: 160 })}
                   alt={post.author.name}
                   fill
                   className="object-cover"
@@ -558,7 +559,7 @@ export function PostCard({
         <div className="relative w-full rounded-2xl overflow-hidden mb-3 bg-slate-100 dark:bg-black/30 border border-slate-200/60 dark:border-white/5">
           <div className="relative w-full aspect-16/10 sm:aspect-16/9">
             <Image
-              src={post.media[0].secureUrl}
+              src={getOptimizedImageUrl(post.media[0].secureUrl, { width: 1200 })}
               alt="Post attachment"
               fill
               className="object-cover"
@@ -834,7 +835,7 @@ function CommentThreadItem({
         <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10 relative shrink-0 ring-1 ring-slate-200 dark:ring-white/10">
           {comment.author.image ? (
             <Image
-              src={comment.author.image}
+              src={getOptimizedImageUrl(comment.author.image, { width: 120 })}
               alt={comment.author.name}
               fill
               className="object-cover"

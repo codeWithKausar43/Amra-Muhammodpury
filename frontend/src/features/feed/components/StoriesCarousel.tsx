@@ -4,6 +4,7 @@ import * as React from 'react';
 import Image from 'next/image';
 import { Plus } from 'lucide-react';
 import { Story } from '../types';
+import { getOptimizedImageUrl } from '@/lib/utils/image';
 
 interface StoriesCarouselProps {
   stories: Story[];
@@ -24,10 +25,15 @@ function CommunityStoryCard({ story, index, onSelectStory }: CommunityStoryCardP
 
   const authorName = story.author?.name || story.title || 'কমিউনিটি সদস্য';
   const initial = (authorName.trim().charAt(0) || 'ম').toUpperCase();
-  const backgroundPhoto =
+
+  const rawBackground =
     story.mediaUrl ||
     story.author?.image ||
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80';
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop&q=85';
+  const backgroundPhoto = getOptimizedImageUrl(rawBackground, { width: 800 });
+
+  const rawAvatar = story.author?.image;
+  const authorAvatar = rawAvatar ? getOptimizedImageUrl(rawAvatar, { width: 160 }) : null;
 
   return (
     <div
@@ -41,8 +47,9 @@ function CommunityStoryCard({ story, index, onSelectStory }: CommunityStoryCardP
           alt={story.title || authorName}
           fill
           unoptimized
-          sizes="(max-width: 640px) 128px, 160px"
+          sizes="(max-width: 640px) 160px, 200px"
           className="object-cover group-hover:scale-105 transition-transform duration-300"
+          style={{ imageRendering: 'auto' }}
           onError={() => setBgError(true)}
         />
       ) : (
@@ -56,15 +63,15 @@ function CommunityStoryCard({ story, index, onSelectStory }: CommunityStoryCardP
         </div>
       )}
 
-      {/* Dark Gradient Overlay for Readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15 pointer-events-none" />
+      {/* Modern Facebook-style Gradient Overlay: Clear at top and middle, subtle gradient only at bottom for label readability */}
+      <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none" />
 
       {/* Top-Left Author Avatar with Ring */}
-      <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-20 overflow-hidden shadow-sm">
-        {story.author?.image && !avatarError ? (
+      <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-brand-emerald p-0.5 bg-white dark:bg-brand-charcoal z-20 overflow-hidden shadow-md">
+        {authorAvatar && !avatarError ? (
           <div className="relative w-full h-full rounded-full overflow-hidden">
             <Image
-              src={story.author.image}
+              src={authorAvatar}
               alt={authorName}
               fill
               unoptimized
@@ -82,7 +89,7 @@ function CommunityStoryCard({ story, index, onSelectStory }: CommunityStoryCardP
 
       {/* Bottom Author Name */}
       <div className="absolute bottom-2.5 left-2.5 right-2.5 z-20 pointer-events-none">
-        <p className="text-xs font-bold text-white leading-tight drop-shadow-md truncate">
+        <p className="text-xs font-bold text-white leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate">
           {authorName}
         </p>
       </div>
@@ -97,6 +104,7 @@ export function StoriesCarousel({
   onSelectStory,
 }: StoriesCarouselProps) {
   const communityStories = stories.filter((s) => s.id !== 'story-1');
+  const optimizedUserImage = userImage ? getOptimizedImageUrl(userImage, { width: 800 }) : null;
 
   return (
     <div className="w-full overflow-hidden select-none mb-3.5">
@@ -112,21 +120,21 @@ export function StoriesCarousel({
         >
           {/* Top 70% Image Area */}
           <div className="relative w-full h-[70%] overflow-hidden bg-slate-100 dark:bg-white/5">
-            {userImage ? (
+            {optimizedUserImage ? (
               <Image
-                src={userImage}
+                src={optimizedUserImage}
                 alt="Create story"
                 fill
                 unoptimized
-                sizes="(max-width: 640px) 128px, 160px"
+                sizes="(max-width: 640px) 160px, 200px"
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
+                style={{ imageRendering: 'auto' }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-950 dark:to-brand-charcoal text-brand-emerald dark:text-brand-mint font-bold text-2xl">
                 ম
               </div>
             )}
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
           </div>
 
           {/* Elevated Floating Plus Circle */}

@@ -48,7 +48,11 @@ export class FeedService {
     return {
       id: author.id,
       name: author.name,
-      image: author.image,
+      image: author.image
+        ? (typeof author.image === 'string' && author.image.includes('googleusercontent.com')
+            ? author.image.replace(/=s\d+(-c)?/gi, '=s800-c')
+            : author.image)
+        : null,
       role: author.role,
       phone: author.phone,
       isOrgMember,
@@ -714,11 +718,11 @@ export class FeedService {
       });
 
       const curatedBackgrounds = [
-        'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1080&auto=format&fit=crop&q=85',
+        'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=1080&auto=format&fit=crop&q=85',
+        'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1080&auto=format&fit=crop&q=85',
+        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1080&auto=format&fit=crop&q=85',
+        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=1080&auto=format&fit=crop&q=85',
       ];
 
       for (let i = 0; i < registeredUsers.length && result.length < 8; i++) {
@@ -728,7 +732,7 @@ export class FeedService {
         const bgPhoto =
           userSummary.image ||
           curatedBackgrounds[i % curatedBackgrounds.length] ||
-          'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80';
+          'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1080&auto=format&fit=crop&q=85';
 
         result.push({
           id: `community-user-${u.id}`,
