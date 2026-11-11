@@ -39,6 +39,8 @@ export function StoriesCarousel({
                 src={userImage}
                 alt="Create story"
                 fill
+                unoptimized
+                sizes="(max-width: 640px) 128px, 160px"
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
               />
             ) : (
@@ -78,8 +80,10 @@ export function StoriesCarousel({
               {/* Full Cover Background */}
               <Image
                 src={backgroundPhoto}
-                alt={story.title}
+                alt={story.title || story.author.name}
                 fill
+                unoptimized
+                sizes="(max-width: 640px) 128px, 160px"
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
               />
 
@@ -94,6 +98,8 @@ export function StoriesCarousel({
                       src={story.author.image}
                       alt={story.author.name}
                       fill
+                      unoptimized
+                      sizes="36px"
                       className="object-cover"
                     />
                   </div>

@@ -184,6 +184,7 @@ export function StoryViewerModal({
             src={storyImage}
             alt={currentStory.author.name}
             fill
+            unoptimized
             className="object-cover"
             priority
           />
@@ -233,6 +234,7 @@ export function StoryViewerModal({
                     src={currentStory.author.image}
                     alt={currentStory.author.name}
                     fill
+                    unoptimized
                     className="object-cover"
                   />
                 ) : (

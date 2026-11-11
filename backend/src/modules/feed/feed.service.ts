@@ -679,7 +679,7 @@ export class FeedService {
   }
 
   public async getStories(): Promise<StoryDto[]> {
-    const stories = await this.prisma.story.findMany({
+    const activeStories = await this.prisma.story.findMany({
       where: {
         expiresAt: { gt: new Date() },
       },
@@ -692,13 +692,55 @@ export class FeedService {
       },
     });
 
-    return stories.map((s) => ({
+    const result: StoryDto[] = activeStories.map((s) => ({
       id: s.id,
       title: s.title,
       mediaUrl: s.mediaUrl,
       author: this.mapAuthor(s.author),
       createdAt: s.createdAt,
     }));
+
+    // If there are few or no active uploaded stories, populate with real registered users from the database
+    // so the Facebook-style community story reel is always vibrant and showcases registered community members.
+    if (result.length < 6) {
+      const existingAuthorIds = new Set(result.map((s) => s.author.id));
+      const registeredUsers = await this.prisma.user.findMany({
+        where: {
+          id: { notIn: Array.from(existingAuthorIds) },
+        },
+        select: AUTHOR_SELECT,
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+      });
+
+      const curatedBackgrounds = [
+        'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=80',
+      ];
+
+      for (let i = 0; i < registeredUsers.length && result.length < 8; i++) {
+        const u = registeredUsers[i];
+        if (!u) continue;
+        const userSummary = this.mapAuthor(u);
+        const bgPhoto =
+          userSummary.image ||
+          curatedBackgrounds[i % curatedBackgrounds.length] ||
+          'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80';
+
+        result.push({
+          id: `community-user-${u.id}`,
+          title: `${userSummary.name}`,
+          mediaUrl: bgPhoto,
+          author: userSummary,
+          createdAt: new Date(),
+        });
+      }
+    }
+
+    return result;
   }
 
   public async createStory(
