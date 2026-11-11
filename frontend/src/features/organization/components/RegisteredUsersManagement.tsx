@@ -446,9 +446,6 @@ export function RegisteredUsersManagement() {
                                   এডমিন
                                 </span>
                               ) : null}
-                                  এডমিন
-                                </span>
-                              ) : null}
                               {user.isSuspended && (
                                 <span className="px-1.5 py-0.2 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 shrink-0 inline-flex items-center gap-0.5">
                                   <Ban className="w-2.5 h-2.5" />
