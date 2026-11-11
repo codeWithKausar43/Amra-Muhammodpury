@@ -69,6 +69,8 @@ export interface ContributionAgreement {
   agreedAmount: number;
   effectiveFrom: string;
   isCurrent: boolean;
+  nextEffectiveAmount?: number | null;
+  nextEffectiveDate?: string | null;
 }
 
 export interface ContributionPayment {

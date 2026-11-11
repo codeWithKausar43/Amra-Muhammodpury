@@ -383,6 +383,17 @@ export function useOrgMutations() {
     },
   });
 
+  const updateMonthlyContribution = useMutation({
+    mutationFn: organizationService.updateMonthlyContribution,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.memberDashboard });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.membershipStatus });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'contributions'] });
+      queryClient.invalidateQueries({ queryKey: ['org', 'admin', 'members'] });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+    },
+  });
+
   const reviewApplication = useMutation({
     mutationFn: (vars: { id: string; status: 'APPROVED' | 'REJECTED'; rejectionReason?: string }) =>
       organizationService.reviewApplication(vars.id, vars.status, vars.rejectionReason),
@@ -757,6 +768,7 @@ export function useOrgMutations() {
     applyMembership,
     submitInitialPayment,
     payMonthlyContribution,
+    updateMonthlyContribution,
     reviewApplication,
     reviewPayment,
     updatePaymentConfig,

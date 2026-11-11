@@ -116,6 +116,22 @@ export const organizationService = {
     return res.data!;
   },
 
+  async updateMonthlyContribution(data: {
+    newAmount: number;
+    reason?: string;
+  }): Promise<any> {
+    const res = await apiClient<ApiResponse<any>>('/org/membership/monthly-contribution', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return res.data!;
+  },
+
+  async getContributionHistory(): Promise<any> {
+    const res = await apiClient<ApiResponse<any>>('/org/membership/contribution-history');
+    return res.data!;
+  },
+
   async getMemberDashboard(): Promise<OrgMemberDashboardData> {
     const res = await apiClient<ApiResponse<OrgMemberDashboardData>>('/org/member/dashboard');
     return res.data!;

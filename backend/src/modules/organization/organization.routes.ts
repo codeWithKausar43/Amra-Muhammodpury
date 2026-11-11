@@ -6,6 +6,7 @@ import {
   ApplyMembershipSchema,
   InitialPaymentSchema,
   PayContributionSchema,
+  ChangeContributionSchema,
   ReviewApplicationSchema,
   ReviewPaymentSchema,
   CreateFundSchema,
@@ -139,6 +140,23 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(
       successResponse(payment, 'মাসিক অনুদানের তথ্য সফলভাবে জমা দেওয়া হয়েছে। অ্যাডমিন যাচাইয়ের পর এটি অনুমোদিত হবে।'),
     );
+  });
+
+  // Update monthly contribution amount (Effective next month, requires confirmation)
+  fastify.patch('/membership/monthly-contribution', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const validatedData = ChangeContributionSchema.parse(request.body);
+    const result = await service.updateMonthlyContributionAmount(session.user.id, validatedData);
+    return reply.send(
+      successResponse(result, 'আপনার মাসিক অনুদানের পরিমাণ সফলভাবে আপডেট করা হয়েছে। এটি পরবর্তী মাস থেকে কার্যকর হবে।'),
+    );
+  });
+
+  // View member's contribution agreement & change request history
+  fastify.get('/membership/contribution-history', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const history = await service.getContributionAgreementsHistory(session.user.id);
+    return reply.send(successResponse(history, 'চাঁদা পরিবর্তনের ইতিহাস সফলভাবে লোড হয়েছে'));
   });
 
   // Member Dashboard (Personal membership, stats, financial ledger)

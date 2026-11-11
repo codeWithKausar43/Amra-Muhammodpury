@@ -153,11 +153,12 @@ export function MonthlyContributionTracking() {
       }
 
       const calculated: any[] = [];
-      const evalStartYear = Math.max(joinedYear, currY - 1);
+      const evalStartYear = Math.max(2026, joinedYear);
       for (let y = evalStartYear; y <= currY; y++) {
-        const startM = y === joinedYear ? joinedMonth : 1;
+        const startM = y === 2026 ? Math.max(11, joinedMonth) : (y === joinedYear ? joinedMonth : 1);
         const endM = y === currY ? currM : 12;
         for (let m = startM; m <= endM; m++) {
+          if (y < 2026 || (y === 2026 && m < 11)) continue;
           const key = `${y}-${m}`;
           const pStatus = paidMap.get(key);
           if (pStatus === 'VERIFIED') continue;

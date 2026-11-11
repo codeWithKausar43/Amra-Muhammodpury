@@ -32,6 +32,12 @@ describe('OrganizationService', () => {
       },
       contributionAgreement: {
         findFirst: vi.fn(),
+        findMany: vi.fn(),
+        create: vi.fn(),
+        updateMany: vi.fn(),
+      },
+      contributionChangeRequest: {
+        findMany: vi.fn(),
         create: vi.fn(),
       },
       contributionPayment: {
@@ -89,6 +95,10 @@ describe('OrganizationService', () => {
       secretBallot: {
         create: vi.fn(),
         createMany: vi.fn(),
+        findMany: vi.fn(),
+      },
+      notification: {
+        create: vi.fn(),
         findMany: vi.fn(),
       },
       $transaction: vi.fn(async (cb) => cb(mockPrisma)),
@@ -389,7 +399,7 @@ describe('OrganizationService', () => {
         await expect(
           service.payMonthlyContribution('user-1', {
             periodYear: 2026,
-            months: [1, 3],
+            months: [11, 13],
             amount: 200,
             paymentMethod: 'BKASH',
           }),
@@ -405,8 +415,8 @@ describe('OrganizationService', () => {
         });
         mockPrisma.contributionPayment.findMany.mockResolvedValueOnce([]);
         mockPrisma.contributionPayment.create
-          .mockResolvedValueOnce({ id: 'pay-1', periodMonth: 1, amount: 100 })
-          .mockResolvedValueOnce({ id: 'pay-2', periodMonth: 2, amount: 100 });
+          .mockResolvedValueOnce({ id: 'pay-1', periodMonth: 11, amount: 100 })
+          .mockResolvedValueOnce({ id: 'pay-2', periodMonth: 12, amount: 100 });
         mockPrisma.orgMembership.update.mockResolvedValueOnce({});
         mockPrisma.orgFund.findUnique.mockResolvedValueOnce({ id: 'fund-gen', code: 'GENERAL' });
         mockPrisma.orgFund.update.mockResolvedValueOnce({});
@@ -414,7 +424,7 @@ describe('OrganizationService', () => {
 
         const res = await service.payMonthlyContribution('user-1', {
           periodYear: 2026,
-          months: [1, 2],
+          months: [11, 12],
           amount: 200,
           paymentMethod: 'BKASH',
           trxId: 'TRX-123456',
@@ -427,7 +437,7 @@ describe('OrganizationService', () => {
     });
 
     describe('getMemberDashboard', () => {
-      it('should return complete dashboard with dynamic calendar, totalContributed, and pendingDueCount', async () => {
+      it('should return complete dashboard with dynamic calendar starting from November 2026', async () => {
         mockPrisma.orgMembership.findUnique.mockResolvedValueOnce({
           id: 'mem-1',
           monthlyContribution: 100,
@@ -436,14 +446,15 @@ describe('OrganizationService', () => {
           user: { name: 'Kausar' },
         });
 
-        // 1 verified payment for month 1 in 2026
+        // 1 verified payment for month 11 in 2026
         mockPrisma.contributionPayment.findMany
           .mockResolvedValueOnce([
-            { id: 'p-1', periodYear: 2026, periodMonth: 1, amount: 100, paidAt: new Date('2026-01-05') },
+            { id: 'p-1', periodYear: 2026, periodMonth: 11, amount: 100, paidAt: new Date('2026-11-05') },
           ])
           .mockResolvedValueOnce([
-            { id: 'p-1', periodYear: 2026, periodMonth: 1, amount: 100, paidAt: new Date('2026-01-05') },
+            { id: 'p-1', periodYear: 2026, periodMonth: 11, amount: 100, paidAt: new Date('2026-11-05') },
           ]);
+        mockPrisma.contributionAgreement.findMany.mockResolvedValueOnce([]);
         mockPrisma.orgNotice.findMany.mockResolvedValueOnce([]);
         mockPrisma.orgMeeting.findMany.mockResolvedValueOnce([]);
         mockPrisma.election.findMany.mockResolvedValueOnce([]);
@@ -452,9 +463,72 @@ describe('OrganizationService', () => {
 
         expect(dashboard.totalContributed).toBe(100);
         expect(dashboard.calendar).toHaveLength(12);
-        expect(dashboard.calendar[0]?.isPaid).toBe(true);
+        // Months 1-10 in 2026 must be NOT_APPLICABLE
+        expect(dashboard.calendar[0]?.status).toBe('NOT_APPLICABLE');
+        expect(dashboard.calendar[0]?.isEligible).toBe(false);
+        // Month 11 in 2026 is eligible and paid
+        expect(dashboard.calendar[10]?.isEligible).toBe(true);
+        expect(dashboard.calendar[10]?.isPaid).toBe(true);
         expect(dashboard.agreement).toBeDefined();
         expect(dashboard.agreement?.agreedAmount).toBe(100);
+      });
+    });
+
+    describe('updateMonthlyContributionAmount', () => {
+      it('should reject amount less than 50', async () => {
+        await expect(
+          service.updateMonthlyContributionAmount('user-1', { newAmount: 40 }),
+        ).rejects.toThrow('মাসিক অনুদান সর্বনিম্ন ৫০ টাকা হতে হবে');
+      });
+
+      it('should reject same amount as current', async () => {
+        mockPrisma.orgMembership.findUnique.mockResolvedValueOnce({
+          id: 'mem-1',
+          monthlyContribution: 100,
+          status: 'ACTIVE',
+          user: { name: 'Kausar' },
+        });
+
+        await expect(
+          service.updateMonthlyContributionAmount('user-1', { newAmount: 100 }),
+        ).rejects.toThrow('নতুন অনুদানের পরিমাণ বর্তমান পরিমাণের চেয়ে ভিন্ন হতে হবে');
+      });
+
+      it('should successfully schedule new agreement effective from next month and log audit request', async () => {
+        mockPrisma.orgMembership.findUnique.mockResolvedValueOnce({
+          id: 'mem-1',
+          monthlyContribution: 100,
+          status: 'ACTIVE',
+          user: { name: 'Kausar' },
+        });
+
+        const createdAgreement = {
+          id: 'agr-new',
+          userId: 'user-1',
+          monthlyAmount: 200,
+          effectiveFrom: new Date(),
+          isCurrent: true,
+        };
+
+        mockPrisma.contributionAgreement.updateMany.mockResolvedValueOnce({ count: 1 });
+        mockPrisma.contributionAgreement.create.mockResolvedValueOnce(createdAgreement);
+        mockPrisma.contributionChangeRequest.create.mockResolvedValueOnce({ id: 'req-1' });
+        mockPrisma.orgMembership.update.mockResolvedValueOnce({ id: 'mem-1', monthlyContribution: 200 });
+        mockPrisma.notification.create.mockResolvedValueOnce({ id: 'notif-1' });
+
+        const result = await service.updateMonthlyContributionAmount('user-1', {
+          newAmount: 200,
+          reason: 'উন্নয়নমূলক ফান্ড বৃদ্ধি',
+        });
+
+        expect(result.newAmount).toBe(200);
+        expect(result.previousAmount).toBe(100);
+        expect(mockPrisma.contributionAgreement.create).toHaveBeenCalled();
+        expect(mockPrisma.contributionChangeRequest.create).toHaveBeenCalled();
+        expect(mockPrisma.orgMembership.update).toHaveBeenCalledWith({
+          where: { userId: 'user-1' },
+          data: { monthlyContribution: 200 },
+        });
       });
     });
 
@@ -579,6 +653,9 @@ describe('OrganizationService', () => {
 
     describe('getContributionTracking (Category Math & Pending Integrity)', () => {
       it('should categorize verified, pending, unpaid, and overdue members with mathematical balance', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-12-15T12:00:00Z'));
+        try {
         // Reviewer has ADMIN role
         mockPrisma.user.findUnique.mockResolvedValueOnce({ role: 'ADMIN' });
 
@@ -605,7 +682,7 @@ describe('OrganizationService', () => {
             userId: 'u-3',
             monthlyContribution: 250,
             status: 'ACTIVE',
-            joinedAt: new Date('2026-11-01'), // joined this month -> 1 month due
+            joinedAt: new Date('2026-12-01'), // joined in December -> 1 month due (unpaid)
             user: { name: 'Member 3', phone: '01733333333' },
           },
           {
@@ -613,12 +690,12 @@ describe('OrganizationService', () => {
             userId: 'u-4',
             monthlyContribution: 400,
             status: 'ACTIVE',
-            joinedAt: new Date('2025-01-01'), // joined long ago -> multiple months due
+            joinedAt: new Date('2026-11-01'), // joined in Nov -> multiple months due (Nov + Dec overdue)
             user: { name: 'Member 4', phone: '01744444444' },
           },
         ]);
 
-        // Payments for target period (Nov 2026):
+        // Payments for target period (Dec 2026):
         // u-1 has VERIFIED payment
         // u-2 has PENDING payment
         // u-3 has NO payment (1 month unpaid)
@@ -629,27 +706,27 @@ describe('OrganizationService', () => {
               id: 'p-u1',
               userId: 'u-1',
               periodYear: 2026,
-              periodMonth: 11,
+              periodMonth: 12,
               amount: 500,
               status: 'VERIFIED',
-              paidAt: new Date('2026-11-02'),
+              paidAt: new Date('2026-12-02'),
             },
             {
               id: 'p-u2',
               userId: 'u-2',
               periodYear: 2026,
-              periodMonth: 11,
+              periodMonth: 12,
               amount: 300,
               status: 'PENDING',
-              paidAt: new Date('2026-11-03'),
+              paidAt: new Date('2026-12-03'),
               trxId: 'TRX-PENDING-999',
               senderNumber: '01722222222',
             },
           ])
           // allMemberPayments
           .mockResolvedValueOnce([
-            { id: 'p-u1', userId: 'u-1', periodYear: 2026, periodMonth: 11, amount: 500, status: 'VERIFIED' },
-            { id: 'p-u2', userId: 'u-2', periodYear: 2026, periodMonth: 11, amount: 300, status: 'PENDING' },
+            { id: 'p-u1', userId: 'u-1', periodYear: 2026, periodMonth: 12, amount: 500, status: 'VERIFIED' },
+            { id: 'p-u2', userId: 'u-2', periodYear: 2026, periodMonth: 12, amount: 300, status: 'PENDING' },
           ])
           // allPendingPayments
           .mockResolvedValueOnce([
@@ -657,16 +734,16 @@ describe('OrganizationService', () => {
               id: 'p-u2',
               userId: 'u-2',
               periodYear: 2026,
-              periodMonth: 11,
+              periodMonth: 12,
               amount: 300,
               status: 'PENDING',
-              paidAt: new Date('2026-11-03'),
+              paidAt: new Date('2026-12-03'),
               trxId: 'TRX-PENDING-999',
               senderNumber: '01722222222',
             },
           ]);
 
-        const tracking = await service.getContributionTracking('admin-user-id', 2026, 11);
+        const tracking = await service.getContributionTracking('admin-user-id', 2026, 12);
 
         expect(tracking.period.totalActiveMembers).toBe(4);
         expect(tracking.counts.paid).toBe(1);
@@ -685,6 +762,9 @@ describe('OrganizationService', () => {
         expect(tracking.pending[0]?.paidAmount).toBe(300);
         expect(tracking.pending[0]?.trxId).toBe('TRX-PENDING-999');
         expect(tracking.pending[0]?.senderNumber).toBe('01722222222');
+        } finally {
+          vi.useRealTimers();
+        }
       });
     });
   });

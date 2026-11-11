@@ -80,8 +80,16 @@ export default function OrganizationAdminPage() {
   const userPosition = React.useMemo(() => {
     // 0. Super Admin / Platform Owner has highest precedence
     const systemRole = (session?.user as any)?.role;
-    const userEmail = session?.user?.email;
-    if (systemRole === 'SUPER_ADMIN' || userEmail === 'itskausarprodhan@gmail.com') {
+    const userEmail = session?.user?.email?.toLowerCase()?.trim();
+    const membership = membershipStatus?.membership;
+
+    if (
+      systemRole === 'SUPER_ADMIN' ||
+      membership?.orgRole === 'SUPER_ADMIN' ||
+      userEmail === 'itskausarprodhan@gmail.com' ||
+      userEmail === 'itskausarprod@gmail.com' ||
+      (session?.user as any)?.isSystemAdmin
+    ) {
       return 'সিস্টেম অ্যাডমিন';
     }
 
@@ -106,7 +114,6 @@ export default function OrganizationAdminPage() {
     }
 
     // 2. Check membership designation or orgRole
-    const membership = membershipStatus?.membership;
     const desig = membership?.designation;
     if (desig?.title || (desig as any)?.name) {
       return desig?.title || (desig as any)?.name;
