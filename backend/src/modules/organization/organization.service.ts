@@ -1316,7 +1316,7 @@ export class OrganizationService {
       this.prisma.orgFund.aggregate({ _sum: { balance: true } }),
       this.prisma.fundTransaction.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 20,
+        take: 100,
         include: {
           fund: { select: { id: true, name: true, code: true } },
           items: { orderBy: { createdAt: 'asc' } },
@@ -1845,6 +1845,10 @@ export class OrganizationService {
       });
       if (!existingTrx) throw new NotFoundError('লেনদেন পাওয়া যায়নি');
 
+      if (existingTrx.type !== 'EXPENSE' || existingTrx.referenceId) {
+        throw new BadRequestError('মাসিক চাঁদা বা সদস্য অনুদানের তথ্য পরিবর্তন করা যাবে না। শুধুমাত্র খরচ আপডেট করা সম্ভব।');
+      }
+
       const oldAmount = existingTrx.amount;
       const itemsTotal = (data.items && data.items.length > 0)
         ? data.items.reduce((s, it) => s + it.amount, 0)
@@ -1994,6 +1998,51 @@ export class OrganizationService {
       });
 
       return updatedTrx;
+    });
+  }
+
+  public async deleteTransaction(userId: string, id: string) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'ADMIN']);
+
+    return this.prisma.$transaction(async (tx) => {
+      const existingTrx = await tx.fundTransaction.findUnique({
+        where: { id },
+        include: { items: true, project: true },
+      });
+      if (!existingTrx) throw new NotFoundError('লেনদেন পাওয়া যায়নি');
+
+      if (existingTrx.type !== 'EXPENSE' || existingTrx.referenceId) {
+        throw new BadRequestError('মাসিক চাঁদা বা সদস্য অনুদানের তথ্য মুছে ফেলা যাবে না। শুধুমাত্র খরচের এন্ট্রি মুছে ফেলা সম্ভব।');
+      }
+
+      // 1. Refund the expense amount to the fund balance
+      await tx.orgFund.update({
+        where: { id: existingTrx.fundId },
+        data: { balance: { increment: existingTrx.amount } },
+      });
+
+      // 2. Adjust linked OrgProject if this transaction was tied to a project (e.g. Humanitarian / Tree Plantation)
+      if (existingTrx.projectId) {
+        await tx.orgProject.update({
+          where: { id: existingTrx.projectId },
+          data: {
+            spent: { decrement: existingTrx.amount },
+          },
+        });
+      }
+
+      // 3. Delete items
+      await tx.expenseItem.deleteMany({
+        where: { transactionId: id },
+      });
+
+      // 4. Delete the transaction record
+      await tx.fundTransaction.delete({
+        where: { id },
+      });
+
+      return { success: true, message: 'খরচের রেকর্ডটি সফলভাবে মুছে ফেলা হয়েছে' };
     });
   }
 

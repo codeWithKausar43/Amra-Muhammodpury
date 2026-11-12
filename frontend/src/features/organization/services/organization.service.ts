@@ -340,6 +340,13 @@ export const organizationService = {
     return res.data!;
   },
 
+  async deleteTransaction(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient<ApiResponse<{ success: boolean; message: string }>>(`/org/admin/transactions/${id}`, {
+      method: 'DELETE',
+    });
+    return res.data!;
+  },
+
   async getTransparency(): Promise<FinancialTransparencyData> {
     const res = await apiClient<ApiResponse<FinancialTransparencyData>>('/org/transparency');
     return res.data!;

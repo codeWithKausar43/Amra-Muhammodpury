@@ -360,6 +360,14 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(successResponse(trx, 'লেনদেন সফলভাবে আপডেট করা হয়েছে'));
   });
 
+  // Delete Expense Transaction
+  fastify.delete('/admin/transactions/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const result = await service.deleteTransaction(session.user.id, id);
+    return reply.status(200).send(successResponse(result, 'খরচের রেকর্ড সফলভাবে মুছে ফেলা হয়েছে'));
+  });
+
   // Create Committee
   fastify.post('/admin/committees', async (request, reply) => {
     const session = await fastify.authenticate(request, reply);

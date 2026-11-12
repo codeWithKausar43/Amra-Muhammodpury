@@ -148,10 +148,13 @@ export default function AdminModulePage() {
   const [searchQuery, setSearchQuery] = React.useState('');
 
   // Transactions Sub-filter
-  const [trxView, setTrxView] = React.useState<'FUNDS' | 'PAYMENTS'>('PAYMENTS');
+  const [trxView, setTrxView] = React.useState<'FUNDS' | 'PAYMENTS'>('FUNDS');
 
   // Queries
   const { data: stats } = useOrgAdminStatsQuery();
+  const expenseTransactions = React.useMemo(() => {
+    return (stats?.recentTransactions || []).filter((tx) => tx.type === 'EXPENSE');
+  }, [stats?.recentTransactions]);
   const { data: applications = [], isLoading: appsLoading } = useOrgApplicationsQuery(
     appFilter === 'ALL' ? undefined : appFilter,
   );
@@ -427,6 +430,11 @@ export default function AdminModulePage() {
   };
 
   const handleOpenEditTrx = (tx: any) => {
+    if (tx.type !== 'EXPENSE' || tx.referenceId) {
+      toast.warning('মাসিক চাঁদা বা সদস্য অনুদানের তথ্য পরিবর্তন করা যাবে না। শুধুমাত্র খরচ আপডেট করা সম্ভব।');
+      return;
+    }
+
     setEditingTrx(tx);
     setSelectedFundId(tx.fundId || tx.fund?.id || funds[0]?.id || '');
 
@@ -637,6 +645,24 @@ export default function AdminModulePage() {
     } finally {
       setIsSubmittingTrx(false);
     }
+  };
+
+  const handleDeleteTrx = (tx: any) => {
+    if (tx.type !== 'EXPENSE' || tx.referenceId) {
+      toast.warning('মাসিক চাঁদা বা সদস্য অনুদানের তথ্য মুছে ফেলা যাবে না। শুধুমাত্র খরচ মুছে ফেলা সম্ভব।');
+      return;
+    }
+
+    setConfirmDialog({
+      title: 'খরচের রেকর্ড মুছে ফেলা',
+      description: `আপনি কি নিশ্চিত যে "${tx.title}" (৳ ${toBengaliNumber(Math.abs(tx.amount))}) খরচের রেকর্ডটি মুছে ফেলতে চান? এটি মুছে ফেললে তহবিলের ব্যালেন্স স্বয়ংক্রিয়ভাবে সমন্বয় হয়ে যাবে।`,
+      variant: 'danger',
+      confirmText: 'মুছে ফেলুন',
+      onConfirm: async () => {
+        await mutations.deleteTransaction.mutateAsync(tx.id);
+        toast.success('খরচের রেকর্ডটি সফলভাবে মুছে ফেলা হয়েছে');
+      },
+    });
   };
 
   const handleOpenCreateNotice = () => {
@@ -1279,7 +1305,7 @@ export default function AdminModulePage() {
                   {meta.title}
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-brand-emerald dark:text-brand-mint bg-brand-emerald/10">
-                  {toBengaliNumber((stats?.recentTransactions?.length || 0) + (stats?.recentPayments?.length || 0))} টি রেকর্ড
+                  {toBengaliNumber(expenseTransactions.length + (stats?.recentPayments?.length || 0))} টি রেকর্ড
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -1298,7 +1324,7 @@ export default function AdminModulePage() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  তহবিল লেনদেন ({stats?.recentTransactions?.length || 0})
+                  সকল খরচ ({toBengaliNumber(expenseTransactions.length)})
                 </button>
                 <button
                   type="button"
@@ -1326,9 +1352,9 @@ export default function AdminModulePage() {
 
           {trxView === 'FUNDS' && (
             <div className="w-full">
-              {stats?.recentTransactions && stats.recentTransactions.length > 0 ? (
+              {expenseTransactions.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
-                  {stats.recentTransactions.map((tx) => (
+                  {expenseTransactions.map((tx) => (
                     <div
                       key={tx.id}
                       className="py-3 px-1 sm:px-2 flex items-start justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors group"
@@ -1336,13 +1362,9 @@ export default function AdminModulePage() {
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <div
                           className="shrink-0 mt-0.5"
-                          title={tx.type === 'EXPENSE' ? 'ব্যয় / খরচ' : 'জমা / অনুদান'}
+                          title="অনুমোদিত ব্যয় / খরচ"
                         >
-                          {tx.type === 'EXPENSE' ? (
-                            <ArrowDownRight className="w-4 h-4 text-rose-500 stroke-[2.5]" />
-                          ) : (
-                            <ArrowUpRight className="w-4 h-4 text-emerald-500 stroke-[2.5]" />
-                          )}
+                          <ArrowDownRight className="w-4 h-4 text-rose-500 stroke-[2.5]" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-snug group-hover:text-brand-emerald transition-colors break-words">
@@ -1363,7 +1385,7 @@ export default function AdminModulePage() {
                             <button
                               type="button"
                               onClick={() => setViewingTrxDetails(tx)}
-                              className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition-colors"
+                              className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                             >
                               <Receipt className="w-3 h-3 text-brand-emerald" />
                               <span>{toBengaliNumber(tx.items.length)} টি আইটেম ব্রেকডাউন</span>
@@ -1373,33 +1395,31 @@ export default function AdminModulePage() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <div
-                          className={`font-mono font-bold text-xs sm:text-sm ${
-                            tx.type === 'EXPENSE'
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-emerald-600 dark:text-brand-mint'
-                          }`}
-                        >
-                          {tx.type === 'EXPENSE' ? '- ' : '+ '}৳ {toBengaliNumber(Math.abs(tx.amount))}
+                        <div className="font-mono font-bold text-xs sm:text-sm text-rose-600 dark:text-rose-400">
+                          - ৳ {toBengaliNumber(Math.abs(tx.amount))}
                         </div>
-                        <span
-                          className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            tx.type === 'EXPENSE'
-                              ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300'
-                              : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-brand-mint'
-                          }`}
-                        >
-                          {tx.type === 'EXPENSE' ? 'অনুমোদিত ব্যয়' : 'জমা / অনুদান'}
+                        <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300">
+                          অনুমোদিত ব্যয়
                         </span>
-                        <div>
+                        <div className="flex items-center justify-end gap-2 mt-1.5">
                           <button
                             type="button"
                             onClick={() => handleOpenEditTrx(tx)}
-                            className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-slate-500 hover:text-brand-emerald dark:text-slate-400 dark:hover:text-brand-mint transition-colors cursor-pointer"
-                            title="লেনদেন বা খরচ সম্পাদনা করুন"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:text-brand-emerald dark:text-slate-400 dark:hover:text-brand-mint transition-colors cursor-pointer"
+                            title="খরচ সম্পাদনা করুন"
                           >
                             <Pencil className="w-3 h-3" />
                             <span>আপডেট</span>
+                          </button>
+                          <span className="text-slate-300 dark:text-white/20">•</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTrx(tx)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 transition-colors cursor-pointer"
+                            title="খরচটি মুছে ফেলুন"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>মুছুন</span>
                           </button>
                         </div>
                       </div>
@@ -1412,10 +1432,10 @@ export default function AdminModulePage() {
                     <TrendingUp className="w-6 h-6" />
                   </div>
                   <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                    কোনো লেনদেন রেকর্ড পাওয়া যায়নি
+                    কোনো খরচের রেকর্ড পাওয়া যায়নি
                   </h3>
                   <p className="text-xs text-slate-500">
-                    তহবিল মডিউলে গিয়ে লেনদেন এন্ট্রি দিন।
+                    নতুন খরচ যুক্ত করতে '+ নতুন খরচ ও কার্যক্রম এন্ট্রি' বোতামে চাপ দিন।
                   </p>
                 </div>
               )}
@@ -2580,23 +2600,41 @@ export default function AdminModulePage() {
               <p className="text-xs text-slate-400 text-center py-4">এই লেনদেনের কোনো পৃথক আইটেম তালিকা নেই।</p>
             )}
 
-            <div className="pt-2 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const txToEdit = viewingTrxDetails;
-                  setViewingTrxDetails(null);
-                  handleOpenEditTrx(txToEdit);
-                }}
-                className="px-4 py-2 rounded-xl bg-brand-emerald text-white hover:bg-emerald-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                <span>এই খরচ আপডেট করুন</span>
-              </button>
+            <div className="pt-2 flex items-center justify-between gap-2 flex-wrap">
+              {viewingTrxDetails.type === 'EXPENSE' && !viewingTrxDetails.referenceId ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const txToEdit = viewingTrxDetails;
+                      setViewingTrxDetails(null);
+                      handleOpenEditTrx(txToEdit);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-brand-emerald text-white hover:bg-emerald-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>আপডেট</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const txToDelete = viewingTrxDetails;
+                      setViewingTrxDetails(null);
+                      handleDeleteTrx(txToDelete);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>মুছে ফেলুন</span>
+                  </button>
+                </div>
+              ) : (
+                <div />
+              )}
               <button
                 type="button"
                 onClick={() => setViewingTrxDetails(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                className="px-4 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer ml-auto"
               >
                 বন্ধ করুন
               </button>
