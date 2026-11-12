@@ -18,9 +18,13 @@ import { openInExternalChrome } from '@/lib/pwa/pwa-utils';
 
 interface PwaInstallScreenProps {
   targetPath?: string;
+  onUnlock?: () => void;
 }
 
-export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenProps) {
+export default function PwaInstallScreen({
+  targetPath = '/',
+  onUnlock,
+}: PwaInstallScreenProps) {
   const {
     isInstalled,
     hasStoredRecord,
@@ -84,10 +88,22 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
 
       if (result === 'accepted') {
         setInstalledSuccess(true);
+        try {
+          sessionStorage.setItem('amra_pwa_gate_unlocked', 'true');
+          localStorage.setItem('amra_pwa_gate_unlocked', 'true');
+          window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
+        } catch {
+          // ignore
+        }
         if (platformInfo.isAndroid || isMobileAtClickTime) {
           setTimeout(() => {
             openInstalledApp(targetPath);
+            onUnlock?.();
           }, 1200);
+        } else {
+          setTimeout(() => {
+            onUnlock?.();
+          }, 800);
         }
         return;
       }
@@ -121,10 +137,18 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
 
   const handleOpenApp = () => {
     setIsOpeningApp(true);
+    try {
+      sessionStorage.setItem('amra_pwa_gate_unlocked', 'true');
+      localStorage.setItem('amra_pwa_gate_unlocked', 'true');
+      window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
+    } catch {
+      // ignore
+    }
+    onUnlock?.();
     const launched = openInstalledApp(targetPath);
     setTimeout(() => {
       setIsOpeningApp(false);
-    }, 1500);
+    }, 1200);
     return launched;
   };
 
@@ -207,6 +231,13 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                   </p>
                 </div>
               )}
+              <button
+                type="button"
+                onClick={handleOpenApp}
+                className="w-full mt-1.5 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>অথবা সরাসরি অ্যাপে প্রবেশ করুন</span>
+              </button>
             </div>
           )}
 
@@ -360,6 +391,15 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                   </span>
                 </li>
               </ol>
+
+              <button
+                type="button"
+                onClick={handleOpenApp}
+                className="w-full mt-3 py-3 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
+              >
+                <span>সরাসরি অ্যাপে প্রবেশ করুন</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           )}
 
@@ -410,6 +450,15 @@ export default function PwaInstallScreen({ targetPath = '/' }: PwaInstallScreenP
                   </span>
                 </li>
               </ol>
+
+              <button
+                type="button"
+                onClick={handleOpenApp}
+                className="w-full mt-3 py-3 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
+              >
+                <span>সরাসরি অ্যাপে প্রবেশ করুন</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           )}
 

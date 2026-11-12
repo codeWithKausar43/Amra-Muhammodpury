@@ -720,7 +720,18 @@ export class FeedService {
         },
         select: AUTHOR_SELECT,
         orderBy: { createdAt: 'desc' },
-        take: 8,
+        take: 12,
+      });
+
+      // Prioritize registered users with profile images so the Facebook-style story reel is visual & vibrant
+      registeredUsers.sort((a, b) => {
+        const aHasCloudinary = a.image && a.image.includes('cloudinary');
+        const bHasCloudinary = b.image && b.image.includes('cloudinary');
+        if (aHasCloudinary && !bHasCloudinary) return -1;
+        if (!aHasCloudinary && bHasCloudinary) return 1;
+        if (a.image && !b.image) return -1;
+        if (!a.image && b.image) return 1;
+        return 0;
       });
 
       const curatedBackgrounds = [

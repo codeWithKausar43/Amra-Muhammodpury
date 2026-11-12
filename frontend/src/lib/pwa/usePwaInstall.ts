@@ -129,16 +129,16 @@ export function usePwaInstall() {
     let promptEvent =
       deferredPrompt || (typeof window !== 'undefined' ? window.__deferredPwaPrompt : null);
 
-    // If prompt is not yet ready, wait briefly for browser event heuristic
+    // If prompt is not yet ready, wait briefly for browser event heuristic (400ms max)
     if (!promptEvent && typeof window !== 'undefined') {
       const start = Date.now();
-      while (Date.now() - start < 2500) {
+      while (Date.now() - start < 400) {
         if (window.__deferredPwaPrompt) {
           promptEvent = window.__deferredPwaPrompt;
           setDeferredPrompt(promptEvent);
           break;
         }
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 50));
       }
     }
 

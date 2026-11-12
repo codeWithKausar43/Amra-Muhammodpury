@@ -9,7 +9,9 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   DATABASE_URL: z
     .string()
-    .default('postgresql://postgres:postgres@localhost:5433/amra_muhammadpuri_dev?schema=public'),
+    .default(
+      'postgresql://neondb_owner:npg_4MPbpzxhKC6j@ep-blue-pine-a1lvkmxx-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
+    ),
 
   // Better Auth
   BETTER_AUTH_SECRET: z

@@ -13,6 +13,7 @@ import {
 
 interface PwaInstallScreenProps {
   targetPath?: string;
+  onUnlock?: () => void;
 }
 
 // Lazy-load the installation screen so installed standalone users NEVER download this bundle
@@ -67,6 +68,17 @@ function PwaInstallGateInner({ children }: PwaInstallGateProps) {
 
   // Start with null during SSR to avoid hydration mismatch
   const [isStandalone, setIsStandalone] = React.useState<boolean | null>(null);
+  const [isUnlocked, setIsUnlocked] = React.useState<boolean>(false);
+
+  const unlockGate = React.useCallback(() => {
+    setIsUnlocked(true);
+    try {
+      sessionStorage.setItem('amra_pwa_gate_unlocked', 'true');
+      localStorage.setItem('amra_pwa_gate_unlocked', 'true');
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Compute full current route string
   const currentFullPath = React.useMemo(() => {
@@ -147,6 +159,25 @@ function PwaInstallGateInner({ children }: PwaInstallGateProps) {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
+    // 5. Restore unlocked state if user already installed or clicked open/enter
+    try {
+      const unlocked =
+        sessionStorage.getItem('amra_pwa_gate_unlocked') === 'true' ||
+        localStorage.getItem('amra_pwa_gate_unlocked') === 'true';
+      if (unlocked) {
+        setIsUnlocked(true);
+      }
+    } catch {
+      // ignore
+    }
+
+    const handleUnlockEvent = () => {
+      unlockGate();
+    };
+
+    window.addEventListener('pwa-unlock-gate', handleUnlockEvent);
+    window.addEventListener('appinstalled', handleUnlockEvent);
+
     return () => {
       if (mediaQuery.removeEventListener) {
         mediaQuery.removeEventListener('change', handleMediaChange);
@@ -154,8 +185,10 @@ function PwaInstallGateInner({ children }: PwaInstallGateProps) {
         mediaQuery.removeListener(handleMediaChange);
       }
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pwa-unlock-gate', handleUnlockEvent);
+      window.removeEventListener('appinstalled', handleUnlockEvent);
     };
-  }, [router, currentFullPath, isStandalone]);
+  }, [router, currentFullPath, isStandalone, unlockGate]);
 
   // During SSR or initial client mounting tick:
   // Render lightweight branded splash shell to strictly prevent any content flash / leakage!
@@ -163,14 +196,14 @@ function PwaInstallGateInner({ children }: PwaInstallGateProps) {
     return <PwaSplashPlaceholder />;
   }
 
-  // If running inside the installed standalone PWA, grant full access to application
-  if (isStandalone === true) {
+  // If running inside the installed standalone PWA or unlocked by user action, grant full access
+  if (isStandalone === true || isUnlocked === true) {
     return <>{children}</>;
   }
 
   // Non-installed standard browser session:
   // Strictly display the mandatory installation screen with requested route preserved.
-  return <LazyInstallScreen targetPath={currentFullPath} />;
+  return <LazyInstallScreen targetPath={currentFullPath} onUnlock={unlockGate} />;
 }
 
 export function PwaInstallGate({ children }: PwaInstallGateProps) {
