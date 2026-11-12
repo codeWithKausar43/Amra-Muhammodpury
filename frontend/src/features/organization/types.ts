@@ -711,13 +711,16 @@ export interface AdminMemberItem {
     image: string | null;
     profession?: string | null;
     email?: string | null;
+    role?: string;
   };
+  orgRole?: string;
+  systemRole?: string;
   committees: Array<{
     committeeId: string;
     committeeName: string;
     customTitle: string | null;
   }>;
-  currentMonthStatus: 'PAID' | 'UNPAID' | 'PENDING' | 'OVERDUE' | 'NOT_APPLICABLE';
+  currentMonthStatus: 'PAID' | 'UNPAID' | 'PENDING' | 'OVERDUE' | 'NOT_APPLICABLE' | 'FEE_PENDING';
   currentMonthPaidAmount?: number;
 }
 

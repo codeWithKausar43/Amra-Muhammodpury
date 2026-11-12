@@ -45,6 +45,7 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = 
   UNPAID: { label: 'বকেয়া', color: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400' },
   PENDING: { label: 'যাচাই বাকি', color: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400' },
   OVERDUE: { label: 'মেয়াদোত্তীর্ণ', color: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400' },
+  FEE_PENDING: { label: 'ফি বাকি', color: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/50' },
   NOT_APPLICABLE: { label: 'প্রযোজ্য নয়', color: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
 };
 
@@ -239,9 +240,39 @@ export function OrganizationMemberManagement() {
             <div className="overflow-x-auto pb-1 scrollbar-none sm:scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10 -mx-1 px-1">
               <div className="min-w-[345px] sm:min-w-full divide-y divide-slate-200/70 dark:divide-white/10">
                 {members.map((member) => {
-                  const payBadge =
-                    PAYMENT_STATUS_LABELS[member.currentMonthStatus] ??
-                    PAYMENT_STATUS_LABELS['NOT_APPLICABLE']!;
+                  const isFeePending = member.status === 'APPROVED_PAYMENT_PENDING';
+                  const payBadge = isFeePending
+                    ? PAYMENT_STATUS_LABELS['FEE_PENDING']!
+                    : member.status !== 'ACTIVE'
+                    ? PAYMENT_STATUS_LABELS['NOT_APPLICABLE']!
+                    : (PAYMENT_STATUS_LABELS[member.currentMonthStatus] ??
+                      PAYMENT_STATUS_LABELS['NOT_APPLICABLE']!);
+
+                  const isSuperAdmin =
+                    member.user?.role === 'SUPER_ADMIN' ||
+                    member.systemRole === 'SUPER_ADMIN' ||
+                    member.orgRole === 'SUPER_ADMIN' ||
+                    member.user?.email === 'itskausarprodhan@gmail.com' ||
+                    member.user?.email === 'itskausarprod@gmail.com';
+
+                  const isAdmin = !isSuperAdmin && (member.user?.role === 'ADMIN' || member.orgRole === 'ADMIN');
+
+                  const roleTitle = isSuperAdmin
+                    ? 'সিস্টেম অ্যাডমিন'
+                    : member.designation?.name ||
+                      (isAdmin
+                        ? 'প্রশাসক'
+                        : member.orgRole === 'PRESIDENT'
+                        ? 'সভাপতি'
+                        : member.orgRole === 'VICE_PRESIDENT'
+                        ? 'সহ-সভাপতি'
+                        : member.orgRole === 'GENERAL_SECRETARY'
+                        ? 'সাধারণ সম্পাদক'
+                        : member.orgRole === 'TREASURER'
+                        ? 'কোষাধ্যক্ষ'
+                        : member.orgRole === 'MODERATOR'
+                        ? 'সমন্বয়ক'
+                        : null);
 
                   return (
                     <div
@@ -282,11 +313,19 @@ export function OrganizationMemberManagement() {
                           <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
                             {member.user.name}
                           </h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5 font-medium font-mono">
-                            {member.user.phone || (member.memberNumber ? `#${member.memberNumber}` : 'ফোন নম্বর নেই')}
-                            {member.designation && (
-                              <span className="font-sans text-brand-emerald dark:text-brand-mint ml-1.5">
-                                • {member.designation.name}
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5 font-medium font-mono flex items-center">
+                            <span>
+                              {member.user.phone || (member.memberNumber ? `#${member.memberNumber}` : 'ফোন নম্বর নেই')}
+                            </span>
+                            {roleTitle && (
+                              <span
+                                className={
+                                  isSuperAdmin
+                                    ? 'font-sans text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 ml-1.5 inline-flex items-center'
+                                    : 'font-sans text-brand-emerald dark:text-brand-mint ml-1.5 font-semibold'
+                                }
+                              >
+                                {isSuperAdmin ? roleTitle : `• ${roleTitle}`}
                               </span>
                             )}
                           </p>
@@ -419,24 +458,25 @@ export function OrganizationMemberManagement() {
                           <span>আইডি: #{membership?.memberNumber || 'নির্ধারিত নয়'}</span>
                           <span>•</span>
                           <span>
-                            {membership?.designation?.name ||
-                              (user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com'
-                                ? 'সিস্টেম অ্যাডমিন'
-                                : membership?.orgRole === 'SUPER_ADMIN'
-                                ? 'সিস্টেম অ্যাডমিন'
-                                : membership?.orgRole === 'ADMIN' || user?.role === 'ADMIN'
-                                ? 'প্রশাসক'
-                                : membership?.orgRole === 'PRESIDENT'
-                                ? 'সভাপতি'
-                                : membership?.orgRole === 'VICE_PRESIDENT'
-                                ? 'সহ-সভাপতি'
-                                : membership?.orgRole === 'GENERAL_SECRETARY'
-                                ? 'সাধারণ সম্পাদক'
-                                : membership?.orgRole === 'TREASURER'
-                                ? 'কোষাধ্যক্ষ'
-                                : membership?.orgRole === 'MODERATOR'
-                                ? 'সমন্বয়ক'
-                                : 'সাধারণ সদস্য')}
+                            {user?.role === 'SUPER_ADMIN' ||
+                            user?.email === 'itskausarprodhan@gmail.com' ||
+                            user?.email === 'itskausarprod@gmail.com' ||
+                            membership?.orgRole === 'SUPER_ADMIN'
+                              ? 'সিস্টেম অ্যাডমিন'
+                              : membership?.designation?.name ||
+                                (membership?.orgRole === 'ADMIN' || user?.role === 'ADMIN'
+                                  ? 'প্রশাসক'
+                                  : membership?.orgRole === 'PRESIDENT'
+                                  ? 'সভাপতি'
+                                  : membership?.orgRole === 'VICE_PRESIDENT'
+                                  ? 'সহ-সভাপতি'
+                                  : membership?.orgRole === 'GENERAL_SECRETARY'
+                                  ? 'সাধারণ সম্পাদক'
+                                  : membership?.orgRole === 'TREASURER'
+                                  ? 'কোষাধ্যক্ষ'
+                                  : membership?.orgRole === 'MODERATOR'
+                                  ? 'সমন্বয়ক'
+                                  : 'সাধারণ সদস্য')}
                           </span>
                         </div>
                       </div>

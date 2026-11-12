@@ -4099,6 +4099,7 @@ export class OrganizationService {
       } else if (query.paymentStatus === 'UNPAID') {
         const unpaidEligibleUserIds = eligibleTargetUserIds.filter((id) => !paidUserIdSet.has(id));
         whereCondition.userId = { in: unpaidEligibleUserIds };
+        whereCondition.status = 'ACTIVE';
       } else if (query.paymentStatus === 'PENDING') {
         const pendingPayments = await this.prisma.contributionPayment.findMany({
           where: {
@@ -4171,8 +4172,15 @@ export class OrganizationService {
       const jMonth = jDate.getMonth() + 1;
       const isEligibleForTarget = jYear < targetYear || (jYear === targetYear && jMonth <= targetMonth);
 
+      const isSuperAdminUser =
+        m.user?.role === 'SUPER_ADMIN' ||
+        m.user?.email === 'itskausarprodhan@gmail.com' ||
+        m.user?.email === 'itskausarprod@gmail.com';
+
       let monthStatus = 'UNPAID';
-      if (!isEligibleForTarget) {
+      if (m.status !== 'ACTIVE') {
+        monthStatus = m.status === 'APPROVED_PAYMENT_PENDING' ? 'FEE_PENDING' : 'NOT_APPLICABLE';
+      } else if (!isEligibleForTarget) {
         monthStatus = 'NOT_APPLICABLE';
       } else if (payment) {
         if (payment.status === 'VERIFIED') monthStatus = 'PAID';
@@ -4193,19 +4201,16 @@ export class OrganizationService {
         image: m.user?.image || null,
         phone: m.user?.phone || null,
         email: m.user?.email || null,
-        systemRole: m.user?.role || 'USER',
+        systemRole: isSuperAdminUser ? 'SUPER_ADMIN' : m.user?.role || 'USER',
         memberNumber: m.memberNumber || 'AMP-NEW',
         status: m.status,
         profession: m.profession || null,
         monthlyContribution: m.monthlyContribution,
-        orgRole:
-          m.user?.role === 'SUPER_ADMIN' ||
-          m.user?.email === 'itskausarprodhan@gmail.com' ||
-          m.user?.email === 'itskausarprod@gmail.com'
-            ? 'SUPER_ADMIN'
-            : m.user?.role === 'ADMIN' && (!m.orgRole || m.orgRole === 'MEMBER')
-            ? 'ADMIN'
-            : m.orgRole,
+        orgRole: isSuperAdminUser
+          ? 'SUPER_ADMIN'
+          : m.user?.role === 'ADMIN' && (!m.orgRole || m.orgRole === 'MEMBER')
+          ? 'ADMIN'
+          : m.orgRole,
         joinedAt: m.joinedAt,
         lastPaymentDate: m.lastPaymentDate,
         lastReminderSentAt: m.lastReminderSentAt,
@@ -4217,6 +4222,7 @@ export class OrganizationService {
           image: m.user?.image || null,
           profession: m.profession || null,
           email: m.user?.email || null,
+          role: isSuperAdminUser ? 'SUPER_ADMIN' : m.user?.role || 'USER',
         },
         designationId: m.designationId,
         designation: m.designation || null,
