@@ -39,7 +39,7 @@ export default function PwaInstallScreen({
   const [isOpeningApp, setIsOpeningApp] = React.useState<boolean>(false);
   const [apkDownloading, setApkDownloading] = React.useState<boolean>(false);
 
-  // APK direct download — Android only
+  // APK direct download — Android
   const APK_URL = '/mohammadpuri.apk';
   const APK_FILENAME = 'মোহাম্মদপুর-কমিউনিটি.apk';
 
@@ -62,8 +62,6 @@ export default function PwaInstallScreen({
 
   // Directly generates and downloads the standalone app launcher file ONLY on Desktop PC
   const triggerDesktopDownload = () => {
-    // Strictly for Desktop! NEVER download .url on Android/iOS (unsupported file type on mobile)
-    // Triple-check: platformInfo state, UA, and touch capabilities
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
     const isActuallyMobile =
       platformInfo.isAndroid ||
@@ -95,7 +93,6 @@ export default function PwaInstallScreen({
 
   const handleInstallClick = async () => {
     setIsProcessing(true);
-    // Safety: determine mobile status at click time via UA (protects against stale state)
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
     const isMobileAtClickTime =
       platformInfo.isAndroid ||
@@ -107,13 +104,6 @@ export default function PwaInstallScreen({
 
       if (result === 'accepted') {
         setInstalledSuccess(true);
-        try {
-          sessionStorage.setItem('amra_pwa_gate_unlocked', 'true');
-          localStorage.setItem('amra_pwa_gate_unlocked', 'true');
-          window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
-        } catch {
-          // ignore
-        }
         if (platformInfo.isAndroid || isMobileAtClickTime) {
           setTimeout(() => {
             openInstalledApp(targetPath);
@@ -133,7 +123,6 @@ export default function PwaInstallScreen({
 
       // 2. If native prompt unavailable or not ready:
       if (platformInfo.isAndroid || isMobileAtClickTime) {
-        // Android: directly download the APK file — 1-tap, no instructions needed
         triggerApkDownload();
       } else if (platformInfo.isIos) {
         // iOS instructions are already rendered
@@ -153,13 +142,6 @@ export default function PwaInstallScreen({
 
   const handleOpenApp = () => {
     setIsOpeningApp(true);
-    try {
-      sessionStorage.setItem('amra_pwa_gate_unlocked', 'true');
-      localStorage.setItem('amra_pwa_gate_unlocked', 'true');
-      window.dispatchEvent(new CustomEvent('pwa-unlock-gate'));
-    } catch {
-      // ignore
-    }
     onUnlock?.();
     const launched = openInstalledApp(targetPath);
     setTimeout(() => {
@@ -246,20 +228,13 @@ export default function PwaInstallScreen({
                   </p>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={handleOpenApp}
-                className="w-full mt-1.5 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span>অথবা সরাসরি অ্যাপে প্রবেশ করুন</span>
-              </button>
             </div>
           )}
 
           {/* =========================================================================
-              SECTION 2: Installation Success State
+              SECTION 2: Installation Success State (Non-Android PWA)
              ========================================================================= */}
-          {installedSuccess && (
+          {!platformInfo.isAndroid && installedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 space-y-3 animate-in fade-in">
               <div className="flex items-center justify-center gap-2 font-bold text-sm text-brand-mint">
                 <Check className="w-5 h-5 text-emerald-400" />
@@ -290,9 +265,9 @@ export default function PwaInstallScreen({
           )}
 
           {/* =========================================================================
-              SECTION 3: App Previously Recorded State (With Guaranteed Re-install Option)
+              SECTION 3: App Previously Recorded State (Non-Android Only)
              ========================================================================= */}
-          {(hasStoredRecord || isInstalled) && !installedSuccess && (
+          {!platformInfo.isAndroid && (hasStoredRecord || isInstalled) && !installedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 space-y-3 animate-in fade-in">
               <div className="flex items-center justify-center gap-2 font-bold text-sm text-brand-mint">
                 <Check className="w-5 h-5 text-emerald-400" />
@@ -320,7 +295,6 @@ export default function PwaInstallScreen({
                 )}
               </button>
               
-              {/* Escape hatch for users who never actually got the app installed or whose intent failed */}
               <div className="pt-2 border-t border-white/10">
                 <button
                   type="button"
@@ -328,39 +302,44 @@ export default function PwaInstallScreen({
                   className="w-full text-center text-xs text-emerald-300 hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer py-1"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>অ্যাপটি ফোনে খুঁজে পাচ্ছেন না? সরাসরি নতুন করে ইনস্টল করুন</span>
+                  <span>অ্যাপটি ডিভাইসে খুঁজে পাচ্ছেন না? আবার ইনস্টল করুন</span>
                 </button>
               </div>
             </div>
           )}
 
           {/* =========================================================================
-              SECTION 4: Primary Install Action (Never downloads invalid files on Mobile)
+              SECTION 4: Primary Install Action
+              Android: ALWAYS displays the direct APK download button.
+              Desktop / Other: Native PWA prompt or launcher download.
              ========================================================================= */}
-          {!installedSuccess && !hasStoredRecord && !isInstalled && (
+          {platformInfo.isAndroid ? (
             <div className="space-y-3 pt-1">
-              {/* Android: APK direct download button (primary CTA) */}
-              {platformInfo.isAndroid ? (
-                <a
-                  href="/mohammadpuri.apk"
-                  download="মোহাম্মদপুর-কমিউনিটি.apk"
-                  onClick={triggerApkDownload}
-                  className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
-                >
-                  {apkDownloading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>ডাউনলোড হচ্ছে...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-5 h-5" />
-                      <span>অ্যাপটি ইনস্টল করুন</span>
-                    </>
-                  )}
-                </a>
-              ) : (
-                /* Non-Android (Desktop / iOS): native PWA prompt */
+              <a
+                href="/mohammadpuri.apk"
+                download="মোহাম্মদপুর-কমিউনিটি.apk"
+                onClick={triggerApkDownload}
+                className="w-full py-4 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer text-center"
+              >
+                {apkDownloading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>ডাউনলোড হচ্ছে...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    <span>অ্যাপটি ইনস্টল করুন</span>
+                  </>
+                )}
+              </a>
+              <p className="text-[11px] text-slate-400 leading-relaxed text-center">
+                অফিসিয়াল অ্যাপটি ব্যবহার করতে উপরের বাটনে চাপ দিয়ে APK ফাইলটি ডাউনলোড করে ইনস্টল করুন।
+              </p>
+            </div>
+          ) : (
+            !installedSuccess && !hasStoredRecord && !isInstalled && (
+              <div className="space-y-3 pt-1">
                 <button
                   type="button"
                   onClick={handleInstallClick}
@@ -379,10 +358,9 @@ export default function PwaInstallScreen({
                     </>
                   )}
                 </button>
-              )}
-            </div>
+              </div>
+            )
           )}
-
 
           {/* =========================================================================
               SECTION 6: iOS Safari Step Instructions
@@ -431,15 +409,6 @@ export default function PwaInstallScreen({
                   </span>
                 </li>
               </ol>
-
-              <button
-                type="button"
-                onClick={handleOpenApp}
-                className="w-full mt-3 py-3 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
-              >
-                <span>সরাসরি অ্যাপে প্রবেশ করুন</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
             </div>
           )}
 

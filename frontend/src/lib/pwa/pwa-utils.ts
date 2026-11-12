@@ -42,22 +42,27 @@ export function isPwaStandalone(): boolean {
     return true;
   }
 
-  // 2. Standard CSS display-mode media query checks
+  // 2. Active app session flag
+  if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('amra_is_standalone') === 'true') {
+    window.__IS_PWA_STANDALONE__ = true;
+    return true;
+  }
+
+  // 3. Standard CSS display-mode media query checks
   const isStandaloneMedia =
     window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches ||
-    window.matchMedia('(display-mode: minimal-ui)').matches;
+    window.matchMedia('(display-mode: fullscreen)').matches;
 
-  // 3. iOS Safari standalone mode
+  // 4. iOS Safari standalone mode
   const isIosStandalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
 
-  // 4. Android Trusted Web Activity / WebAPK referrer check
+  // 5. Android Trusted Web Activity / WebAPK referrer check
   const isAndroidTwa =
     typeof document !== 'undefined' &&
     typeof document.referrer === 'string' &&
     document.referrer.startsWith('android-app://');
 
-  // 5. Android WebView detection (APK wrapper apps)
+  // 6. Android WebView detection (APK wrapper apps)
   // Android WebViews include "; wv)" in User-Agent string
   const ua = navigator.userAgent || '';
   const isAndroidWebView =
@@ -66,6 +71,9 @@ export function isPwaStandalone(): boolean {
   const standalone = Boolean(isStandaloneMedia || isIosStandalone || isAndroidTwa || isAndroidWebView);
   if (standalone) {
     window.__IS_PWA_STANDALONE__ = true;
+    try {
+      sessionStorage.setItem('amra_is_standalone', 'true');
+    } catch {}
   }
   return standalone;
 }
