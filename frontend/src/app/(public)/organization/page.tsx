@@ -30,7 +30,6 @@ export default function OrganizationPage() {
 
   const membership = membershipData?.membership;
   const application = membershipData?.latestApplication;
-  const isActiveMember = membership?.status === 'ACTIVE';
   const isOfficer =
     Boolean(
       membership &&
@@ -38,9 +37,16 @@ export default function OrganizationPage() {
           membership.orgRole,
         ),
     ) ||
+    Boolean(
+      membership?.designation?.title &&
+        /সভাপতি/i.test(membership.designation.title),
+    ) ||
     (session?.user as any)?.role === 'ADMIN' ||
     (session?.user as any)?.role === 'SUPER_ADMIN' ||
-    session?.user?.email === 'itskausarprodhan@gmail.com';
+    session?.user?.email === 'itskausarprodhan@gmail.com' ||
+    session?.user?.email === 'itskausarprod@gmail.com';
+
+  const isActiveMember = membership?.status === 'ACTIVE' || isOfficer;
 
   // Only elections with active voting or open nomination are considered active
   const activeElection = elections.find(

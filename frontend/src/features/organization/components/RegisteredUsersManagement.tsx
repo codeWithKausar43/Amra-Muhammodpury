@@ -19,7 +19,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useSession } from '@/lib/auth/auth-client';
-import { useAdminUsersQuery, useOrgMutations } from '../hooks/useOrganizationQueries';
+import { useAdminUsersQuery, useOrgMutations, useOrgMembershipStatusQuery } from '../hooks/useOrganizationQueries';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/feedback/Toast';
@@ -86,9 +86,17 @@ function GoogleBrandIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) 
 
 export function RegisteredUsersManagement() {
   const { data: session } = useSession();
+  const { data: membershipData } = useOrgMembershipStatusQuery();
+  const membership = membershipData?.membership;
   const isSystemAdmin =
     (session?.user as any)?.role === 'SUPER_ADMIN' ||
-    session?.user?.email === 'itskausarprodhan@gmail.com';
+    session?.user?.email === 'itskausarprodhan@gmail.com' ||
+    session?.user?.email === 'itskausarprod@gmail.com';
+  const isPresident =
+    (session?.user as any)?.role === 'ADMIN' ||
+    membership?.orgRole === 'PRESIDENT' ||
+    Boolean(membership?.designation?.title && /সভাপতি/i.test(membership.designation.title));
+  const canPerformActions = isSystemAdmin || isPresident;
   const mutations = useOrgMutations();
 
   const [search, setSearch] = React.useState('');
@@ -374,7 +382,7 @@ export function RegisteredUsersManagement() {
                 {/* Table Header */}
                 <div
                   className={`grid ${
-                    isSystemAdmin
+                    canPerformActions
                       ? 'grid-cols-[minmax(180px,1.2fr)_minmax(210px,1.4fr)_minmax(95px,0.7fr)_minmax(75px,0.5fr)_minmax(85px,0.5fr)_minmax(80px,0.5fr)]'
                       : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
                   } items-center gap-2.5 px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5`}
@@ -383,8 +391,8 @@ export function RegisteredUsersManagement() {
                   <div>যোগাযোগ</div>
                   <div>শ্রেণি</div>
                   <div>মাধ্যম</div>
-                  <div className={isSystemAdmin ? '' : 'text-right'}>তারিখ</div>
-                  {isSystemAdmin && <div className="text-right">অ্যাকশন</div>}
+                  <div className={canPerformActions ? '' : 'text-right'}>তারিখ</div>
+                  {canPerformActions && <div className="text-right">অ্যাকশন</div>}
                 </div>
 
                 {/* Compact Rows (একটার নিচে একটা কম জায়গায় স্লিম লেআউট) */}
@@ -393,7 +401,9 @@ export function RegisteredUsersManagement() {
                     const isMember = user.isMember;
                     const isTargetSuperAdmin =
                       user.role === 'SUPER_ADMIN' || user.email === 'itskausarprodhan@gmail.com';
-                    const isPresident = user.membership?.orgRole === 'PRESIDENT';
+                    const isTargetPresident =
+                      user.membership?.orgRole === 'PRESIDENT' ||
+                      (user.membership?.designation && /সভাপতি/i.test(user.membership.designation));
                     const isSelf =
                       session?.user?.id === user.id || session?.user?.email === user.email;
 
@@ -401,7 +411,7 @@ export function RegisteredUsersManagement() {
                       <div
                         key={user.id}
                         className={`grid ${
-                          isSystemAdmin
+                          canPerformActions
                             ? 'grid-cols-[minmax(180px,1.2fr)_minmax(210px,1.4fr)_minmax(95px,0.7fr)_minmax(75px,0.5fr)_minmax(85px,0.5fr)_minmax(80px,0.5fr)]'
                             : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
                         } items-center gap-2.5 px-3 py-2 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors ${
@@ -512,16 +522,16 @@ export function RegisteredUsersManagement() {
                         </div>
 
                         {/* 5. Registration Date */}
-                        <div className={`min-w-0 ${isSystemAdmin ? '' : 'text-right'}`}>
+                        <div className={`min-w-0 ${canPerformActions ? '' : 'text-right'}`}>
                           <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
                             {formatBengaliDate(user.createdAt)}
                           </span>
                         </div>
 
-                        {/* 6. System Admin Exclusive Actions (Suspend & Delete only - No 'সভাপতি করুন') */}
-                        {isSystemAdmin && (
+                        {/* 6. Officer Actions: Suspend (President & System Admin) | Delete (System Admin ONLY) */}
+                        {canPerformActions && (
                           <div className="flex items-center justify-end gap-1">
-                            {isTargetSuperAdmin || isSelf ? (
+                            {isTargetSuperAdmin || isSelf || (isPresident && !isSystemAdmin && isTargetPresident) ? (
                               <span className="text-[10px] text-slate-400 italic">সুরক্ষিত</span>
                             ) : (
                               <>
@@ -545,19 +555,21 @@ export function RegisteredUsersManagement() {
                                     <Ban className="w-3.5 h-3.5" />
                                   )}
                                 </button>
-                                <button
-                                  type="button"
-                                  disabled={actionLoadingId === user.id}
-                                  onClick={() => setActiveDialog({ type: 'DELETE', user })}
-                                  title="অ্যাকাউন্ট মুছে ফেলুন"
-                                  className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-colors disabled:opacity-50 cursor-pointer"
-                                >
-                                  {actionLoadingId === user.id ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  )}
-                                </button>
+                                {isSystemAdmin && (
+                                  <button
+                                    type="button"
+                                    disabled={actionLoadingId === user.id}
+                                    onClick={() => setActiveDialog({ type: 'DELETE', user })}
+                                    title="অ্যাকাউন্ট মুছে ফেলুন"
+                                    className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-colors disabled:opacity-50 cursor-pointer"
+                                  >
+                                    {actionLoadingId === user.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                )}
                               </>
                             )}
                           </div>

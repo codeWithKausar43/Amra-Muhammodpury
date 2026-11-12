@@ -506,6 +506,14 @@ export default function OrganizationAdminPage() {
             </button>
 
             <Link
+              href="/organization/member"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs border border-white/25 transition-all whitespace-nowrap"
+            >
+              <Award className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+              <span>সদস্য ড্যাশবোর্ড</span>
+            </Link>
+
+            <Link
               href="/organization"
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors whitespace-nowrap"
             >

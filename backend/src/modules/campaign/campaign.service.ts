@@ -103,17 +103,104 @@ export class CampaignService {
       where: { id: userId },
       select: { role: true, email: true },
     });
-    if (user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com') return 'SUPER_ADMIN';
+    if (
+      user?.role === 'SUPER_ADMIN' ||
+      user?.email === 'itskausarprodhan@gmail.com' ||
+      user?.email === 'itskausarprod@gmail.com'
+    ) {
+      return 'SUPER_ADMIN';
+    }
     if (user?.role === 'ADMIN') return 'PRESIDENT';
 
     const membership = await this.prisma.orgMembership.findUnique({
       where: { userId },
-      select: { orgRole: true, status: true },
+      include: { designation: true },
     });
-    if (membership && membership.status === 'ACTIVE') {
-      if (membership.orgRole === 'SUPER_ADMIN') return 'PRESIDENT';
-      return membership.orgRole;
+    if (membership) {
+      const officerRoles = [
+        'SUPER_ADMIN',
+        'PRESIDENT',
+        'VICE_PRESIDENT',
+        'GENERAL_SECRETARY',
+        'TREASURER',
+        'MODERATOR',
+        'ADMIN',
+      ];
+      if (officerRoles.includes(membership.orgRole)) {
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE' },
+            })
+            .catch(() => {});
+        }
+        if (membership.orgRole === 'SUPER_ADMIN') return 'PRESIDENT';
+        return membership.orgRole;
+      }
+      const desigCode = membership.designation?.code?.toUpperCase();
+      if (desigCode === 'PRESIDENT' || desigCode === 'CONVENER') {
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE', orgRole: 'PRESIDENT' },
+            })
+            .catch(() => {});
+        }
+        return 'PRESIDENT';
+      }
+      if (desigCode && officerRoles.includes(desigCode)) {
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE' },
+            })
+            .catch(() => {});
+        }
+        return desigCode;
+      }
+      if (
+        membership.designation?.name &&
+        /সভাপতি/i.test(membership.designation.name) &&
+        !/সহ[- ]?সভাপতি/i.test(membership.designation.name)
+      ) {
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE', orgRole: 'PRESIDENT' },
+            })
+            .catch(() => {});
+        }
+        return 'PRESIDENT';
+      }
     }
+
+    // Check active committee assignments
+    const committeeAssignment = await this.prisma.orgCommitteeMember.findFirst({
+      where: { userId, isCurrent: true },
+      include: { designation: true },
+    });
+    if (committeeAssignment) {
+      const codeUpper = committeeAssignment.designation?.code?.toUpperCase();
+      if (codeUpper === 'PRESIDENT' || codeUpper === 'CONVENER') return 'PRESIDENT';
+      if (
+        codeUpper &&
+        ['VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(codeUpper)
+      ) {
+        return codeUpper;
+      }
+      if (
+        committeeAssignment.customTitle &&
+        /সভাপতি/i.test(committeeAssignment.customTitle) &&
+        !/সহ[- ]?সভাপতি/i.test(committeeAssignment.customTitle)
+      ) {
+        return 'PRESIDENT';
+      }
+    }
+
     return null;
   }
 

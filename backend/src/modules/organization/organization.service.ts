@@ -203,17 +203,105 @@ export class OrganizationService {
       where: { id: userId },
       select: { role: true, email: true },
     });
-    if (user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com') return 'SUPER_ADMIN';
+    if (
+      user?.role === 'SUPER_ADMIN' ||
+      user?.email === 'itskausarprodhan@gmail.com' ||
+      user?.email === 'itskausarprod@gmail.com'
+    ) {
+      return 'SUPER_ADMIN';
+    }
     if (user?.role === 'ADMIN') return 'PRESIDENT'; // System ADMIN has President privileges
 
     const membership = await this.prisma.orgMembership.findUnique({
       where: { userId },
-      select: { orgRole: true, status: true },
+      include: { designation: true },
     });
-    if (membership && membership.status === 'ACTIVE') {
-      if (membership.orgRole === 'SUPER_ADMIN') return 'PRESIDENT';
-      return membership.orgRole;
+    if (membership) {
+      const officerRoles = [
+        'SUPER_ADMIN',
+        'PRESIDENT',
+        'VICE_PRESIDENT',
+        'GENERAL_SECRETARY',
+        'TREASURER',
+        'MODERATOR',
+        'ADMIN',
+      ];
+      if (officerRoles.includes(membership.orgRole)) {
+        // Auto-heal membership status to ACTIVE for officers if previously pending
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE' },
+            })
+            .catch(() => {});
+        }
+        if (membership.orgRole === 'SUPER_ADMIN') return 'PRESIDENT';
+        return membership.orgRole;
+      }
+      const desigCode = membership.designation?.code?.toUpperCase();
+      if (desigCode === 'PRESIDENT' || desigCode === 'CONVENER') {
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE', orgRole: 'PRESIDENT' },
+            })
+            .catch(() => {});
+        }
+        return 'PRESIDENT';
+      }
+      if (desigCode && officerRoles.includes(desigCode)) {
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE' },
+            })
+            .catch(() => {});
+        }
+        return desigCode;
+      }
+      if (
+        membership.designation?.name &&
+        /সভাপতি/i.test(membership.designation.name) &&
+        !/সহ[- ]?সভাপতি/i.test(membership.designation.name)
+      ) {
+        if (membership.status !== 'ACTIVE') {
+          await this.prisma.orgMembership
+            .update({
+              where: { id: membership.id },
+              data: { status: 'ACTIVE', orgRole: 'PRESIDENT' },
+            })
+            .catch(() => {});
+        }
+        return 'PRESIDENT';
+      }
     }
+
+    // Check active committee assignments
+    const committeeAssignment = await this.prisma.orgCommitteeMember.findFirst({
+      where: { userId, isCurrent: true },
+      include: { designation: true },
+    });
+    if (committeeAssignment) {
+      const codeUpper = committeeAssignment.designation?.code?.toUpperCase();
+      if (codeUpper === 'PRESIDENT' || codeUpper === 'CONVENER') return 'PRESIDENT';
+      if (
+        codeUpper &&
+        ['VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(codeUpper)
+      ) {
+        return codeUpper;
+      }
+      if (
+        committeeAssignment.customTitle &&
+        /সভাপতি/i.test(committeeAssignment.customTitle) &&
+        !/সহ[- ]?সভাপতি/i.test(committeeAssignment.customTitle)
+      ) {
+        return 'PRESIDENT';
+      }
+    }
+
     return null;
   }
 
@@ -987,7 +1075,20 @@ export class OrganizationService {
     });
 
     const isSysAdmin = await this.isSystemAdmin(userId);
-    if (!membership || (membership.status !== 'ACTIVE' && !isSysAdmin)) {
+    const role = await this.getOfficerRole(userId);
+    const isOfficer = Boolean(
+      role &&
+        [
+          'SUPER_ADMIN',
+          'PRESIDENT',
+          'VICE_PRESIDENT',
+          'GENERAL_SECRETARY',
+          'TREASURER',
+          'MODERATOR',
+          'ADMIN',
+        ].includes(role),
+    );
+    if (!membership || (membership.status !== 'ACTIVE' && !isSysAdmin && !isOfficer)) {
       throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ মেম্বার ড্যাশবোর্ড দেখতে পারবেন');
     }
 
@@ -2887,7 +2988,20 @@ export class OrganizationService {
     });
 
     const isSysAdmin = await this.isSystemAdmin(userId);
-    if (!isSysAdmin && (!membership || membership.status !== 'ACTIVE')) {
+    const role = await this.getOfficerRole(userId);
+    const isOfficer = Boolean(
+      role &&
+        [
+          'SUPER_ADMIN',
+          'PRESIDENT',
+          'VICE_PRESIDENT',
+          'GENERAL_SECRETARY',
+          'TREASURER',
+          'MODERATOR',
+          'ADMIN',
+        ].includes(role),
+    );
+    if (!isSysAdmin && !isOfficer && (!membership || membership.status !== 'ACTIVE')) {
       throw new ForbiddenError('কেবলমাত্র সক্রিয় সদস্যগণ নির্বাচনে প্রার্থী হতে পারেন');
     }
 
@@ -2957,7 +3071,20 @@ export class OrganizationService {
     });
 
     const isSysAdmin = await this.isSystemAdmin(userId);
-    if (!isSysAdmin && (!membership || membership.status !== 'ACTIVE')) {
+    const role = await this.getOfficerRole(userId);
+    const isOfficer = Boolean(
+      role &&
+        [
+          'SUPER_ADMIN',
+          'PRESIDENT',
+          'VICE_PRESIDENT',
+          'GENERAL_SECRETARY',
+          'TREASURER',
+          'MODERATOR',
+          'ADMIN',
+        ].includes(role),
+    );
+    if (!isSysAdmin && !isOfficer && (!membership || membership.status !== 'ACTIVE')) {
       throw new ForbiddenError('কেবলমাত্র অনুমোদিত সক্রিয় সদস্যগণ ভোট দিতে পারেন');
     }
 
@@ -3192,7 +3319,20 @@ export class OrganizationService {
     });
 
     const isSysAdmin = await this.isSystemAdmin(userId);
-    if (!isSysAdmin && (!requester || requester.status !== 'ACTIVE')) {
+    const role = await this.getOfficerRole(userId);
+    const isOfficer = Boolean(
+      role &&
+        [
+          'SUPER_ADMIN',
+          'PRESIDENT',
+          'VICE_PRESIDENT',
+          'GENERAL_SECRETARY',
+          'TREASURER',
+          'MODERATOR',
+          'ADMIN',
+        ].includes(role),
+    );
+    if (!isSysAdmin && !isOfficer && (!requester || requester.status !== 'ACTIVE')) {
       throw new ForbiddenError('শুধুমাত্র সংগঠনের সক্রিয় সদস্যরা সদস্য ডিরেক্টরি দেখতে পারবেন');
     }
 
@@ -3466,8 +3606,14 @@ export class OrganizationService {
 
   public async toggleUserSystemRole(adminId: string, targetUserId: string, newRole: 'USER' | 'ADMIN' | 'SUPER_ADMIN') {
     const isSysAdmin = await this.isSystemAdmin(adminId);
-    if (!isSysAdmin) {
-      throw new ForbiddenError('ইউজার রোল পরিবর্তন করার অনুমতি শুধুমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    const role = await this.getOfficerRole(adminId);
+    const isPresident = role === 'PRESIDENT' || role === 'SUPER_ADMIN';
+    if (!isSysAdmin && !isPresident) {
+      throw new ForbiddenError('ইউজার রোল পরিবর্তন করার অনুমতি শুধুমাত্র প্রধান সিস্টেম অ্যাডমিন ও সভাপতির রয়েছে');
+    }
+
+    if (newRole === 'SUPER_ADMIN' && !isSysAdmin) {
+      throw new ForbiddenError('সিস্টেম অ্যাডমিন রোল প্রদানের ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
     }
 
     const targetUser = await this.prisma.user.findUnique({
@@ -3489,8 +3635,10 @@ export class OrganizationService {
 
   public async suspendUser(adminId: string, targetUserId: string, isSuspended: boolean, reason?: string) {
     const isSysAdmin = await this.isSystemAdmin(adminId);
-    if (!isSysAdmin) {
-      throw new ForbiddenError('ব্যবহারকারী স্থগিত (Suspend) করার ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+    const role = await this.getOfficerRole(adminId);
+    const isPresident = role === 'PRESIDENT' || role === 'SUPER_ADMIN';
+    if (!isSysAdmin && !isPresident) {
+      throw new ForbiddenError('ব্যবহারকারী স্থগিত (Suspend) করার ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিন ও সভাপতির রয়েছে');
     }
 
     const targetUser = await this.prisma.user.findUnique({
@@ -3527,8 +3675,15 @@ export class OrganizationService {
   }
 
   public async deleteUser(adminId: string, targetUserId: string) {
-    const isSysAdmin = await this.isSystemAdmin(adminId);
-    if (!isSysAdmin) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true, email: true },
+    });
+    const isSuperAdmin =
+      user?.role === 'SUPER_ADMIN' ||
+      user?.email === 'itskausarprodhan@gmail.com' ||
+      user?.email === 'itskausarprod@gmail.com';
+    if (!isSuperAdmin) {
       throw new ForbiddenError('ব্যবহারকারী মুছে ফেলার ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
     }
 
@@ -4247,12 +4402,25 @@ export class OrganizationService {
         resolvedOrgRole = 'MEMBER';
       }
 
-      // 1. Update primary designation & orgRole in OrgMembership
+      if (resolvedOrgRole === 'PRESIDENT') {
+        if (!isSysAdmin) {
+          throw new ForbiddenError('সংগঠনের সভাপতি নির্ধারণের ক্ষমতা কেবলমাত্র প্রধান সিস্টেম অ্যাডমিনের রয়েছে');
+        }
+        await tx.user.update({
+          where: { id: membership.userId },
+          data: { role: 'ADMIN' },
+        });
+      }
+
+      // 1. Update primary designation & orgRole in OrgMembership (auto-activate officer status)
       const updatedMembership = await tx.orgMembership.update({
         where: { id: memberId },
         data: {
           designationId: targetDesignationId !== undefined ? targetDesignationId : undefined,
           ...(resolvedOrgRole ? { orgRole: resolvedOrgRole } : {}),
+          ...(resolvedOrgRole && resolvedOrgRole !== 'MEMBER'
+            ? { status: 'ACTIVE' }
+            : {}),
         },
         include: { designation: true },
       });
