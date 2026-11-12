@@ -11,7 +11,6 @@ import {
   CreditCard,
   Settings,
   Sparkles,
-  Lock,
   HeartHandshake,
 } from 'lucide-react';
 import {
@@ -183,40 +182,10 @@ export default function OrganizationPage() {
       )}
 
       {/* 3. Organization Financial Transparency & Complete Accounts Ledger (Protected: Visible ONLY to Active Members & Officers) */}
-      {isActiveMember || isOfficer ? (
+      {(isActiveMember || isOfficer) && (
         <section id="transparency" className="pt-2 animate-in fade-in">
           <MemberFinancialTransparency />
         </section>
-      ) : (
-        /* For General / Non-member Users: Preview Banner explaining accounts are for members, and directing to membership */
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 shadow-md animate-in fade-in">
-          <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 text-left">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-emerald-300 text-xs font-semibold backdrop-blur-sm">
-                <Lock className="w-3.5 h-3.5" />
-                <span>সদস্যদের জন্য সংরক্ষিত</span>
-              </div>
-              <h3 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white">
-                অভ্যন্তরীণ তহবিল হিসাবরক্ষণ ও প্রাতিষ্ঠানিক সুযোগ
-              </h3>
-              <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed font-normal">
-                সংগঠনের বিস্তারিত আয়-ব্যয় অডিট লেজার, মানবিক সহায়তা ও বৃক্ষরোপণ খতিয়ান শুধুমাত্র অনুমোদিত প্রাতিষ্ঠানিক সদস্যদের জন্য সংরক্ষিত। মোহাম্মদপুরের নাগরিক উন্নয়ন ও স্বচ্ছ কার্যক্রমে সরাসরি অংশীদার হতে সদস্যপদ গ্রহণ করুন।
-              </p>
-            </div>
-
-            <div className="shrink-0 pt-1 md:pt-0">
-              <Link
-                href="/organization/apply"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-emerald-950 font-bold text-xs sm:text-sm hover:bg-emerald-50 shadow-md active:scale-95 transition-all"
-              >
-                <span>সদস্য হতে আবেদন করুন</span>
-                <span className="text-emerald-700">→</span>
-              </Link>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* 4. Why Join & Membership Benefits (Visible to Non-Members so general visitors learn all about the organization) */}
