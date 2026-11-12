@@ -133,7 +133,7 @@ export function MemberAnalyticsGraph({
         {
           id: 'overdue',
           shortLabel: 'মেয়াদোত্তীর্ণ',
-          compactLabel: 'মেয়াদশেষ',
+          compactLabel: 'মেয়াদোত্তীর্ণ',
           fullLabel: 'দীর্ঘমেয়াদী বকেয়া তাগিদ',
           value: overdueCount,
           color: '#DC2626',
@@ -233,7 +233,7 @@ export function MemberAnalyticsGraph({
       {
         id: 'overdue',
         shortLabel: 'মেয়াদোত্তীর্ণ',
-        compactLabel: 'মেয়াদশেষ',
+        compactLabel: 'মেয়াদোত্তীর্ণ',
         fullLabel: 'একাধিক মাস অনাদায়ী বকেয়া',
         value: overdueCount,
         color: '#DC2626',

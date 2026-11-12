@@ -4022,8 +4022,9 @@ export class OrganizationService {
     const paidThisMonthCount = paidUserIdSet.size;
     const unpaidThisMonthCount = Math.max(0, eligibleTargetUserIds.length - paidThisMonthCount);
 
-    // Overdue count: active members who have not paid past due months
+    // Overdue count: active members who have multiple months overdue (consistent with getContributionTracking)
     let overdueCount = 0;
+    const overdueUserIds: string[] = [];
     const allVerifiedPayments = await this.prisma.contributionPayment.findMany({
       where: {
         userId: { in: activeUserIds },
@@ -4045,17 +4046,27 @@ export class OrganizationService {
       const jMonth = jDate.getMonth() + 1;
       const vSet = memberVerifiedMap.get(m.userId) || new Set();
 
-      let hasOverdue = false;
-      const startM = targetYear === jYear ? jMonth : 1;
-      const checkEndM = targetYear === currentYear ? currentMonth : 12;
+      const evalStartYear = Math.max(ORG_OFFICIAL_START_YEAR, jYear);
+      let overdueMonthsCount = 0;
 
-      for (let monthIdx = startM; monthIdx <= checkEndM; monthIdx++) {
-        if (!vSet.has(`${targetYear}-${monthIdx}`)) {
-          hasOverdue = true;
-          break;
+      for (let y = evalStartYear; y <= currentYear; y++) {
+        const startM = y === ORG_OFFICIAL_START_YEAR
+          ? Math.max(ORG_OFFICIAL_START_MONTH, jMonth)
+          : (y === jYear ? jMonth : 1);
+        const endM = y === currentYear ? currentMonth : 12;
+
+        for (let mIdx = startM; mIdx <= endM; mIdx++) {
+          if (!isMonthEligibleForContribution(y, mIdx, m.joinedAt, m.createdAt)) continue;
+          if (!vSet.has(`${y}-${mIdx}`)) {
+            overdueMonthsCount++;
+          }
         }
       }
-      if (hasOverdue) overdueCount++;
+
+      if (overdueMonthsCount > 1) {
+        overdueCount++;
+        overdueUserIds.push(m.userId);
+      }
     }
 
     // 2. Build Prisma Filter Condition for Member Query
@@ -4099,6 +4110,9 @@ export class OrganizationService {
       } else if (query.paymentStatus === 'UNPAID') {
         const unpaidEligibleUserIds = eligibleTargetUserIds.filter((id) => !paidUserIdSet.has(id));
         whereCondition.userId = { in: unpaidEligibleUserIds };
+        whereCondition.status = 'ACTIVE';
+      } else if (query.paymentStatus === 'OVERDUE') {
+        whereCondition.userId = { in: overdueUserIds };
         whereCondition.status = 'ACTIVE';
       } else if (query.paymentStatus === 'PENDING') {
         const pendingPayments = await this.prisma.contributionPayment.findMany({
