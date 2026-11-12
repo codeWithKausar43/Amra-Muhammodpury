@@ -57,7 +57,13 @@ export function isPwaStandalone(): boolean {
     typeof document.referrer === 'string' &&
     document.referrer.startsWith('android-app://');
 
-  const standalone = Boolean(isStandaloneMedia || isIosStandalone || isAndroidTwa);
+  // 5. Android WebView detection (APK wrapper apps)
+  // Android WebViews include "; wv)" in User-Agent string
+  const ua = navigator.userAgent || '';
+  const isAndroidWebView =
+    /Android/i.test(ua) && /; wv\)/.test(ua);
+
+  const standalone = Boolean(isStandaloneMedia || isIosStandalone || isAndroidTwa || isAndroidWebView);
   if (standalone) {
     window.__IS_PWA_STANDALONE__ = true;
   }

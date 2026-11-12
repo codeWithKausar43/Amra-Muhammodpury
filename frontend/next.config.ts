@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
           { key: 'Content-Disposition', value: 'attachment; filename="mohammadpuri-community.apk"' },
         ],
       },
+      {
+        source: '/.well-known/assetlinks.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/json' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+        ],
+      },
     ];
   },
 };

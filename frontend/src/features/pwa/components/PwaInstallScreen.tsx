@@ -37,7 +37,6 @@ export default function PwaInstallScreen({
 
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [isOpeningApp, setIsOpeningApp] = React.useState<boolean>(false);
-  const [showAndroidGuide, setShowAndroidGuide] = React.useState<boolean>(false);
   const [apkDownloading, setApkDownloading] = React.useState<boolean>(false);
 
   // APK direct download — Android only
@@ -96,7 +95,6 @@ export default function PwaInstallScreen({
 
   const handleInstallClick = async () => {
     setIsProcessing(true);
-    setShowAndroidGuide(false);
     // Safety: determine mobile status at click time via UA (protects against stale state)
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
     const isMobileAtClickTime =
@@ -130,9 +128,6 @@ export default function PwaInstallScreen({
       }
 
       if (result === 'dismissed') {
-        if (platformInfo.isAndroid || isMobileAtClickTime) {
-          setShowAndroidGuide(true);
-        }
         return;
       }
 
@@ -140,7 +135,6 @@ export default function PwaInstallScreen({
       if (platformInfo.isAndroid || isMobileAtClickTime) {
         // Android: directly download the APK file — 1-tap, no instructions needed
         triggerApkDownload();
-        setShowAndroidGuide(true);
       } else if (platformInfo.isIos) {
         // iOS instructions are already rendered
       } else {
@@ -151,7 +145,6 @@ export default function PwaInstallScreen({
       console.warn('Install error:', err);
       if (platformInfo.isAndroid || isMobileAtClickTime) {
         triggerApkDownload();
-        setShowAndroidGuide(true);
       }
     } finally {
       setIsProcessing(false);
@@ -177,7 +170,6 @@ export default function PwaInstallScreen({
 
   const handleForceReinstall = () => {
     clearInstallRecord();
-    setShowAndroidGuide(false);
     setInstalledSuccess(false);
     handleInstallClick();
   };
@@ -391,64 +383,7 @@ export default function PwaInstallScreen({
             </div>
           )}
 
-          {/* =========================================================================
-              SECTION 5: Android Installation Helper — APK download + step guide
-             ========================================================================= */}
-          {platformInfo.isAndroid && !installedSuccess && (showAndroidGuide || (!hasStoredRecord && !isInstalled)) && (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-left space-y-3 mt-2 animate-in fade-in duration-300">
-              <div className="flex items-center gap-2 text-xs font-bold text-brand-mint">
-                <Smartphone className="w-4 h-4 text-brand-emerald" />
-                <span>সরাসরি APK ডাউনলোড করে ইনস্টল করুন:</span>
-              </div>
 
-              {/* Primary: APK direct download link */}
-              <a
-                href="/mohammadpuri.apk"
-                download="মোহাম্মদপুর-কমিউনিটি.apk"
-                className="w-full py-3 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
-              >
-                <Download className="w-4 h-4" />
-                <span>APK ডাউনলোড করুন (৩.৩ MB)</span>
-              </a>
-
-              <ol className="space-y-2 text-xs text-slate-300 font-medium pl-0.5">
-                <li className="flex items-start gap-2.5">
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-emerald/30 border border-brand-emerald/40 text-brand-mint text-[10px] font-bold shrink-0 mt-0.5">
-                    ১
-                  </span>
-                  <span>
-                    উপরের বাটনে চেপে{' '}
-                    <strong className="text-white">APK ফাইলটি ডাউনলোড</strong>{' '}
-                    করুন।
-                  </span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-emerald/30 border border-brand-emerald/40 text-brand-mint text-[10px] font-bold shrink-0 mt-0.5">
-                    ২
-                  </span>
-                  <span>
-                    নোটিফিকেশন বারে বা ফাইল ম্যানেজারে গিয়ে{' '}
-                    <strong className="text-white">ডাউনলোড করা ফাইলে ট্যাপ</strong>{' '}
-                    করুন।
-                  </span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-emerald/30 border border-brand-emerald/40 text-brand-mint text-[10px] font-bold shrink-0 mt-0.5">
-                    ৩
-                  </span>
-                  <span>
-                    <strong className="text-white">&quot;Install&quot;</strong> বাটনে চাপলেই অ্যাপটি ফোনে ইনস্টল হয়ে যাবে!
-                  </span>
-                </li>
-              </ol>
-
-              <p className="text-[10px] text-slate-400 leading-relaxed">
-                ⚠️ &quot;অজানা উৎস&quot; বা Unknown sources সম্পর্কে সতর্কতা আসলে{' '}
-                <strong className="text-slate-300">Allow</strong> বা{' '}
-                <strong className="text-slate-300">অনুমতি দিন</strong> চাপুন।
-              </p>
-            </div>
-          )}
           {/* =========================================================================
               SECTION 6: iOS Safari Step Instructions
              ========================================================================= */}

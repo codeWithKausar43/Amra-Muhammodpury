@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.amra_muhammodpury.twa",
+      "sha256_cert_fingerprints": [
+        "B7:15:54:F9:F2:D7:09:79:AA:1A:EE:D2:6A:74:B5:25:70:6B:35:50:36:29:4C:75:57:B4:81:8F:7D:DC:ED:7D"
+      ]
+    }
+  }
+]
