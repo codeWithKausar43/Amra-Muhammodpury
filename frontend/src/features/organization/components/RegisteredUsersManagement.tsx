@@ -381,11 +381,10 @@ export function RegisteredUsersManagement() {
               <div className="min-w-[660px]">
                 {/* Table Header */}
                 <div
-                  className={`grid ${
-                    canPerformActions
+                  className={`grid ${canPerformActions
                       ? 'grid-cols-[minmax(180px,1.2fr)_minmax(210px,1.4fr)_minmax(95px,0.7fr)_minmax(75px,0.5fr)_minmax(85px,0.5fr)_minmax(80px,0.5fr)]'
                       : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
-                  } items-center gap-2.5 px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5`}
+                    } items-center gap-2.5 px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-white/5`}
                 >
                   <div>ব্যবহারকারী</div>
                   <div>যোগাযোগ</div>
@@ -410,13 +409,11 @@ export function RegisteredUsersManagement() {
                     return (
                       <div
                         key={user.id}
-                        className={`grid ${
-                          canPerformActions
+                        className={`grid ${canPerformActions
                             ? 'grid-cols-[minmax(180px,1.2fr)_minmax(210px,1.4fr)_minmax(95px,0.7fr)_minmax(75px,0.5fr)_minmax(85px,0.5fr)_minmax(80px,0.5fr)]'
                             : 'grid-cols-[minmax(180px,1.2fr)_minmax(220px,1.5fr)_minmax(100px,0.8fr)_minmax(85px,0.6fr)_minmax(95px,0.6fr)]'
-                        } items-center gap-2.5 px-3 py-2 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors ${
-                          user.isSuspended ? 'opacity-60 bg-rose-50/30 dark:bg-rose-950/10' : ''
-                        }`}
+                          } items-center gap-2.5 px-3 py-2 hover:bg-slate-50/70 dark:hover:bg-white/[0.02] rounded-xl transition-colors ${user.isSuspended ? 'opacity-60 bg-rose-50/30 dark:bg-rose-950/10' : ''
+                          }`}
                       >
                         {/* 1. User Profile & Name */}
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -543,11 +540,10 @@ export function RegisteredUsersManagement() {
                                     setActiveDialog({ type: 'SUSPEND', user });
                                   }}
                                   title={user.isSuspended ? 'স্থগিতাদেশ প্রত্যাহার করুন' : 'অ্যাকাউন্ট স্থগিত করুন'}
-                                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer ${
-                                    user.isSuspended
+                                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer ${user.isSuspended
                                       ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                                       : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400'
-                                  }`}
+                                    }`}
                                 >
                                   {actionLoadingId === user.id ? (
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -660,11 +656,11 @@ export function RegisteredUsersManagement() {
           inputPrompt={
             activeDialog.type === 'SUSPEND' && !activeDialog.user.isSuspended
               ? {
-                  label: 'স্থগিতের কারণ (ঐচ্ছিক):',
-                  placeholder: 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত',
-                  value: suspendReason,
-                  onChange: setSuspendReason,
-                }
+                label: 'স্থগিতের কারণ (ঐচ্ছিক):',
+                placeholder: 'প্রশাসনিক সিদ্ধান্তের প্রেক্ষিতে সাময়িকভাবে স্থগিত',
+                value: suspendReason,
+                onChange: setSuspendReason,
+              }
               : undefined
           }
         />
