@@ -399,10 +399,20 @@ export function RegisteredUsersManagement() {
                   {users.map((user) => {
                     const isMember = user.isMember;
                     const isTargetSuperAdmin =
-                      user.role === 'SUPER_ADMIN' || user.email === 'itskausarprodhan@gmail.com';
+                      user.role === 'SUPER_ADMIN' ||
+                      user.email === 'itskausarprodhan@gmail.com' ||
+                      user.email === 'itskausarprod@gmail.com';
+                    const targetOrgRole = user.membership?.orgRole;
+                    const targetDesignation = user.membership?.designation;
+
                     const isTargetPresident =
-                      user.membership?.orgRole === 'PRESIDENT' ||
-                      (user.membership?.designation && /সভাপতি/i.test(user.membership.designation));
+                      !isTargetSuperAdmin &&
+                      (targetOrgRole === 'PRESIDENT' ||
+                        (Boolean(targetDesignation) && /সভাপতি/i.test(targetDesignation!)));
+
+                    const isTargetAdmin =
+                      !isTargetSuperAdmin && !isTargetPresident && user.role === 'ADMIN';
+
                     const isSelf =
                       session?.user?.id === user.id || session?.user?.email === user.email;
 
@@ -441,16 +451,32 @@ export function RegisteredUsersManagement() {
                               {isMember && <VerifiedBadge size="xs" />}
                               {isTargetSuperAdmin ? (
                                 <span className="px-1.5 py-0.2 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20 shrink-0">
-                                  সিস্টেম এডমিন
+                                  সিস্টেম অ্যাডমিন
                                 </span>
-                              ) : isPresident ? (
+                              ) : isTargetPresident ? (
                                 <span className="px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0 inline-flex items-center gap-0.5">
                                   <Crown className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                                   সভাপতি
                                 </span>
-                              ) : user.role === 'ADMIN' ? (
+                              ) : targetDesignation ? (
+                                <span className="px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0">
+                                  {targetDesignation}
+                                </span>
+                              ) : targetOrgRole && targetOrgRole !== 'MEMBER' ? (
+                                <span className="px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 shrink-0">
+                                  {targetOrgRole === 'VICE_PRESIDENT'
+                                    ? 'সহ-সভাপতি'
+                                    : targetOrgRole === 'GENERAL_SECRETARY'
+                                    ? 'সাধারণ সম্পাদক'
+                                    : targetOrgRole === 'TREASURER'
+                                    ? 'কোষাধ্যক্ষ'
+                                    : targetOrgRole === 'MODERATOR'
+                                    ? 'সমন্বয়ক'
+                                    : targetOrgRole}
+                                </span>
+                              ) : isTargetAdmin ? (
                                 <span className="px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20 shrink-0">
-                                  এডমিন
+                                  প্রশাসক
                                 </span>
                               ) : null}
                               {user.isSuspended && (

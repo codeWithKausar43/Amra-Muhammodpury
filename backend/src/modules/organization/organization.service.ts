@@ -3647,7 +3647,12 @@ export class OrganizationService {
           ? {
               id: activeMembership.id,
               memberNumber: activeMembership.memberNumber,
-              orgRole: activeMembership.orgRole,
+              orgRole:
+                u.role === 'SUPER_ADMIN' ||
+                u.email === 'itskausarprodhan@gmail.com' ||
+                u.email === 'itskausarprod@gmail.com'
+                  ? 'SUPER_ADMIN'
+                  : activeMembership.orgRole,
               joinedAt: activeMembership.joinedAt,
               designation: activeMembership.designation?.name || null,
               rank: activeMembership.designation?.rank || null,
