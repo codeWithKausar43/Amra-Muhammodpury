@@ -20,6 +20,17 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
+  async headers() {
+    return [
+      {
+        source: '/mohammadpuri.apk',
+        headers: [
+          { key: 'Content-Type', value: 'application/vnd.android.package-archive' },
+          { key: 'Content-Disposition', value: 'attachment; filename="mohammadpuri-community.apk"' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

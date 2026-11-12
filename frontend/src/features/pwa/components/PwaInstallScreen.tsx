@@ -38,6 +38,27 @@ export default function PwaInstallScreen({
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [isOpeningApp, setIsOpeningApp] = React.useState<boolean>(false);
   const [showAndroidGuide, setShowAndroidGuide] = React.useState<boolean>(false);
+  const [apkDownloading, setApkDownloading] = React.useState<boolean>(false);
+
+  // APK direct download — Android only
+  const APK_URL = '/mohammadpuri.apk';
+  const APK_FILENAME = 'মোহাম্মদপুর-কমিউনিটি.apk';
+
+  const triggerApkDownload = () => {
+    try {
+      setApkDownloading(true);
+      const a = document.createElement('a');
+      a.href = APK_URL;
+      a.download = APK_FILENAME;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.warn('APK download error:', err);
+    } finally {
+      setTimeout(() => setApkDownloading(false), 2000);
+    }
+  };
   const [installedSuccess, setInstalledSuccess] = React.useState<boolean>(false);
 
   // Directly generates and downloads the standalone app launcher file ONLY on Desktop PC
@@ -117,7 +138,8 @@ export default function PwaInstallScreen({
 
       // 2. If native prompt unavailable or not ready:
       if (platformInfo.isAndroid || isMobileAtClickTime) {
-        // Mobile Android: Never download .url file! Show clear 1-tap browser install instructions
+        // Android: directly download the APK file — 1-tap, no instructions needed
+        triggerApkDownload();
         setShowAndroidGuide(true);
       } else if (platformInfo.isIos) {
         // iOS instructions are already rendered
@@ -128,6 +150,7 @@ export default function PwaInstallScreen({
     } catch (err) {
       console.warn('Install error:', err);
       if (platformInfo.isAndroid || isMobileAtClickTime) {
+        triggerApkDownload();
         setShowAndroidGuide(true);
       }
     } finally {
@@ -324,50 +347,79 @@ export default function PwaInstallScreen({
              ========================================================================= */}
           {!installedSuccess && !hasStoredRecord && !isInstalled && (
             <div className="space-y-3 pt-1">
-              <button
-                type="button"
-                onClick={handleInstallClick}
-                disabled={isPrompting || isProcessing}
-                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-80"
-              >
-                {isPrompting || isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>ইনস্টলেশন প্রস্তুত হচ্ছে...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5" />
-                    <span>অ্যাপটি ইনস্টল করুন</span>
-                  </>
-                )}
-              </button>
+              {/* Android: APK direct download button (primary CTA) */}
+              {platformInfo.isAndroid ? (
+                <a
+                  href="/mohammadpuri.apk"
+                  download="মোহাম্মদপুর-কমিউনিটি.apk"
+                  onClick={triggerApkDownload}
+                  className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
+                >
+                  {apkDownloading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>ডাউনলোড হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-5 h-5" />
+                      <span>অ্যাপটি ইনস্টল করুন</span>
+                    </>
+                  )}
+                </a>
+              ) : (
+                /* Non-Android (Desktop / iOS): native PWA prompt */
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  disabled={isPrompting || isProcessing}
+                  className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-emerald via-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm sm:text-base shadow-glow hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-80"
+                >
+                  {isPrompting || isProcessing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>ইনস্টলেশন প্রস্তুত হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-5 h-5" />
+                      <span>অ্যাপটি ইনস্টল করুন</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           )}
 
           {/* =========================================================================
-              SECTION 5: Android Installation Helper (One-tap Chrome Install)
+              SECTION 5: Android Installation Helper — APK download + step guide
              ========================================================================= */}
           {platformInfo.isAndroid && !installedSuccess && (showAndroidGuide || (!hasStoredRecord && !isInstalled)) && (
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-left space-y-3 mt-2 animate-in fade-in duration-300">
               <div className="flex items-center gap-2 text-xs font-bold text-brand-mint">
                 <Smartphone className="w-4 h-4 text-brand-emerald" />
-                <span>অ্যান্ড্রয়েডে সহজে ইনস্টল করার নিয়ম:</span>
+                <span>সরাসরি APK ডাউনলোড করে ইনস্টল করুন:</span>
               </div>
-              <ol className="space-y-2.5 text-xs text-slate-200 font-medium pl-0.5">
+
+              {/* Primary: APK direct download link */}
+              <a
+                href="/mohammadpuri.apk"
+                download="মোহাম্মদপুর-কমিউনিটি.apk"
+                className="w-full py-3 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
+              >
+                <Download className="w-4 h-4" />
+                <span>APK ডাউনলোড করুন (৩.৩ MB)</span>
+              </a>
+
+              <ol className="space-y-2 text-xs text-slate-300 font-medium pl-0.5">
                 <li className="flex items-start gap-2.5">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-emerald/30 border border-brand-emerald/40 text-brand-mint text-[10px] font-bold shrink-0 mt-0.5">
                     ১
                   </span>
                   <span>
-                    ব্রাউজারের অ্যাড্রেস বারের ডানে থাকা{' '}
-                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
-                      (+) প্লাস চিহ্ন
-                    </span>{' '}
-                    অথবা উপরের ডানপাশে ৩টি ডট{' '}
-                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
-                      ⋮ মেনু
-                    </span>-তে চাপুন।
+                    উপরের বাটনে চেপে{' '}
+                    <strong className="text-white">APK ফাইলটি ডাউনলোড</strong>{' '}
+                    করুন।
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">
@@ -375,11 +427,9 @@ export default function PwaInstallScreen({
                     ২
                   </span>
                   <span>
-                    মেনু থেকে{' '}
-                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
-                      <Download className="w-3 h-3 inline text-brand-mint" /> Install app
-                    </span>{' '}
-                    বা <strong>&quot;হোম স্ক্রিনে যোগ করুন&quot;</strong> চাপুন।
+                    নোটিফিকেশন বারে বা ফাইল ম্যানেজারে গিয়ে{' '}
+                    <strong className="text-white">ডাউনলোড করা ফাইলে ট্যাপ</strong>{' '}
+                    করুন।
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">
@@ -387,22 +437,18 @@ export default function PwaInstallScreen({
                     ৩
                   </span>
                   <span>
-                    <strong>&quot;Install&quot;</strong> চাপলেই সরাসরি আপনার ফোনে অফিসিয়াল অ্যাপটি ইনস্টল হয়ে যাবে!
+                    <strong className="text-white">&quot;Install&quot;</strong> বাটনে চাপলেই অ্যাপটি ফোনে ইনস্টল হয়ে যাবে!
                   </span>
                 </li>
               </ol>
 
-              <button
-                type="button"
-                onClick={handleOpenApp}
-                className="w-full mt-3 py-3 px-4 rounded-xl bg-brand-emerald hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md"
-              >
-                <span>সরাসরি অ্যাপে প্রবেশ করুন</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <p className="text-[10px] text-slate-400 leading-relaxed">
+                ⚠️ &quot;অজানা উৎস&quot; বা Unknown sources সম্পর্কে সতর্কতা আসলে{' '}
+                <strong className="text-slate-300">Allow</strong> বা{' '}
+                <strong className="text-slate-300">অনুমতি দিন</strong> চাপুন।
+              </p>
             </div>
           )}
-
           {/* =========================================================================
               SECTION 6: iOS Safari Step Instructions
              ========================================================================= */}
