@@ -99,13 +99,23 @@ export default function OrganizationPage() {
                 <p className="text-[11px] text-emerald-100">মাসিক অনুদান: ৳{application.monthlyContribution}</p>
               </div>
             ) : application?.status === 'APPROVED' && membership?.status === 'APPROVED_PAYMENT_PENDING' ? (
-              <Link
-                href="/organization/payment"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-gold text-slate-900 font-bold text-sm shadow-lg hover:brightness-105 active:scale-95 transition-all"
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>প্রারম্ভিক কিস্তি পরিশোধ করুন</span>
-              </Link>
+              membershipData?.pendingInitialPayment ? (
+                <div className="px-4 py-3 rounded-2xl bg-amber-500/15 backdrop-blur-md border border-amber-500/30 text-center">
+                  <div className="flex items-center justify-center gap-1.5 text-amber-300 text-xs font-bold mb-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>প্রারম্ভিক কিস্তি যাচাই ও অনুমোদন প্রক্রিয়াধীন</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-100">অ্যাডমিন অনুমোদন করার পর সদস্য ড্যাশবোর্ড সক্রিয় হবে</p>
+                </div>
+              ) : (
+                <Link
+                  href="/organization/payment"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-gold text-slate-900 font-bold text-sm shadow-lg hover:brightness-105 active:scale-95 transition-all"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>প্রারম্ভিক কিস্তি পরিশোধ করুন</span>
+                </Link>
+              )
             ) : (
               <Link
                 href="/organization/apply"

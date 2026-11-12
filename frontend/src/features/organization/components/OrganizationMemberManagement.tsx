@@ -418,7 +418,26 @@ export function OrganizationMemberManagement() {
                         <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
                           <span>আইডি: #{membership?.memberNumber || 'নির্ধারিত নয়'}</span>
                           <span>•</span>
-                          <span>{membership?.designation?.name || 'সাধারণ সদস্য'}</span>
+                          <span>
+                            {membership?.designation?.name ||
+                              (user?.role === 'SUPER_ADMIN' || user?.email === 'itskausarprodhan@gmail.com'
+                                ? 'সিস্টেম অ্যাডমিন'
+                                : membership?.orgRole === 'SUPER_ADMIN'
+                                ? 'সিস্টেম অ্যাডমিন'
+                                : membership?.orgRole === 'ADMIN' || user?.role === 'ADMIN'
+                                ? 'প্রশাসক'
+                                : membership?.orgRole === 'PRESIDENT'
+                                ? 'সভাপতি'
+                                : membership?.orgRole === 'VICE_PRESIDENT'
+                                ? 'সহ-সভাপতি'
+                                : membership?.orgRole === 'GENERAL_SECRETARY'
+                                ? 'সাধারণ সম্পাদক'
+                                : membership?.orgRole === 'TREASURER'
+                                ? 'কোষাধ্যক্ষ'
+                                : membership?.orgRole === 'MODERATOR'
+                                ? 'সমন্বয়ক'
+                                : 'সাধারণ সদস্য')}
+                          </span>
                         </div>
                       </div>
                     </div>

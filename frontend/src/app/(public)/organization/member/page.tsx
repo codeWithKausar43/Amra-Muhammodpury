@@ -49,6 +49,41 @@ const MONTH_NAMES_BN = [
   'ডিসেম্বর',
 ];
 
+function resolveMemberRoleDisplay(membership: any): { title: string; orgRole: string } {
+  const isSuperAdmin =
+    membership?.orgRole === 'SUPER_ADMIN' ||
+    membership?.user?.role === 'SUPER_ADMIN' ||
+    membership?.user?.email === 'itskausarprodhan@gmail.com' ||
+    membership?.user?.email === 'itskausarprod@gmail.com';
+
+  const isAdmin = membership?.orgRole === 'ADMIN' || membership?.user?.role === 'ADMIN';
+
+  if (isSuperAdmin) {
+    return { title: 'সিস্টেম অ্যাডমিন', orgRole: 'SUPER_ADMIN' };
+  }
+  if (membership?.designation?.title) {
+    return { title: membership.designation.title, orgRole: membership.orgRole || 'MEMBER' };
+  }
+  if (isAdmin) {
+    return { title: 'প্রশাসক', orgRole: 'ADMIN' };
+  }
+
+  switch (membership?.orgRole) {
+    case 'PRESIDENT':
+      return { title: 'সভাপতি', orgRole: 'PRESIDENT' };
+    case 'VICE_PRESIDENT':
+      return { title: 'সহ-সভাপতি', orgRole: 'VICE_PRESIDENT' };
+    case 'GENERAL_SECRETARY':
+      return { title: 'সাধারণ সম্পাদক', orgRole: 'GENERAL_SECRETARY' };
+    case 'TREASURER':
+      return { title: 'কোষাধ্যক্ষ', orgRole: 'TREASURER' };
+    case 'MODERATOR':
+      return { title: 'সমন্বয়ক', orgRole: 'MODERATOR' };
+    default:
+      return { title: 'সাধারণ সদস্য', orgRole: membership?.orgRole || 'MEMBER' };
+  }
+}
+
 function toBengaliNumber(num: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return Number(num || 0)
@@ -182,7 +217,8 @@ function downloadReceiptCanvas(receipt: any, membership: any) {
       ? membership.memberId
       : `#${membership.memberId}`
     : '#AMP-2026-0042';
-  const designation = `${membership?.designation?.title || 'সাধারণ সদস্য'} • ${membership?.orgRole || 'MEMBER'}`;
+  const roleDisplay = resolveMemberRoleDisplay(membership);
+  const designation = `${roleDisplay.title} • ${roleDisplay.orgRole}`;
   const purpose = receipt.title || `${MONTH_NAMES_BN[receipt.periodMonth - 1]} ${toBengaliDigits(receipt.periodYear)} এর মাসিক অনুদান`;
   const trxDisplay = receipt.senderNumber
     ? `মোবাইল: ${receipt.senderNumber}`
@@ -778,9 +814,14 @@ export default function MemberDashboardPage() {
             <h1 className="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-tight truncate">
               {membership.user?.name}
             </h1>
-            <p className="text-xs text-slate-600 dark:text-emerald-200/90 font-medium truncate">
-              {membership.designation?.title || 'সাধারণ সদস্য'} • {membership.orgRole}
-            </p>
+            {(() => {
+              const roleDisplay = resolveMemberRoleDisplay(membership);
+              return (
+                <p className="text-xs text-slate-600 dark:text-emerald-200/90 font-medium truncate">
+                  {roleDisplay.title} • {roleDisplay.orgRole}
+                </p>
+              );
+            })()}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-block px-3 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/90 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-[11px] sm:text-xs font-bold tracking-wider">
                 ID: {memberIdDisplay}
@@ -1727,7 +1768,7 @@ export default function MemberDashboardPage() {
                   <div>
                     <span className="text-[11px] text-slate-500 block">পদবী ও ভূমিকা:</span>
                     <span className="font-medium text-slate-800">
-                      {membership.designation?.title || 'সাধারণ সদস্য'} • {membership.orgRole}
+                      {resolveMemberRoleDisplay(membership).title} • {resolveMemberRoleDisplay(membership).orgRole}
                     </span>
                   </div>
                   <div>

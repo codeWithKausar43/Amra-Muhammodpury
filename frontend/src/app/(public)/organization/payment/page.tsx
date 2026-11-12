@@ -5,12 +5,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   CreditCard,
-  CheckCircle2,
   AlertCircle,
   Loader2,
   Copy,
   ArrowLeft,
   ShieldCheck,
+  Clock,
 } from 'lucide-react';
 import {
   useOrgMembershipStatusQuery,
@@ -138,23 +138,23 @@ export default function OrganizationPaymentPage() {
   if (isSuccess) {
     return (
       <div className="max-w-xl mx-auto px-4 py-12 text-center space-y-5">
-        <div className="w-16 h-16 rounded-3xl bg-brand-emerald/10 text-brand-emerald flex items-center justify-center mx-auto">
-          <CheckCircle2 className="w-10 h-10" />
+        <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+          <Clock className="w-10 h-10" />
         </div>
         <div className="space-y-2">
           <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-            অভিনন্দন! আপনার সদস্যপদ সক্রিয় হয়েছে
+            প্রারম্ভিক কিস্তির তথ্য জমা গৃহীত হয়েছে! ⏳
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
-            আপনার প্রারম্ভিক কিস্তি (৳{agreementAmount}) সফলভাবে যাচাই হয়েছে। আপনি এখন মোহাম্মদপুর কমিউনিটি সংগঠনের একজন পূর্ণাঙ্গ সক্রিয় সদস্য।
+            আপনার প্রারম্ভিক কিস্তি (৳{agreementAmount}) জমার তথ্য সফলভাবে গৃহীত হয়েছে। এটি বর্তমানে অ্যাডমিনের যাচাই ও অনুমোদনের অপেক্ষায় রয়েছে (PENDING)। অ্যাডমিন অনুমোদন প্রদান করলেই আপনার সদস্যপদ সক্রিয় হবে এবং আপনি সদস্য ড্যাশবোর্ডে প্রবেশ করতে পারবেন।
           </p>
         </div>
         <div className="pt-3">
           <Link
-            href="/organization/member"
+            href="/organization"
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-emerald text-white text-sm font-semibold hover:bg-emerald-800 transition-colors shadow-md"
           >
-            <span>সদস্য ড্যাশবোর্ডে প্রবেশ করুন</span>
+            <span>সংগঠনের পেজে ফিরে যান</span>
           </Link>
         </div>
       </div>
@@ -201,6 +201,17 @@ export default function OrganizationPaymentPage() {
           আপনার অনুমোদিত মাসিক অনুদান: <strong>৳{agreementAmount}</strong>। নিচের যে কোনো মাধ্যমে পরিশোধ করে প্রেরক নম্বর প্রদান করুন।
         </p>
       </div>
+
+      {/* Pending Verification Notice if already submitted */}
+      {membershipData?.pendingInitialPayment && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs sm:text-sm flex items-center gap-3">
+          <Clock className="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="space-y-0.5">
+            <p className="font-bold">আপনার প্রারম্ভিক কিস্তি ইতিমধ্যেই জমা রয়েছে (যাচাই ও অনুমোদন প্রক্রিয়াধীন)</p>
+            <p className="text-[11px] opacity-90">অ্যাডমিন অনুমোদন করলেই আপনার সদস্যপদ সক্রিয় হয়ে যাবে। পুনরায় পেমেন্ট জমা দেওয়ার প্রয়োজন নেই।</p>
+          </div>
+        </div>
+      )}
 
       {/* Payment Method Selector */}
       <div className="bg-white dark:bg-brand-charcoal-dark/70 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/10 space-y-3">

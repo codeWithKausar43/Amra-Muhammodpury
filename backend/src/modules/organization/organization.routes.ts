@@ -128,7 +128,7 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const validatedData = InitialPaymentSchema.parse(request.body);
     const membership = await service.submitInitialPayment(session.user.id, validatedData);
     return reply.send(
-      successResponse(membership, 'অভিনন্দন! আপনার প্রারম্ভিক কিস্তি যাচাই হয়েছে এবং সদস্যপদ সক্রিয় করা হয়েছে।'),
+      successResponse(membership, 'আপনার প্রারম্ভিক কিস্তির তথ্য সফলভাবে জমা দেওয়া হয়েছে। অ্যাডমিন যাচাই ও অনুমোদন করার পর সদস্যপদ সক্রিয় হবে।'),
     );
   });
 

@@ -386,12 +386,25 @@ export class OrganizationService {
       where: { userId, isCurrent: true },
     });
 
+    const pendingInitialPayment = await this.prisma.contributionPayment.findFirst({
+      where: { userId, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        amount: true,
+        receiptNumber: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
     return {
       hasMembership: Boolean(membership),
       membership,
       committeeMember,
       latestApplication: application,
       currentAgreement: agreement,
+      pendingInitialPayment,
     };
   }
 
@@ -573,10 +586,9 @@ export class OrganizationService {
     const periodYear = now.getFullYear();
 
     const receiptNumber = `AMP-REC-${periodYear}${String(periodMonth).padStart(2, '0')}-${crypto.randomInt(1000, 9999)}`;
-    const memberNumber = `AMP-${periodYear}-${crypto.randomInt(1000, 9999)}`;
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Record payment
+      // 1. Record payment as PENDING (strictly awaiting admin verification)
       const payment = await tx.contributionPayment.create({
         data: {
           userId,
@@ -587,45 +599,33 @@ export class OrganizationService {
           trxId: data.trxId?.trim() || null,
           senderNumber: data.senderNumber?.trim() || null,
           receiptNumber,
-          status: 'VERIFIED',
-          notes: data.notes || 'সদস্যপদ অ্যাক্টিভেশন ও প্রথম মাসের অনুদান',
+          status: 'PENDING',
+          notes: data.notes || 'সদস্যপদ সক্রিয়করণ ও প্রারম্ভিক কিস্তি',
         },
       });
 
-      // 2. Activate membership
-      const updatedMembership = await tx.orgMembership.update({
-        where: { userId },
-        data: {
-          status: 'ACTIVE',
-          memberNumber,
-          joinedAt: now,
-          lastPaymentDate: now,
-        },
-      });
+      // 2. Notify officers & admins
+      this.prisma.user?.findUnique?.({ where: { id: userId }, select: { name: true } })?.then((user) => {
+        this.notificationService.sendPushToOfficers({
+          title: 'নতুন প্রারম্ভিক চাঁদা জমা 🔔',
+          body: `${user?.name || 'একজন আবেদনকারী'} সদস্যপদ সক্রিয় করতে ৳${amount} প্রারম্ভিক চাঁদা জমা দিয়েছেন। যাচাই ও অনুমোদন প্রয়োজন।`,
+          url: '/organization/admin',
+          sound: '/sounds/notification.wav',
+        }, userId).catch(() => { });
 
-      // 3. Credit General Fund
-      const generalFund = await tx.orgFund.findUnique({ where: { code: 'GENERAL' } });
-      if (generalFund) {
-        await tx.orgFund.update({
-          where: { id: generalFund.id },
-          data: { balance: { increment: amount } },
-        });
+        this.notificationService.sendPushToUser(userId, {
+          title: 'প্রারম্ভিক চাঁদা জমা গৃহীত হয়েছে ⏳',
+          body: `আপনার ৳${amount} প্রারম্ভিক চাঁদার তথ্য জমা হয়েছে। এটি অ্যাডমিন যাচাই ও অনুমোদন করার পর আপনার সদস্যপদ সক্রিয় হবে।`,
+          url: '/organization',
+        })?.catch?.(() => { });
+      })?.catch?.(() => { });
 
-        await tx.fundTransaction.create({
-          data: {
-            fundId: generalFund.id,
-            type: 'CONTRIBUTION',
-            amount,
-            title: `নতুন সদস্যপদ ও অনুদান (${memberNumber})`,
-            description: `মাসিক চাঁদা পরিশোধ: ${periodMonth}/${periodYear}`,
-            category: 'সদস্য চাঁদা',
-            referenceId: payment.id,
-            performedBy: userId,
-          },
-        });
-      }
-
-      return { payment, membership: updatedMembership };
+      return {
+        payment,
+        membership,
+        status: 'PENDING',
+        message: 'আপনার প্রারম্ভিক কিস্তির তথ্য সফলভাবে জমা দেওয়া হয়েছে। অ্যাডমিন যাচাই ও অনুমোদন করার পর সদস্যপদ সক্রিয় হবে।',
+      };
     });
   }
 
@@ -997,6 +997,26 @@ export class OrganizationService {
           where: { userId: payment.userId },
           data: { lastPaymentDate: new Date() },
         });
+
+        // If member was waiting for initial payment verification, activate membership now!
+        const existingMember = await tx.orgMembership.findUnique({
+          where: { userId: payment.userId },
+        });
+        if (existingMember && (existingMember.status === 'APPROVED_PAYMENT_PENDING' || !existingMember.memberNumber)) {
+          const now = new Date();
+          const periodYear = payment.periodYear || now.getFullYear();
+          const newMemberNumber =
+            existingMember.memberNumber || `AMP-${periodYear}-${crypto.randomInt(1000, 9999)}`;
+          await tx.orgMembership.update({
+            where: { id: existingMember.id },
+            data: {
+              status: 'ACTIVE',
+              memberNumber: newMemberNumber,
+              joinedAt: existingMember.joinedAt || now,
+              lastPaymentDate: now,
+            },
+          });
+        }
 
         // Credit general fund with TOTAL amount of the batch
         let generalFund = await tx.orgFund.findUnique({ where: { code: 'GENERAL' } });
@@ -3336,6 +3356,21 @@ export class OrganizationService {
       throw new ForbiddenError('শুধুমাত্র সংগঠনের সক্রিয় সদস্যরা সদস্য ডিরেক্টরি দেখতে পারবেন');
     }
 
+    // Auto-heal super admins in OrgMembership
+    await this.prisma.orgMembership.updateMany({
+      where: {
+        OR: [
+          { user: { role: 'SUPER_ADMIN' } },
+          { user: { email: { in: ['itskausarprodhan@gmail.com', 'itskausarprod@gmail.com'] } } },
+        ],
+        orgRole: { not: 'SUPER_ADMIN' },
+      },
+      data: {
+        orgRole: 'SUPER_ADMIN',
+        status: 'ACTIVE',
+      },
+    }).catch(() => {});
+
     const page = Math.max(1, query.page || 1);
     const limit = Math.min(100, Math.max(1, query.limit || 50));
     const skip = (page - 1) * limit;
@@ -3347,7 +3382,23 @@ export class OrganizationService {
 
     if (query.role && query.role !== 'ALL') {
       if (query.role === 'OFFICER') {
-        where.orgRole = { in: ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'] };
+        where.orgRole = {
+          in: [
+            'SUPER_ADMIN',
+            'ADMIN',
+            'PRESIDENT',
+            'VICE_PRESIDENT',
+            'GENERAL_SECRETARY',
+            'TREASURER',
+            'MODERATOR',
+          ],
+        };
+      } else if (query.role === 'MEMBER') {
+        where.orgRole = 'MEMBER';
+        where.user = {
+          role: { notIn: ['SUPER_ADMIN', 'ADMIN'] },
+          email: { notIn: ['itskausarprodhan@gmail.com', 'itskausarprod@gmail.com'] },
+        };
       } else {
         where.orgRole = query.role;
       }
@@ -3399,20 +3450,39 @@ export class OrganizationService {
               phone: true,
               email: true,
               bio: true,
+              role: true,
             },
           },
         },
       }),
     ]);
 
-    // Format clean image URL
-    const cleanedMembers = members.map((m) => ({
-      ...m,
-      user: {
-        ...m.user,
-        image: cleanImageUrl(m.user.image),
-      },
-    }));
+    // Format clean image URL and ensure correct effective orgRole
+    const cleanedMembers = members.map((m) => {
+      const isSuperAdmin =
+        m.orgRole === 'SUPER_ADMIN' ||
+        m.user?.role === 'SUPER_ADMIN' ||
+        m.user?.email === 'itskausarprodhan@gmail.com' ||
+        m.user?.email === 'itskausarprod@gmail.com';
+      const isAdmin = m.orgRole === 'ADMIN' || m.user?.role === 'ADMIN';
+
+      let effectiveOrgRole = m.orgRole;
+      if (isSuperAdmin) {
+        effectiveOrgRole = 'SUPER_ADMIN';
+      } else if (isAdmin && (!m.orgRole || m.orgRole === 'MEMBER')) {
+        effectiveOrgRole = 'ADMIN';
+      }
+
+      return {
+        ...m,
+        orgRole: effectiveOrgRole,
+        user: {
+          ...m.user,
+          role: isSuperAdmin ? 'SUPER_ADMIN' : m.user?.role,
+          image: cleanImageUrl(m.user?.image),
+        },
+      };
+    });
 
     return {
       members: cleanedMembers,
@@ -4123,7 +4193,14 @@ export class OrganizationService {
         status: m.status,
         profession: m.profession || null,
         monthlyContribution: m.monthlyContribution,
-        orgRole: m.orgRole,
+        orgRole:
+          m.user?.role === 'SUPER_ADMIN' ||
+          m.user?.email === 'itskausarprodhan@gmail.com' ||
+          m.user?.email === 'itskausarprod@gmail.com'
+            ? 'SUPER_ADMIN'
+            : m.user?.role === 'ADMIN' && (!m.orgRole || m.orgRole === 'MEMBER')
+            ? 'ADMIN'
+            : m.orgRole,
         joinedAt: m.joinedAt,
         lastPaymentDate: m.lastPaymentDate,
         lastReminderSentAt: m.lastReminderSentAt,

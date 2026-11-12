@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { MemberDirectoryItem } from '../types';
 import { cleanImageUrl } from './CandidateAvatar';
+import { getMemberRoleBadge } from './MemberDirectorySection';
 
 interface MemberProfileModalProps {
   member: MemberDirectoryItem | null;
@@ -70,23 +71,8 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
       : `#${member.memberNumber}`
     : '#AMP-2026-0042';
 
-  const roleTitle =
-    member.designation?.name ||
-    (member.orgRole === 'PRESIDENT'
-      ? 'সভাপতি'
-      : member.orgRole === 'VICE_PRESIDENT'
-        ? 'সহ-সভাপতি'
-        : member.orgRole === 'GENERAL_SECRETARY'
-          ? 'সাধারণ সম্পাদক'
-          : member.orgRole === 'TREASURER'
-            ? 'কোষাধ্যক্ষ'
-            : member.orgRole === 'MODERATOR'
-              ? 'সমন্বয়ক'
-              : 'সাধারণ সদস্য');
-
-  const isOfficer = ['PRESIDENT', 'VICE_PRESIDENT', 'GENERAL_SECRETARY', 'TREASURER', 'MODERATOR'].includes(
-    member.orgRole,
-  );
+  const roleInfo = getMemberRoleBadge(member);
+  const roleTitle = roleInfo.title;
 
   const handleCopyPhone = () => {
     if (member.user?.phone) {
@@ -248,10 +234,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
             {/* Role Badge & Member ID */}
             <div className="flex flex-wrap items-center justify-center gap-2 mt-1.5">
               <span
-                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold shadow-xs ${isOfficer
-                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                  }`}
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold shadow-xs ${roleInfo.badgeClass}`}
               >
                 <Award className="w-3 h-3" />
                 <span>{roleTitle}</span>

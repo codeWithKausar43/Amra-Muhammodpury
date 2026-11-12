@@ -98,8 +98,16 @@ export interface ContributionPayment {
 export interface OrgMembershipStatus {
   hasMembership: boolean;
   membership: OrgMembership | null;
+  committeeMember?: any | null;
   latestApplication: OrgApplication | null;
   currentAgreement: ContributionAgreement | null;
+  pendingInitialPayment?: {
+    id: string;
+    amount: number;
+    receiptNumber?: string;
+    status: string;
+    createdAt: string;
+  } | null;
 }
 
 export interface OrgMemberDashboardData {
@@ -655,6 +663,7 @@ export interface MemberDirectoryItem {
     phone: string | null;
     email: string | null;
     bio: string | null;
+    role?: string | null;
   };
 }
 

@@ -22,6 +22,94 @@ function toBengaliDigits(num: number | string): string {
   return String(num).replace(/[0-9]/g, (d) => bengaliDigits[+d] || d);
 }
 
+export function getMemberRoleBadge(member: {
+  orgRole?: string | null;
+  designation?: { name?: string | null } | null;
+  user?: { role?: string | null; email?: string | null } | null;
+}): { title: string; isOfficer: boolean; badgeClass: string } {
+  const isSuperAdmin =
+    member.orgRole === 'SUPER_ADMIN' ||
+    member.user?.role === 'SUPER_ADMIN' ||
+    member.user?.email === 'itskausarprodhan@gmail.com' ||
+    member.user?.email === 'itskausarprod@gmail.com';
+
+  const isAdmin = member.orgRole === 'ADMIN' || member.user?.role === 'ADMIN';
+
+  if (isSuperAdmin) {
+    return {
+      title: 'সিস্টেম অ্যাডমিন',
+      isOfficer: true,
+      badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+    };
+  }
+
+  if (member.designation?.name) {
+    const isOff = [
+      'SUPER_ADMIN',
+      'ADMIN',
+      'PRESIDENT',
+      'VICE_PRESIDENT',
+      'GENERAL_SECRETARY',
+      'TREASURER',
+      'MODERATOR',
+    ].includes(member.orgRole || '') || isAdmin;
+    return {
+      title: member.designation.name,
+      isOfficer: isOff,
+      badgeClass: isOff
+        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+        : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20',
+    };
+  }
+
+  if (isAdmin) {
+    return {
+      title: 'প্রশাসক',
+      isOfficer: true,
+      badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+    };
+  }
+
+  switch (member.orgRole) {
+    case 'PRESIDENT':
+      return {
+        title: 'সভাপতি',
+        isOfficer: true,
+        badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+      };
+    case 'VICE_PRESIDENT':
+      return {
+        title: 'সহ-সভাপতি',
+        isOfficer: true,
+        badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+      };
+    case 'GENERAL_SECRETARY':
+      return {
+        title: 'সাধারণ সম্পাদক',
+        isOfficer: true,
+        badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+      };
+    case 'TREASURER':
+      return {
+        title: 'কোষাধ্যক্ষ',
+        isOfficer: true,
+        badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+      };
+    case 'MODERATOR':
+      return {
+        title: 'সমন্বয়ক',
+        isOfficer: true,
+        badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+      };
+    default:
+      return {
+        title: 'সাধারণ সদস্য',
+        isOfficer: false,
+        badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20',
+      };
+  }
+}
+
 export const MemberDirectorySection: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const debouncedSearch = useDebounce(searchTerm.trim(), 250);
@@ -46,7 +134,9 @@ export const MemberDirectorySection: React.FC = () => {
       const phoneMatch = m.user?.phone?.includes(term);
       const profMatch = m.profession?.toLowerCase().includes(term);
       const idMatch = m.memberNumber?.toLowerCase().includes(term);
+      const roleBadge = getMemberRoleBadge(m);
       const roleMatch =
+        roleBadge.title.toLowerCase().includes(term) ||
         m.designation?.name?.toLowerCase().includes(term) ||
         m.orgRole?.toLowerCase().includes(term);
       return Boolean(nameMatch || phoneMatch || profMatch || idMatch || roleMatch);
@@ -160,27 +250,9 @@ export const MemberDirectorySection: React.FC = () => {
                   : `#${member.memberNumber}`
                 : '#AMP-2026-0042';
 
-              const roleTitle =
-                member.designation?.name ||
-                (member.orgRole === 'PRESIDENT'
-                  ? 'সভাপতি'
-                  : member.orgRole === 'VICE_PRESIDENT'
-                  ? 'সহ-সভাপতি'
-                  : member.orgRole === 'GENERAL_SECRETARY'
-                  ? 'সাধারণ সম্পাদক'
-                  : member.orgRole === 'TREASURER'
-                  ? 'কোষাধ্যক্ষ'
-                  : member.orgRole === 'MODERATOR'
-                  ? 'সমন্বয়ক'
-                  : 'সাধারণ সদস্য');
-
-              const isOfficer = [
-                'PRESIDENT',
-                'VICE_PRESIDENT',
-                'GENERAL_SECRETARY',
-                'TREASURER',
-                'MODERATOR',
-              ].includes(member.orgRole);
+              const roleInfo = getMemberRoleBadge(member);
+              const roleTitle = roleInfo.title;
+              const isOfficer = roleInfo.isOfficer;
 
               return (
                 <div
@@ -221,11 +293,7 @@ export const MemberDirectorySection: React.FC = () => {
                       {/* Role Badge & Profession */}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                            isOfficer
-                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                          }`}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${roleInfo.badgeClass}`}
                         >
                           {roleTitle}
                         </span>
