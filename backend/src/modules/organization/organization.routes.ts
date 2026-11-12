@@ -11,6 +11,7 @@ import {
   ReviewPaymentSchema,
   CreateFundSchema,
   FundTransactionSchema,
+  UpdateFundTransactionSchema,
   CreateCommitteeSchema,
   AssignCommitteeMemberSchema,
   CreateMeetingSchema,
@@ -348,6 +349,15 @@ export const organizationRoutes: FastifyPluginAsync = async (fastify) => {
     const validatedData = FundTransactionSchema.parse(request.body);
     const trx = await service.recordTransaction(session.user.id, validatedData);
     return reply.status(201).send(successResponse(trx, 'লেনদেন সফলভাবে লেজারে যুক্ত হয়েছে'));
+  });
+
+  // Update Transaction
+  fastify.put('/admin/transactions/:id', async (request, reply) => {
+    const session = await fastify.authenticate(request, reply);
+    const { id } = request.params as { id: string };
+    const validatedData = UpdateFundTransactionSchema.parse(request.body);
+    const trx = await service.updateTransaction(session.user.id, id, validatedData);
+    return reply.status(200).send(successResponse(trx, 'লেনদেন সফলভাবে আপডেট করা হয়েছে'));
   });
 
   // Create Committee

@@ -440,6 +440,18 @@ export function useOrgMutations() {
     },
   });
 
+  const updateTransaction = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      organizationService.updateTransaction(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.funds });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.admin.stats });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.transparency });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.projects });
+      queryClient.invalidateQueries({ queryKey: orgQueryKeys.overview });
+    },
+  });
+
   const createCommittee = useMutation({
     mutationFn: organizationService.createCommittee,
     onSuccess: () => {
@@ -778,6 +790,7 @@ export function useOrgMutations() {
     appointPresident,
     createFund,
     recordTransaction,
+    updateTransaction,
     createCommittee,
     assignCommitteeMember,
     createMeeting,

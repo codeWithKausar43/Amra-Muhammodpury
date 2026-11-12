@@ -79,6 +79,23 @@ export const FundTransactionSchema = z.object({
   items: z.array(ExpenseItemInputSchema).optional(),
 });
 
+export const UpdateFundTransactionSchema = z.object({
+  fundId: z.string().uuid().optional(),
+  amount: z.coerce.number().positive('পরিমাণ অবশ্যই ধনাত্মক সংখ্যা হতে হবে').optional(),
+  title: z.string().min(2, 'বিবরণ আবশ্যক').optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  receiptUrl: z.string().nullable().optional(),
+  beneficiaryName: z.string().optional().nullable(),
+  assistanceType: z.string().optional().nullable(),
+  childName: z.string().optional().nullable(),
+  fatherName: z.string().optional().nullable(),
+  birthPlace: z.string().optional().nullable(),
+  treesPlanted: z.string().optional().nullable(),
+  plantationDate: z.string().optional().nullable(),
+  items: z.array(ExpenseItemInputSchema).optional(),
+});
+
 export const CreateCommitteeSchema = z.object({
   name: z.string().min(2, 'কমিটির নাম আবশ্যক'),
   description: z.string().optional(),

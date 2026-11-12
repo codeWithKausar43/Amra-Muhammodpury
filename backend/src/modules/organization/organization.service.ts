@@ -1318,8 +1318,9 @@ export class OrganizationService {
         orderBy: { createdAt: 'desc' },
         take: 20,
         include: {
-          fund: { select: { name: true, code: true } },
+          fund: { select: { id: true, name: true, code: true } },
           items: { orderBy: { createdAt: 'asc' } },
+          project: true,
         },
       }),
       this.prisma.contributionPayment.findMany({
@@ -1803,6 +1804,196 @@ export class OrganizationService {
       }
 
       return trx;
+    });
+  }
+
+  public async updateTransaction(
+    userId: string,
+    id: string,
+    data: {
+      fundId?: string;
+      amount?: number;
+      title?: string;
+      description?: string;
+      category?: string;
+      receiptUrl?: string | null;
+      beneficiaryName?: string | null;
+      assistanceType?: string | null;
+      childName?: string | null;
+      fatherName?: string | null;
+      birthPlace?: string | null;
+      treesPlanted?: string | null;
+      plantationDate?: string | null;
+      items?: Array<{
+        itemName: string;
+        amount: number;
+        category?: string;
+        description?: string;
+        expenseDate?: string;
+        responsiblePerson?: string;
+        receiptUrl?: string;
+      }>;
+    },
+  ) {
+    const role = await this.getOfficerRole(userId);
+    this.requireOfficer(role, ['PRESIDENT', 'TREASURER', 'ADMIN']);
+
+    return this.prisma.$transaction(async (tx) => {
+      const existingTrx = await tx.fundTransaction.findUnique({
+        where: { id },
+        include: { items: true, project: true },
+      });
+      if (!existingTrx) throw new NotFoundError('লেনদেন পাওয়া যায়নি');
+
+      const oldAmount = existingTrx.amount;
+      const itemsTotal = (data.items && data.items.length > 0)
+        ? data.items.reduce((s, it) => s + it.amount, 0)
+        : 0;
+      const newAmount = itemsTotal > 0
+        ? itemsTotal
+        : (typeof data.amount === 'number' && data.amount > 0 ? data.amount : oldAmount);
+
+      const oldFundId = existingTrx.fundId;
+      const targetFundId = data.fundId || oldFundId;
+
+      if (data.fundId && data.fundId !== oldFundId) {
+        const destFund = await tx.orgFund.findUnique({ where: { id: data.fundId } });
+        if (!destFund) throw new NotFoundError('নতুন তহবিল পাওয়া যায়নি');
+      }
+
+      // 1. Balance adjustments on OrgFund
+      if (existingTrx.type === 'EXPENSE') {
+        if (oldFundId === targetFundId) {
+          const diff = oldAmount - newAmount;
+          if (diff !== 0) {
+            await tx.orgFund.update({
+              where: { id: targetFundId },
+              data: { balance: { increment: diff } },
+            });
+          }
+        } else {
+          await tx.orgFund.update({
+            where: { id: oldFundId },
+            data: { balance: { increment: oldAmount } },
+          });
+          await tx.orgFund.update({
+            where: { id: targetFundId },
+            data: { balance: { decrement: newAmount } },
+          });
+        }
+      } else if (existingTrx.type === 'INCOME' || existingTrx.type === 'CONTRIBUTION') {
+        if (oldFundId === targetFundId) {
+          const diff = newAmount - oldAmount;
+          if (diff !== 0) {
+            await tx.orgFund.update({
+              where: { id: targetFundId },
+              data: { balance: { increment: diff } },
+            });
+          }
+        } else {
+          await tx.orgFund.update({
+            where: { id: oldFundId },
+            data: { balance: { decrement: oldAmount } },
+          });
+          await tx.orgFund.update({
+            where: { id: targetFundId },
+            data: { balance: { increment: newAmount } },
+          });
+        }
+      }
+
+      // 2. Adjust linked OrgProject if this transaction was tied to a project (e.g. Humanitarian / Tree Plantation)
+      if (existingTrx.projectId && existingTrx.type === 'EXPENSE') {
+        const spentDiff = newAmount - oldAmount;
+        const projectUpdateData: any = {};
+        if (spentDiff !== 0) {
+          projectUpdateData.spent = { increment: spentDiff };
+        }
+        if (data.title && data.title.trim()) {
+          projectUpdateData.title = data.title.trim();
+        }
+        if (data.description !== undefined) {
+          projectUpdateData.description = data.description ? data.description.trim() : '';
+        }
+        if (data.receiptUrl !== undefined) {
+          projectUpdateData.images = data.receiptUrl ? [data.receiptUrl] : [];
+        }
+        if (targetFundId !== oldFundId) {
+          projectUpdateData.fundId = targetFundId;
+        }
+        if (data.beneficiaryName !== undefined) {
+          projectUpdateData.beneficiaryName = data.beneficiaryName ? data.beneficiaryName.trim() : null;
+        }
+        if (data.assistanceType !== undefined) {
+          projectUpdateData.assistanceType = data.assistanceType ? data.assistanceType.trim() : null;
+        }
+        if (data.childName !== undefined) {
+          projectUpdateData.childName = data.childName ? data.childName.trim() : null;
+        }
+        if (data.fatherName !== undefined) {
+          projectUpdateData.fatherName = data.fatherName ? data.fatherName.trim() : null;
+        }
+        if (data.birthPlace !== undefined) {
+          projectUpdateData.birthPlace = data.birthPlace ? data.birthPlace.trim() : null;
+          projectUpdateData.plantationLocation = data.birthPlace ? data.birthPlace.trim() : null;
+        }
+        if (data.treesPlanted !== undefined) {
+          projectUpdateData.treesPlanted = data.treesPlanted ? data.treesPlanted.trim() : null;
+        }
+        if (data.plantationDate !== undefined) {
+          projectUpdateData.plantationDate = data.plantationDate ? new Date(data.plantationDate) : null;
+        }
+        if (Object.keys(projectUpdateData).length > 0) {
+          await tx.orgProject.update({
+            where: { id: existingTrx.projectId },
+            data: projectUpdateData,
+          });
+        }
+      }
+
+      // 3. Update Itemized Breakdown
+      if (data.items !== undefined) {
+        await tx.expenseItem.deleteMany({
+          where: { transactionId: id },
+        });
+
+        if (data.items && data.items.length > 0) {
+          await tx.expenseItem.createMany({
+            data: data.items.map((it) => ({
+              transactionId: id,
+              projectId: existingTrx.projectId || null,
+              itemName: it.itemName.trim(),
+              amount: it.amount,
+              category: it.category?.trim() || data.category?.trim() || existingTrx.category || null,
+              description: it.description?.trim() || null,
+              expenseDate: it.expenseDate ? new Date(it.expenseDate) : new Date(),
+              responsiblePerson: it.responsiblePerson?.trim() || null,
+              receiptUrl: it.receiptUrl || data.receiptUrl || existingTrx.receiptUrl || null,
+            })),
+          });
+        }
+      }
+
+      // 4. Update the FundTransaction record
+      const updatedTrx = await tx.fundTransaction.update({
+        where: { id },
+        data: {
+          fundId: targetFundId,
+          amount: newAmount,
+          title: data.title !== undefined ? data.title.trim() : existingTrx.title,
+          description: data.description !== undefined ? data.description?.trim() : existingTrx.description,
+          category: data.category !== undefined ? data.category?.trim() : existingTrx.category,
+          receiptUrl: data.receiptUrl !== undefined ? data.receiptUrl : existingTrx.receiptUrl,
+        },
+        include: {
+          items: { orderBy: { createdAt: 'asc' } },
+          fund: { select: { id: true, name: true, code: true } },
+          project: { select: { id: true, title: true } },
+          campaign: { select: { id: true, title: true } },
+        },
+      });
+
+      return updatedTrx;
     });
   }
 

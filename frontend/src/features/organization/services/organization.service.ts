@@ -306,6 +306,40 @@ export const organizationService = {
     return res.data!;
   },
 
+  async updateTransaction(
+    id: string,
+    data: {
+      fundId?: string;
+      amount?: number;
+      title?: string;
+      description?: string;
+      category?: string;
+      receiptUrl?: string | null;
+      beneficiaryName?: string | null;
+      assistanceType?: string | null;
+      childName?: string | null;
+      fatherName?: string | null;
+      birthPlace?: string | null;
+      treesPlanted?: string | null;
+      plantationDate?: string | null;
+      items?: Array<{
+        itemName: string;
+        amount: number;
+        category?: string;
+        description?: string;
+        expenseDate?: string;
+        responsiblePerson?: string;
+        receiptUrl?: string;
+      }>;
+    },
+  ): Promise<OrgTransaction> {
+    const res = await apiClient<ApiResponse<OrgTransaction>>(`/org/admin/transactions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return res.data!;
+  },
+
   async getTransparency(): Promise<FinancialTransparencyData> {
     const res = await apiClient<ApiResponse<FinancialTransparencyData>>('/org/transparency');
     return res.data!;

@@ -209,6 +209,8 @@ export default function AdminModulePage() {
   const [draftItemName, setDraftItemName] = React.useState('');
   const [draftItemAmount, setDraftItemAmount] = React.useState('');
   const [viewingTrxDetails, setViewingTrxDetails] = React.useState<any | null>(null);
+  const [editingTrx, setEditingTrx] = React.useState<any | null>(null);
+  const [selectedFundId, setSelectedFundId] = React.useState<string>('');
 
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -406,6 +408,71 @@ export default function AdminModulePage() {
     }
   };
 
+  const handleOpenCreateTrx = () => {
+    setEditingTrx(null);
+    setSelectedFundId(funds.find((f) => f.code === 'GENERAL')?.id || funds[0]?.id || '');
+    setEntryCategory('HUMANITARIAN');
+    setTrxTitle('');
+    setTrxAmount('');
+    setTrxDesc('');
+    setBeneficiaryName('');
+    setChildName('');
+    setFatherName('');
+    setPlantationDate(new Date().toISOString().split('T')[0]);
+    setReceiptImageUrl('');
+    setExpenseItems([]);
+    setDraftItemName('');
+    setDraftItemAmount('');
+    setTrxModalOpen(true);
+  };
+
+  const handleOpenEditTrx = (tx: any) => {
+    setEditingTrx(tx);
+    setSelectedFundId(tx.fundId || tx.fund?.id || funds[0]?.id || '');
+
+    let cat: 'HUMANITARIAN' | 'TREE_PLANTATION' | 'GENERAL_EXPENSE' | 'INCOME' = 'GENERAL_EXPENSE';
+    if (tx.project?.category === 'TREE_PLANTATION' || tx.category === 'TREE_PLANTATION') {
+      cat = 'TREE_PLANTATION';
+    } else if (tx.project?.category === 'HUMANITARIAN' || tx.category === 'HUMANITARIAN') {
+      cat = 'HUMANITARIAN';
+    } else if (tx.type === 'INCOME') {
+      cat = 'INCOME';
+    } else {
+      cat = 'GENERAL_EXPENSE';
+    }
+    setEntryCategory(cat);
+
+    setTrxTitle(tx.title || '');
+    setTrxAmount(Math.abs(tx.amount) || '');
+    setTrxDesc(tx.description || tx.project?.description || '');
+    setBeneficiaryName(tx.project?.beneficiaryName || '');
+    setChildName(tx.project?.childName || '');
+    setFatherName(tx.project?.fatherName || '');
+    if (tx.project?.plantationDate) {
+      setPlantationDate(new Date(tx.project.plantationDate).toISOString().split('T')[0]);
+    } else {
+      setPlantationDate(new Date().toISOString().split('T')[0]);
+    }
+    setTreesPlanted(tx.project?.treesPlanted || '');
+    setReceiptImageUrl(tx.receiptUrl || tx.project?.images?.[0] || '');
+
+    if (tx.items && tx.items.length > 0) {
+      setExpenseItems(
+        tx.items.map((it: any) => ({
+          itemName: it.itemName,
+          amount: it.amount,
+          category: it.category,
+        }))
+      );
+    } else {
+      setExpenseItems([]);
+    }
+
+    setDraftItemName('');
+    setDraftItemAmount('');
+    setTrxModalOpen(true);
+  };
+
   const handleCreateTrx = async (e: React.FormEvent) => {
     e.preventDefault();
     const calculatedItemsTotal = expenseItems.reduce((s, it) => s + it.amount, 0);
@@ -416,7 +483,68 @@ export default function AdminModulePage() {
     }
 
     const defaultFund = funds.find((f) => f.code === 'GENERAL') || funds[0];
-    const defaultFundId = defaultFund?.id;
+    const defaultFundId = selectedFundId || defaultFund?.id;
+
+    if (editingTrx) {
+      setIsSubmittingTrx(true);
+      try {
+        let computedTitle = trxTitle.trim();
+        let computedTrees: string | undefined = undefined;
+
+        if (entryCategory === 'HUMANITARIAN' && !computedTitle) {
+          computedTitle = 'অসহায় পরিবারের জন্য মানবিক সহায়তা';
+        } else if (entryCategory === 'TREE_PLANTATION') {
+          const cName = childName.trim() || 'নবজাতক শিশু';
+          computedTitle = computedTitle || `${cName}-এর জন্ম উপলক্ষ্যে বৃক্ষরোপণ`;
+          computedTrees = expenseItems.length > 0
+            ? expenseItems.map((i) => i.itemName).join(', ')
+            : (treesPlanted.trim() || undefined);
+        } else if (!computedTitle) {
+          computedTitle = entryCategory === 'INCOME' ? 'সাধারণ অনুদান / জমা' : 'সাধারণ প্রাতিষ্ঠানিক খরচ';
+        }
+
+        await mutations.updateTransaction.mutateAsync({
+          id: editingTrx.id,
+          data: {
+            fundId: defaultFundId,
+            amount: finalAmount,
+            title: computedTitle,
+            description: trxDesc.trim() || undefined,
+            category: entryCategory,
+            receiptUrl: receiptImageUrl || null,
+            beneficiaryName: entryCategory === 'HUMANITARIAN' ? beneficiaryName.trim() || null : undefined,
+            assistanceType: entryCategory === 'HUMANITARIAN' ? assistanceType.trim() || null : undefined,
+            childName: entryCategory === 'TREE_PLANTATION' ? childName.trim() || null : undefined,
+            fatherName: entryCategory === 'TREE_PLANTATION' ? fatherName.trim() || null : undefined,
+            birthPlace: entryCategory === 'TREE_PLANTATION' ? birthPlace.trim() || null : undefined,
+            treesPlanted: entryCategory === 'TREE_PLANTATION' ? computedTrees : undefined,
+            plantationDate: entryCategory === 'TREE_PLANTATION' && plantationDate ? new Date(plantationDate).toISOString() : undefined,
+            items: expenseItems.length > 0 ? expenseItems : [],
+          },
+        });
+
+        setTrxModalOpen(false);
+        setEditingTrx(null);
+        setTrxAmount('');
+        setTrxTitle('');
+        setTrxDesc('');
+        setBeneficiaryName('');
+        setChildName('');
+        setFatherName('');
+        setPlantationDate(new Date().toISOString().split('T')[0]);
+        setReceiptImageUrl('');
+        setIsUploadingImage(false);
+        setExpenseItems([]);
+        setDraftItemName('');
+        setDraftItemAmount('');
+        toast.success('লেনদেন সফলভাবে আপডেট করা হয়েছে!');
+      } catch (err: any) {
+        toast.error(err.message || 'আপডেট করতে সমস্যা হয়েছে।');
+      } finally {
+        setIsSubmittingTrx(false);
+      }
+      return;
+    }
 
     setIsSubmittingTrx(true);
     try {
@@ -1187,10 +1315,7 @@ export default function AdminModulePage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setEntryCategory('HUMANITARIAN');
-                  setTrxModalOpen(true);
-                }}
+                onClick={handleOpenCreateTrx}
                 className="px-3.5 py-1.5 rounded-xl bg-brand-emerald text-white text-xs font-bold hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -1266,6 +1391,17 @@ export default function AdminModulePage() {
                         >
                           {tx.type === 'EXPENSE' ? 'অনুমোদিত ব্যয়' : 'জমা / অনুদান'}
                         </span>
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditTrx(tx)}
+                            className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-slate-500 hover:text-brand-emerald dark:text-slate-400 dark:hover:text-brand-mint transition-colors cursor-pointer"
+                            title="লেনদেন বা খরচ সম্পাদনা করুন"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            <span>আপডেট</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1862,10 +1998,12 @@ export default function AdminModulePage() {
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-bold text-xs sm:text-base text-slate-900 dark:text-white truncate">
-                    নতুন খরচ ও কার্যক্রম এন্ট্রি
+                    {editingTrx ? 'খরচ ও লেনদেন আপডেট / সম্পাদনা' : 'নতুন খরচ ও কার্যক্রম এন্ট্রি'}
                   </h3>
                   <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
-                    সহজেই সংগঠনের যেকোনো খরচ, অনুদান বা সহায়তা কার্যক্রম লিপিবদ্ধ করুন
+                    {editingTrx
+                      ? 'ভুল বা অসঙ্গতি সংশোধন করে পুনরায় সংরক্ষণ করুন'
+                      : 'সহজেই সংগঠনের যেকোনো খরচ, অনুদান বা সহায়তা কার্যক্রম লিপিবদ্ধ করুন'}
                   </p>
                 </div>
               </div>
@@ -1873,6 +2011,7 @@ export default function AdminModulePage() {
                 type="button"
                 onClick={() => {
                   setTrxModalOpen(false);
+                  setEditingTrx(null);
                   setReceiptImageUrl('');
                 }}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer p-1 shrink-0"
@@ -1882,6 +2021,24 @@ export default function AdminModulePage() {
             </div>
 
             <form onSubmit={handleCreateTrx} className="space-y-3.5 sm:space-y-4 text-xs min-w-0">
+              {/* Fund Selection */}
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  তহবিল বেছে নিন *
+                </label>
+                <select
+                  value={selectedFundId || (funds.find((f) => f.code === 'GENERAL')?.id || funds[0]?.id || '')}
+                  onChange={(e) => setSelectedFundId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 outline-none text-xs font-medium text-slate-800 dark:text-slate-200"
+                >
+                  {funds.map((f) => (
+                    <option key={f.id} value={f.id} className="dark:bg-slate-800">
+                      {f.name} (বর্তমান ব্যালেন্স: ৳ {toBengaliNumber(f.balance ?? 0)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Category Quick Selector */}
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -2324,6 +2481,7 @@ export default function AdminModulePage() {
                   type="button"
                   onClick={() => {
                     setTrxModalOpen(false);
+                    setEditingTrx(null);
                     setReceiptImageUrl('');
                   }}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer"
@@ -2336,7 +2494,7 @@ export default function AdminModulePage() {
                   className="px-5 py-2 rounded-xl bg-brand-emerald text-white text-xs font-bold shadow-xs hover:bg-emerald-600 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmittingTrx && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>সংরক্ষণ করুন</span>
+                  <span>{editingTrx ? 'আপডেট সম্পন্ন করুন' : 'সংরক্ষণ করুন'}</span>
                 </button>
               </div>
             </form>
@@ -2422,7 +2580,19 @@ export default function AdminModulePage() {
               <p className="text-xs text-slate-400 text-center py-4">এই লেনদেনের কোনো পৃথক আইটেম তালিকা নেই।</p>
             )}
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const txToEdit = viewingTrxDetails;
+                  setViewingTrxDetails(null);
+                  handleOpenEditTrx(txToEdit);
+                }}
+                className="px-4 py-2 rounded-xl bg-brand-emerald text-white hover:bg-emerald-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>এই খরচ আপডেট করুন</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setViewingTrxDetails(null)}
