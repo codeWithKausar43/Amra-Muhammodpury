@@ -2,12 +2,14 @@
 
 import * as React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Image as ImageIcon } from 'lucide-react';
 import { getOptimizedImageUrl } from '@/lib/utils/image';
 import { Post } from '../types';
 
 interface PostComposerProps {
   user?: {
+    id?: string | null;
     name?: string | null;
     image?: string | null;
   } | null;
@@ -46,25 +48,41 @@ export function PostComposer({
   return (
     <div className="w-full bg-white dark:bg-brand-charcoal-dark/90 border border-slate-200/80 dark:border-white/10 rounded-2xl p-2.5 sm:p-3.5 shadow-soft mb-3.5">
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* User Avatar with Green Active Dot */}
-        <div className="relative shrink-0 cursor-pointer" onClick={handleClick}>
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 relative ring-2 ring-slate-200/60 dark:ring-white/10">
-            {user?.image ? (
-              <Image
-                src={getOptimizedImageUrl(user.image, { width: 160 })}
-                alt={user.name || 'User'}
-                fill
-                className="object-cover"
-              />
-            ) : (
+        {/* User Avatar with Green Active Dot - navigates to user's profile */}
+        {user?.id ? (
+          <Link
+            href={`/profile/${user.id}`}
+            className="relative shrink-0 cursor-pointer block hover:opacity-90 transition-opacity"
+            title={`${user.name || 'ব্যবহারকারী'}-এর প্রোফাইল দেখুন`}
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 relative ring-2 ring-slate-200/60 dark:ring-white/10">
+              {user?.image ? (
+                <Image
+                  src={getOptimizedImageUrl(user.image, { width: 160 })}
+                  alt={user.name || 'User'}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-brand-emerald text-white font-bold text-xs sm:text-sm">
+                  {user?.name?.charAt(0) || 'ম'}
+                </div>
+              )}
+            </div>
+            {/* Active Status Green Dot */}
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-brand-charcoal-dark" />
+          </Link>
+        ) : (
+          <div className="relative shrink-0 cursor-pointer" onClick={handleClick} title="লগইন করুন">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10 relative ring-2 ring-slate-200/60 dark:ring-white/10">
               <div className="w-full h-full flex items-center justify-center bg-brand-emerald text-white font-bold text-xs sm:text-sm">
-                {user?.name?.charAt(0) || 'ম'}
+                ম
               </div>
-            )}
+            </div>
+            {/* Active Status Green Dot */}
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-brand-charcoal-dark" />
           </div>
-          {/* Active Status Green Dot */}
-          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-brand-charcoal-dark" />
-        </div>
+        )}
 
         {/* Pill-shaped Input Bar */}
         <button
