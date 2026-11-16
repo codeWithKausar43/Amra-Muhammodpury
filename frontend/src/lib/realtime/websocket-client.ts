@@ -221,7 +221,7 @@ export class RealtimeClient {
     };
   }
 
-  private send(data: any) {
+  public send(data: any) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify(data));
@@ -229,6 +229,10 @@ export class RealtimeClient {
         // Send failure
       }
     }
+  }
+
+  public sendTyping(conversationId: string, isTyping: boolean) {
+    this.send({ type: 'TYPING', conversationId, isTyping });
   }
 
   private startPing() {

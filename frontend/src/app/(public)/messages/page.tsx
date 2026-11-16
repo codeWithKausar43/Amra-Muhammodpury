@@ -1,39 +1,114 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { useSession } from '@/lib/auth/auth-client';
+import { MessageSquare, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+
 import {
-  MessageSquare,
-  Send,
-  Loader2,
-  ArrowLeft,
-  Search,
-} from 'lucide-react';
-import {
-  useConversationsQuery,
-  useChatMessagesQuery,
-  useSocialMutations,
-} from '@/features/social/hooks/useSocialQueries';
+  useMessengerConversations,
+  useMessengerMessages,
+  usePresenceStatus,
+  useTypingState,
+  useMessengerRealtime,
+  useMessengerMutations,
+} from '@/features/messenger/hooks/useMessenger';
+import { messengerService } from '@/features/messenger/services/messenger.service';
+import { MessageItem } from '@/features/messenger/types/messenger.types';
+
+import { ConversationList } from '@/features/messenger/components/ConversationList';
+import { ChatHeader } from '@/features/messenger/components/ChatHeader';
+import { MessageBubble } from '@/features/messenger/components/MessageBubble';
+import { MessageComposer } from '@/features/messenger/components/MessageComposer';
+import { MessageRequestBanner } from '@/features/messenger/components/MessageRequestBanner';
+import { NewChatModal } from '@/features/messenger/components/NewChatModal';
+import { CreateGroupModal } from '@/features/messenger/components/CreateGroupModal';
+import { GroupMembersModal } from '@/features/messenger/components/GroupMembersModal';
+import { ImageLightbox } from '@/features/messenger/components/ImageLightbox';
 
 export default function MessagesPage() {
-  const { data: session } = useSession();
-  const { data: conversations = [], isLoading: isConvLoading } = useConversationsQuery();
+  const { data: session, isPending: isSessionLoading } = useSession();
+  const currentUserId = session?.user?.id;
+
+  // Active navigation states
+  const [activeTab, setActiveTab] = React.useState<'primary' | 'requests' | 'archived'>('primary');
   const [activeConvId, setActiveConvId] = React.useState<string | null>(null);
-  const { data: chatData, isLoading: isChatLoading } = useChatMessagesQuery(activeConvId);
-  const mutations = useSocialMutations();
-
-  const activeChat = chatData || { messages: [], otherUser: null };
-  const isInitialLoading = isConvLoading && conversations.length === 0;
-
-  const [messageText, setMessageText] = React.useState('');
-  const [sending, setSending] = React.useState(false);
   const [searchFilter, setSearchFilter] = React.useState('');
 
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  // In-thread message search
+  const [isSearchingMessages, setIsSearchingMessages] = React.useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = React.useState('');
 
-  // default select first conversation on desktop
+  // Modals state
+  const [isNewChatOpen, setIsNewChatOpen] = React.useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = React.useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = React.useState(false);
+  const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
+
+  // Message actions: Reply and Edit
+  const [replyingTo, setReplyingTo] = React.useState<MessageItem | null>(null);
+  const [editingMessage, setEditingMessage] = React.useState<MessageItem | null>(null);
+
+  // 1. Fetch Conversations
+  const {
+    data: conversations = [],
+    isLoading: isConvLoading,
+    refetch: refetchConversations,
+  } = useMessengerConversations(activeTab, searchFilter);
+
+  // Query requests count for badge
+  const { data: requestConversations = [] } = useMessengerConversations('requests');
+  const pendingRequestsCount = requestConversations.filter(
+    (c) => c.status === 'PENDING' && !c.isMyRequest,
+  ).length;
+
+  // 2. Fetch Active Thread Messages
+  const {
+    data: threadData,
+    isLoading: isThreadLoading,
+    refetch: refetchMessages,
+  } = useMessengerMessages(activeConvId, messageSearchQuery);
+
+  const activeMessages = threadData?.messages || [];
+  const activeConversation =
+    threadData?.conversation?.id === activeConvId
+      ? threadData.conversation
+      : conversations.find((c) => c.id === activeConvId) || null;
+
+  // 3. User Presence Tracking
+  const otherUserIds = React.useMemo(() => {
+    const set = new Set<string>();
+    conversations.forEach((c) => {
+      if (c.otherUser?.id) set.add(c.otherUser.id);
+    });
+    return Array.from(set);
+  }, [conversations]);
+
+  const { data: presenceMap = {} } = usePresenceStatus(otherUserIds);
+  const onlineUserIds = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const [uid, status] of Object.entries(presenceMap)) {
+      if (status.isOnline) set.add(uid);
+    }
+    return set;
+  }, [presenceMap]);
+
+  // 4. Real-time WebSocket Sync & Typing
+  useMessengerRealtime(activeConvId);
+  const { typingUsers, notifyTyping } = useTypingState(activeConvId);
+
+  // 5. Messenger Mutations
+  const mutations = useMessengerMutations();
+
+  // Scroll to bottom
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!messageSearchQuery) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeMessages.length, messageSearchQuery]);
+
+  // Default select first conversation on desktop
   React.useEffect(() => {
     if (conversations.length > 0 && !activeConvId) {
       if (typeof window !== 'undefined' && window.innerWidth >= 768) {
@@ -42,263 +117,290 @@ export default function MessagesPage() {
     }
   }, [conversations, activeConvId]);
 
-  // Scroll to bottom when new message arrives
-  React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeChat.messages]);
+  // Typing subtitle text
+  const typingText = React.useMemo(() => {
+    const otherTypers = typingUsers.filter((u) => u.name);
+    if (otherTypers.length === 0) return null;
+    if (otherTypers.length === 1) return `${otherTypers[0]?.name} টাইপ করছেন...`;
+    return `${otherTypers.length} জন সদস্য টাইপ করছেন...`;
+  }, [typingUsers]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!messageText.trim() || !activeChat.otherUser) return;
+  // Handlers
+  const handleSelectUserFromNewChat = async (userId: string) => {
+    const conv = await messengerService.getOrCreateDirect(userId);
+    setActiveConvId(conv.id);
+    refetchConversations();
+  };
 
-    setSending(true);
-    const content = messageText.trim();
-    setMessageText('');
+  const handleCreateGroup = async (data: { title: string; memberIds: string[] }) => {
+    const conv = await mutations.createGroup.mutateAsync(data);
+    setActiveConvId(conv.id);
+    refetchConversations();
+  };
 
-    try {
-      await mutations.sendMessage.mutateAsync({
-        recipientId: activeChat.otherUser.id,
-        content,
+  const handleSendMessage = async (payload: {
+    content?: string;
+    mediaUrl?: string;
+    type?: 'TEXT' | 'IMAGE' | 'FILE' | 'AUDIO';
+    fileMeta?: any;
+    replyToId?: string;
+  }) => {
+    if (!activeConvId) return;
+    await mutations.sendMessage.mutateAsync({
+      conversationId: activeConvId,
+      ...payload,
+    });
+  };
+
+  const handleEditMessage = async (messageId: string, content: string) => {
+    await mutations.editMessage.mutateAsync({ messageId, content });
+  };
+
+  const handleDeleteMessage = async (message: MessageItem) => {
+    if (!activeConvId) return;
+    if (confirm('আপনি কি এই বার্তাটি মুছে ফেলতে চান?')) {
+      await mutations.deleteMessage.mutateAsync({
+        messageId: message.id,
+        conversationId: activeConvId,
       });
-    } catch {
-      // ignore
-    } finally {
-      setSending(false);
     }
   };
 
-  const filteredConversations = conversations.filter((c) =>
-    c.otherUser?.name.toLowerCase().includes(searchFilter.toLowerCase()),
-  );
+  const handleReaction = async (messageId: string, emoji: string) => {
+    if (!activeConvId) return;
+    await mutations.toggleReaction.mutateAsync({
+      messageId,
+      conversationId: activeConvId,
+      emoji,
+    });
+  };
+
+  const isPendingRequest = activeConversation?.status === 'PENDING';
+  const isMyRequest = Boolean(activeConversation?.isMyRequest);
+
+  if (isSessionLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-16 flex flex-col items-center justify-center space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-emerald" />
+        <p className="text-xs text-slate-400">মেসেঞ্জার লোড হচ্ছে...</p>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-brand-emerald/10 text-brand-emerald flex items-center justify-center mx-auto">
+          <MessageSquare className="w-8 h-8" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          ইনবক্স ব্যবহারের জন্য লগইন করুন
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          মোহাম্মদপুরী কমিউনিটির সদস্যদের সাথে ব্যক্তিগত বা গ্রুপ চ্যাট করতে আপনার একাউন্টে প্রবেশ করুন।
+        </p>
+        <Link
+          href="/login"
+          className="inline-block px-5 py-2.5 rounded-2xl bg-brand-emerald hover:bg-emerald-800 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
+        >
+          লগইন পাতায় যান
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-2 sm:px-6 py-2 sm:py-4 h-[calc(100vh-5.5rem)] flex flex-col">
-      <div className="glass-panel flex-1 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-soft overflow-hidden flex flex-col md:flex-row">
+    <div className="max-w-6xl mx-auto px-2 sm:px-4 py-2 sm:py-3 h-[calc(100vh-5.5rem)] flex flex-col">
+      <div className="glass-panel flex-1 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-soft overflow-hidden flex flex-col md:flex-row bg-white/70 dark:bg-brand-charcoal-dark/70 backdrop-blur-xl">
         {/* Left Pane: Conversation List */}
         <div
           className={`w-full md:w-80 lg:w-96 border-r border-slate-200/80 dark:border-white/10 flex flex-col ${
             activeConvId ? 'hidden md:flex' : 'flex'
           }`}
         >
-          {/* Header & Search */}
-          <div className="p-4 border-b border-slate-100 dark:border-white/5 space-y-3">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-brand-emerald" />
-              <span>ইনবক্স ও বার্তা</span>
-            </h1>
-
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="কথোপকথন খুঁজুন..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 outline-none text-slate-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          {/* Conversation List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5 no-scrollbar">
-            {isInitialLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center space-y-2">
-                <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
-                <p className="text-xs text-slate-400">লোড হচ্ছে...</p>
-              </div>
-            ) : filteredConversations.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400 space-y-2">
-                <MessageSquare className="w-8 h-8 mx-auto text-slate-300" />
-                <p>কোনো বার্তা বা কথোপকথন নেই।</p>
-                <p>যেকোনো বন্ধুর প্রোফাইলে গিয়ে বার্তা পাঠাতে পারেন।</p>
-              </div>
-            ) : (
-              filteredConversations.map((conv) => {
-                const isSelected = activeConvId === conv.id;
-                return (
-                  <button
-                    key={conv.id}
-                    type="button"
-                    onClick={() => setActiveConvId(conv.id)}
-                    className={`w-full p-3.5 flex items-center gap-3 text-left transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-brand-emerald/10 dark:bg-brand-emerald/20'
-                        : 'hover:bg-slate-50 dark:hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="relative w-11 h-11 rounded-full overflow-hidden bg-brand-emerald/10 ring-2 ring-brand-emerald/20 shrink-0">
-                      {conv.otherUser?.image ? (
-                        <Image
-                          src={conv.otherUser.image}
-                          alt={conv.otherUser.name}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center font-bold text-brand-emerald text-sm">
-                          {conv.otherUser?.name?.charAt(0) || 'ম'}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                          {conv.otherUser?.name || 'মোহাম্মদপুরী সদস্য'}
-                        </p>
-                        <span className="text-[10px] text-slate-400 shrink-0">
-                          {new Date(conv.updatedAt).toLocaleTimeString('bn-BD', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                        {conv.lastMessage?.content || 'কথোপকথন শুরু হয়েছে'}
-                      </p>
-                    </div>
-
-                    {conv.unreadCount > 0 && (
-                      <span className="w-4 h-4 rounded-full bg-brand-emerald text-white text-[10px] flex items-center justify-center font-bold shrink-0">
-                        {conv.unreadCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
+          <ConversationList
+            conversations={conversations}
+            activeConvId={activeConvId}
+            onSelectConversation={(id) => {
+              setActiveConvId(id);
+              setReplyingTo(null);
+              setEditingMessage(null);
+            }}
+            activeTab={activeTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab);
+              setActiveConvId(null);
+            }}
+            searchFilter={searchFilter}
+            onSearchChange={setSearchFilter}
+            isLoading={isConvLoading}
+            onOpenNewChat={() => setIsNewChatOpen(true)}
+            onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
+            onTogglePin={(id) => mutations.togglePin.mutate(id)}
+            onToggleMute={(id) => mutations.toggleMute.mutate(id)}
+            onToggleArchive={(id) => mutations.toggleArchive.mutate(id)}
+            onDeleteFromInbox={(id) => {
+              mutations.deleteFromInbox.mutate(id);
+              if (activeConvId === id) setActiveConvId(null);
+            }}
+            onlineUserIds={onlineUserIds}
+            pendingRequestsCount={pendingRequestsCount}
+          />
         </div>
 
-        {/* Right Pane: Active Thread */}
+        {/* Right Pane: Active Chat Thread */}
         <div
           className={`flex-1 flex flex-col bg-slate-50/50 dark:bg-brand-charcoal-dark/40 ${
             !activeConvId ? 'hidden md:flex' : 'flex'
           }`}
         >
-          {activeConvId && activeChat.otherUser ? (
+          {activeConvId && activeConversation ? (
             <>
               {/* Thread Header */}
-              <div className="p-3.5 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-brand-charcoal-dark/80 backdrop-blur-md flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setActiveConvId(null)}
-                    className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
+              <ChatHeader
+                conversation={activeConversation}
+                currentUserId={currentUserId}
+                isOnline={
+                  activeConversation.otherUser?.id
+                    ? onlineUserIds.has(activeConversation.otherUser.id)
+                    : false
+                }
+                typingText={typingText}
+                onBack={() => setActiveConvId(null)}
+                onSearchToggle={() => {
+                  setIsSearchingMessages(!isSearchingMessages);
+                  if (isSearchingMessages) setMessageSearchQuery('');
+                }}
+                isSearching={isSearchingMessages}
+                searchQuery={messageSearchQuery}
+                onSearchQueryChange={setMessageSearchQuery}
+                onToggleMute={() => mutations.toggleMute.mutate(activeConversation.id)}
+                onToggleArchive={() => mutations.toggleArchive.mutate(activeConversation.id)}
+                onDeleteChat={() => {
+                  mutations.deleteFromInbox.mutate(activeConversation.id);
+                  setActiveConvId(null);
+                }}
+                onOpenMembersModal={() => setIsMembersModalOpen(true)}
+              />
 
-                  <Link
-                    href={`/profile/${activeChat.otherUser.id}`}
-                    className="flex items-center gap-2.5 group"
-                  >
-                    <div className="relative w-9 h-9 rounded-full overflow-hidden bg-brand-emerald/10 ring-2 ring-brand-emerald/20 shrink-0">
-                      {activeChat.otherUser.image ? (
-                        <Image
-                          src={activeChat.otherUser.image}
-                          alt={activeChat.otherUser.name}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center font-bold text-brand-emerald text-xs">
-                          {activeChat.otherUser.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-brand-emerald transition-colors leading-tight">
-                        {activeChat.otherUser.name}
-                      </h3>
-                      <span className="text-[10px] text-slate-400">সদস্য প্রোফাইল দেখুন</span>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Message Bubbles Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {isChatLoading && activeChat.messages.length === 0 ? (
-                  <div className="py-20 flex justify-center">
+              {/* Message List */}
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 no-scrollbar">
+                {isThreadLoading && activeMessages.length === 0 ? (
+                  <div className="py-24 flex justify-center">
                     <Loader2 className="w-6 h-6 animate-spin text-brand-emerald" />
                   </div>
-                ) : activeChat.messages.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-slate-400">
-                    এখনই একটি বার্তা পাঠিয়ে কথোপকথন শুরু করুন!
+                ) : activeMessages.length === 0 ? (
+                  <div className="py-16 text-center text-xs text-slate-400 space-y-2">
+                    <MessageSquare className="w-8 h-8 mx-auto text-slate-300" />
+                    <p className="font-semibold text-slate-600 dark:text-slate-300">
+                      এখনই কথোপকথন শুরু করুন!
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      নিচে বার্তা লিখে পাঠান বাটনে চাপুন।
+                    </p>
                   </div>
                 ) : (
-                  activeChat.messages.map((msg) => {
-                    const isMine = msg.senderId === session?.user?.id;
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
-                      >
-                        <div
-                          className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                            isMine
-                              ? 'bg-brand-emerald text-white rounded-br-xs shadow-sm'
-                              : 'bg-white dark:bg-white/10 text-slate-900 dark:text-slate-100 rounded-bl-xs border border-slate-200/60 dark:border-white/5 shadow-xs'
-                          }`}
-                        >
-                          <p>{msg.content}</p>
-                          <span
-                            className={`text-[9px] mt-1 block ${
-                              isMine ? 'text-emerald-100 text-right' : 'text-slate-400'
-                            }`}
-                          >
-                            {new Date(msg.createdAt).toLocaleTimeString('bn-BD', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
+                  activeMessages.map((msg) => (
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      currentUserId={currentUserId}
+                      isGroup={activeConversation.isGroup}
+                      onImageClick={(url) => setLightboxSrc(url)}
+                      onReply={(target) => {
+                        setEditingMessage(null);
+                        setReplyingTo(target);
+                      }}
+                      onEdit={(target) => {
+                        setReplyingTo(null);
+                        setEditingMessage(target);
+                      }}
+                      onDelete={handleDeleteMessage}
+                      onReaction={handleReaction}
+                    />
+                  ))
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Bar */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-3 border-t border-slate-200/80 dark:border-white/10 bg-white dark:bg-brand-charcoal-dark flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  placeholder="একটি বার্তা লিখুন..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-brand-emerald"
+              {/* Message Request Banner if status is PENDING */}
+              {isPendingRequest && (
+                <MessageRequestBanner
+                  isMyRequest={isMyRequest}
+                  senderName={activeConversation.otherUser?.name}
+                  onAccept={async () => {
+                    await mutations.acceptRequest.mutateAsync(activeConversation.id);
+                  }}
+                  onDecline={async () => {
+                    await mutations.declineRequest.mutateAsync(activeConversation.id);
+                    setActiveConvId(null);
+                  }}
+                  onBlock={async () => {
+                    await mutations.blockRequest.mutateAsync(activeConversation.id);
+                    setActiveConvId(null);
+                  }}
                 />
-                <button
-                  type="submit"
-                  disabled={sending || !messageText.trim()}
-                  className="w-10 h-10 rounded-2xl bg-brand-emerald hover:bg-emerald-800 text-white flex items-center justify-center transition-all disabled:opacity-50 shadow-sm cursor-pointer"
-                >
-                  {sending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </button>
-              </form>
+              )}
+
+              {/* Message Composer */}
+              <MessageComposer
+                onSendMessage={handleSendMessage}
+                onEditMessage={handleEditMessage}
+                replyingTo={replyingTo}
+                onCancelReply={() => setReplyingTo(null)}
+                editingMessage={editingMessage}
+                onCancelEdit={() => setEditingMessage(null)}
+                onTyping={notifyTyping}
+                disabled={isPendingRequest && isMyRequest}
+              />
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 space-y-2">
-              <MessageSquare className="w-12 h-12 text-slate-300" />
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 space-y-3">
+              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+                <MessageSquare className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+              </div>
               <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">
                 কোনো চ্যাট নির্বাচিত নেই
               </h3>
-              <p className="text-xs max-w-xs">
-                বাম পাশের তালিকা থেকে যেকোনো কথোপকথন নির্বাচন করে চ্যাট শুরু করুন।
+              <p className="text-xs max-w-xs text-slate-400 leading-relaxed">
+                বাম পাশের তালিকা থেকে যেকোনো কথোপকথন নির্বাচন করুন অথবা &ldquo;নতুন চ্যাট&rdquo; বাটনে চাপুন।
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <NewChatModal
+        isOpen={isNewChatOpen}
+        onClose={() => setIsNewChatOpen(false)}
+        onSelectUser={handleSelectUserFromNewChat}
+      />
+
+      <CreateGroupModal
+        isOpen={isCreateGroupOpen}
+        onClose={() => setIsCreateGroupOpen(false)}
+        onCreateGroup={handleCreateGroup}
+      />
+
+      {activeConversation && activeConversation.isGroup && (
+        <GroupMembersModal
+          isOpen={isMembersModalOpen}
+          onClose={() => setIsMembersModalOpen(false)}
+          conversation={activeConversation}
+          currentUserId={currentUserId}
+          onRefresh={() => {
+            refetchConversations();
+            refetchMessages();
+          }}
+        />
+      )}
+
+      {/* Lightbox Modal for Full Image View */}
+      <ImageLightbox
+        src={lightboxSrc}
+        onClose={() => setLightboxSrc(null)}
+      />
     </div>
   );
 }

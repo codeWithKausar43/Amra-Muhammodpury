@@ -90,6 +90,29 @@ export const realtimeRoutes: FastifyPluginAsync = async (fastify) => {
           );
           return;
         }
+
+        if (msg.type === 'TYPING' && client.userId && msg.conversationId) {
+          // Broadcast typing status to conversation members
+          fastify.prisma.conversationMember
+            .findMany({
+              where: { conversationId: msg.conversationId },
+              select: { userId: true },
+            })
+            .then((members) => {
+              const otherUserIds = members
+                .map((m) => m.userId)
+                .filter((id) => id !== client.userId);
+              for (const uid of otherUserIds) {
+                realtimeService.publishToUser(uid, 'TYPING_STATUS', {
+                  conversationId: msg.conversationId,
+                  userId: client.userId,
+                  isTyping: Boolean(msg.isTyping),
+                });
+              }
+            })
+            .catch(() => {});
+          return;
+        }
       } catch {
         // Ignore malformed client frame
       }

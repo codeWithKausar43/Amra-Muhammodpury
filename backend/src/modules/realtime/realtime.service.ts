@@ -271,6 +271,23 @@ export class RealtimeService {
   }
 
   /**
+   * Check if a specific user currently has active connected WebSocket sessions
+   */
+  public isUserOnline(userId: string): boolean {
+    const sockets = this.userMap.get(userId);
+    return Boolean(sockets && sockets.size > 0);
+  }
+
+  /**
+   * Broadcast event to an array of user IDs
+   */
+  public publishToUsers(userIds: string[], event: RealtimeEventType, data: any) {
+    for (const uid of userIds) {
+      this.publishToUser(uid, event, data);
+    }
+  }
+
+  /**
    * Broadcast to user-specific private channel
    */
   public publishToUser(userId: string, event: RealtimeEventType, data: any) {

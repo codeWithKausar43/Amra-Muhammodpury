@@ -2,6 +2,7 @@ export type RealtimeChannel =
   | 'public'
   | `campaign:${string}`
   | `user:${string}`
+  | `conversation:${string}`
   | 'admin';
 
 export type RealtimeEventType =
@@ -20,7 +21,19 @@ export type RealtimeEventType =
   | 'ORG_APPLICATION_REVIEWED'
   | 'ORG_PAYMENT_SUBMITTED'
   | 'ORG_PAYMENT_VERIFIED'
-  | 'ORG_NOTICE_PUBLISHED';
+  | 'ORG_NOTICE_PUBLISHED'
+  // Messenger Real-Time Events
+  | 'MESSAGE_RECEIVED'
+  | 'MESSAGE_SENT'
+  | 'MESSAGE_EDITED'
+  | 'MESSAGE_DELETED'
+  | 'MESSAGE_REACTION'
+  | 'MESSAGE_READ'
+  | 'TYPING_STATUS'
+  | 'USER_PRESENCE'
+  | 'CONVERSATION_UPDATED'
+  | 'MESSAGE_REQUEST_RECEIVED'
+  | 'MESSAGE_REQUEST_UPDATED';
 
 export interface CampaignProgressUpdatedPayload {
   campaignId: string;
@@ -67,7 +80,8 @@ export interface RealtimeEnvelope<T = unknown> {
 export type ClientInboundMessage =
   | { type: 'PING' }
   | { type: 'SUBSCRIBE'; channel: RealtimeChannel }
-  | { type: 'UNSUBSCRIBE'; channel: RealtimeChannel };
+  | { type: 'UNSUBSCRIBE'; channel: RealtimeChannel }
+  | { type: 'TYPING'; conversationId: string; isTyping: boolean };
 
 export interface ConnectedClient {
   id: string;
