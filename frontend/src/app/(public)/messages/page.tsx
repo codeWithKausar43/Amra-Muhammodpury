@@ -297,6 +297,7 @@ function MessagesContent() {
             }}
             onlineUserIds={onlineUserIds}
             pendingRequestsCount={pendingRequestsCount}
+            currentUserId={currentUserId}
           />
         </div>
 

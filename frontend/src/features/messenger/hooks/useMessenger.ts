@@ -188,8 +188,8 @@ export function useMessengerRealtime(activeConvId: string | null) {
   React.useEffect(() => {
     // 1. New Message Received
     const unbindReceived = realtimeClient.on('MESSAGE_RECEIVED', (data: any) => {
-      if (!data?.message) return;
-      const msg: MessageItem = data.message;
+      const msg: MessageItem = data?.message || data;
+      if (!msg || !msg.id) return;
       const convId = msg.conversationId;
 
       // Optimistically insert message if viewing this thread
@@ -252,8 +252,8 @@ export function useMessengerRealtime(activeConvId: string | null) {
 
     // 2. Message Sent (Device sync)
     const unbindSent = realtimeClient.on('MESSAGE_SENT', (data: any) => {
-      if (!data?.message) return;
-      const msg: MessageItem = data.message;
+      const msg: MessageItem = data?.message || data;
+      if (!msg || !msg.id) return;
       const convId = msg.conversationId;
 
       if (activeConvId === convId) {

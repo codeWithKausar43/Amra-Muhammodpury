@@ -782,9 +782,15 @@ export class MessageService {
     // Real-time broadcast to all members
     for (const member of conv.members) {
       if (member.userId === senderId) {
-        realtimeService.publishToUser(senderId, 'MESSAGE_SENT', message);
+        realtimeService.publishToUser(senderId, 'MESSAGE_SENT', {
+          message,
+          conversationId: conv.id,
+        });
       } else {
-        realtimeService.publishToUser(member.userId, 'MESSAGE_RECEIVED', message);
+        realtimeService.publishToUser(member.userId, 'MESSAGE_RECEIVED', {
+          message,
+          conversationId: conv.id,
+        });
 
         // If PENDING message request, send dedicated request event
         if (conv.status === 'PENDING') {
