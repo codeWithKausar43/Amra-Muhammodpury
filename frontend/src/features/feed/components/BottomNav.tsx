@@ -80,40 +80,40 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-2 pt-1 pointer-events-none"
       >
         <div className="max-w-md mx-auto pointer-events-auto relative">
-          {/* Animated Speed Dial Menu with Exact Triangle/Arc 14px Alignment Gap */}
+          {/* Animated Speed Dial Menu with Consistent Circular Icons & Smooth Spring Pop */}
           {isMenuOpen && (
             <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-44 h-24 pointer-events-auto z-50">
-              {/* Option 1: Messenger / Chat Speech Bubble (Left) */}
+              {/* Option 1: Messenger / Chat (Left) */}
               <button
                 type="button"
                 onClick={handleActionMessage}
                 aria-label="বার্তা ও চ্যাট"
                 title="বার্তা ও চ্যাট"
-                className="absolute left-0 bottom-2 w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xl shadow-blue-500/40 ring-4 ring-white dark:ring-brand-charcoal-dark hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer animate-in zoom-in-75 fade-in slide-in-from-bottom-5 duration-200"
+                className="speed-dial-item-1 absolute left-0 bottom-2 w-12 h-12 rounded-full bg-[#0084FF] hover:bg-[#0073e6] text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
               >
-                <MessageCircleMore className="w-6 h-6 stroke-[2.2]" />
+                <MessageCircleMore className="w-5 h-5 stroke-[2.2]" />
               </button>
 
-              {/* Option 2: Create Post / Book with Pen (Center / Top) */}
+              {/* Option 2: Create Post (Center / Top) */}
               <button
                 type="button"
                 onClick={handleActionPost}
                 aria-label="নতুন পোস্ট করুন"
                 title="নতুন পোস্ট করুন"
-                className="absolute left-1/2 -translate-x-1/2 bottom-10 w-13 h-13 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-600 to-emerald-700 text-white flex items-center justify-center shadow-2xl shadow-emerald-600/45 ring-4 ring-white dark:ring-brand-charcoal-dark hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer animate-in zoom-in-75 fade-in slide-in-from-bottom-7 duration-250"
+                className="speed-dial-item-2 absolute left-1/2 -translate-x-1/2 bottom-11 w-12 h-12 rounded-full bg-brand-emerald hover:bg-emerald-800 text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
               >
-                <PenSquare className="w-6 h-6 stroke-[2.2]" />
+                <PenSquare className="w-5 h-5 stroke-[2.2]" />
               </button>
 
-              {/* Option 3: Community Persona / Members (Right) */}
+              {/* Option 3: Community / Members (Right) */}
               <button
                 type="button"
                 onClick={handleActionComingSoon}
                 aria-label="কমিউনিটি ও সদস্য"
                 title="কমিউনিটি ও সদস্য"
-                className="absolute right-0 bottom-2 w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-600 to-violet-700 text-white flex items-center justify-center shadow-xl shadow-purple-500/40 ring-4 ring-white dark:ring-brand-charcoal-dark hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer animate-in zoom-in-75 fade-in slide-in-from-bottom-5 duration-200"
+                className="speed-dial-item-3 absolute right-0 bottom-2 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
               >
-                <Users className="w-6 h-6 stroke-[2.2]" />
+                <Users className="w-5 h-5 stroke-[2.2]" />
               </button>
             </div>
           )}

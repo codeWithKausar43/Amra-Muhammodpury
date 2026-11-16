@@ -10,6 +10,13 @@ export const realtimeRoutes: FastifyPluginAsync = async (fastify) => {
     let userRole: string | null = null;
     let isAdminOrOfficer = false;
 
+    // 1. Try URL query param e.g. /ws?userId=...
+    const query = request.query as { userId?: string } | undefined;
+    if (query?.userId) {
+      userId = query.userId;
+    }
+
+    // 2. Try session headers
     try {
       const headers = fromNodeHeaders(request.headers);
       const session = await fastify.auth.api.getSession({ headers });
@@ -58,13 +65,49 @@ export const realtimeRoutes: FastifyPluginAsync = async (fastify) => {
     );
 
     // Inbound frame handling
-    socket.on('message', (raw: any) => {
+    socket.on('message', async (raw: any) => {
       try {
         const text = typeof raw === 'string' ? raw : raw.toString('utf8');
         const msg = JSON.parse(text) as ClientInboundMessage;
 
         if (msg.type === 'PING') {
           socket.send(JSON.stringify({ type: 'PONG', timestamp: Date.now() }));
+          return;
+        }
+
+        if (msg.type === 'AUTH' && msg.userId) {
+          try {
+            const user = await fastify.prisma.user.findUnique({
+              where: { id: msg.userId },
+              select: { id: true, role: true },
+            });
+            if (user) {
+              let isAdm = user.role === 'ADMIN';
+              if (!isAdm) {
+                const membership = await fastify.prisma.orgMembership.findUnique({
+                  where: { userId: user.id },
+                  select: { status: true, orgRole: true },
+                });
+                if (
+                  membership &&
+                  membership.status === 'ACTIVE' &&
+                  ['PRESIDENT', 'TREASURER', 'MODERATOR', 'ADMIN'].includes(membership.orgRole)
+                ) {
+                  isAdm = true;
+                }
+              }
+              realtimeService.bindUser(client, user.id, user.role, isAdm);
+              socket.send(
+                JSON.stringify({
+                  type: 'AUTHENTICATED',
+                  userId: user.id,
+                  channels: Array.from(client.subscriptions),
+                }),
+              );
+            }
+          } catch {
+            // Ignore auth lookup errors
+          }
           return;
         }
 

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useSession } from '@/lib/auth/auth-client';
+import { useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -13,6 +14,7 @@ import {
   useTypingState,
   useMessengerRealtime,
   useMessengerMutations,
+  messengerQueryKeys,
 } from '@/features/messenger/hooks/useMessenger';
 import { messengerService } from '@/features/messenger/services/messenger.service';
 import { MessageItem } from '@/features/messenger/types/messenger.types';
@@ -28,6 +30,7 @@ import { GroupMembersModal } from '@/features/messenger/components/GroupMembersM
 import { ImageLightbox } from '@/features/messenger/components/ImageLightbox';
 
 function MessagesContent() {
+  const queryClient = useQueryClient();
   const { data: session, isPending: isSessionLoading } = useSession();
   const currentUserId = session?.user?.id;
   const searchParams = useSearchParams();
@@ -79,6 +82,14 @@ function MessagesContent() {
       .getOrCreateDirect(targetUserId)
       .then((conv) => {
         if (conv?.id) {
+          queryClient.setQueryData(
+            messengerQueryKeys.messages(conv.id, ''),
+            {
+              conversation: conv,
+              messages: [],
+              nextCursor: null,
+            },
+          );
           setActiveConvId(conv.id);
           setActiveTab('primary');
           refetchConversations();
@@ -87,7 +98,7 @@ function MessagesContent() {
       .catch((err) => {
         console.error('Error starting direct chat:', err);
       });
-  }, [targetUserId, session?.user, isConvLoading, conversations, refetchConversations]);
+  }, [targetUserId, session?.user, isConvLoading, conversations, refetchConversations, queryClient]);
 
   // 2. Fetch Active Thread Messages
   const {
@@ -166,6 +177,14 @@ function MessagesContent() {
     try {
       const conv = await messengerService.getOrCreateDirect(userId);
       if (conv && conv.id) {
+        queryClient.setQueryData(
+          messengerQueryKeys.messages(conv.id, ''),
+          {
+            conversation: conv,
+            messages: [],
+            nextCursor: null,
+          },
+        );
         setActiveConvId(conv.id);
         setActiveTab('primary');
         refetchConversations();
@@ -307,7 +326,20 @@ function MessagesContent() {
             !activeConvId ? 'hidden md:flex' : 'flex'
           }`}
         >
-          {activeConvId && activeConversation ? (
+          {activeConvId ? (
+            isThreadLoading && !activeConversation ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                <Loader2 className="w-8 h-8 animate-spin text-brand-emerald" />
+                <p className="text-xs text-slate-400">কথোপকথন লোড হচ্ছে...</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveConvId(null)}
+                  className="mt-2 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 cursor-pointer"
+                >
+                  ফিরে যান
+                </button>
+              </div>
+            ) : activeConversation ? (
             <>
               {/* Thread Header */}
               <ChatHeader
@@ -407,6 +439,22 @@ function MessagesContent() {
               />
             </>
           ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 space-y-3">
+              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+                <MessageSquare className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                কথোপকথন পাওয়া যায়নি
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveConvId(null)}
+                className="mt-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand-emerald text-white cursor-pointer"
+              >
+                তালিকায় ফিরে যান
+              </button>
+            </div>
+          )) : (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 space-y-3">
               <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
                 <MessageSquare className="w-8 h-8 text-slate-300 dark:text-slate-600" />

@@ -376,6 +376,12 @@ export class MessageService {
             isOnline: realtimeService.isUserOnline(otherMember.user.id),
           }
         : null,
+      isMyRequest: conv.status === 'PENDING' && conv.creatorId === senderId,
+      unreadCount: 0,
+      isPinned: false,
+      isMuted: false,
+      isArchived: false,
+      lastMessage: null,
     };
   }
 
@@ -803,6 +809,12 @@ export class MessageService {
       }
     }
 
+    // Dual delivery: broadcast directly to conversation channel
+    realtimeService.publish(`conversation:${conv.id}`, 'MESSAGE_RECEIVED', {
+      message,
+      conversationId: conv.id,
+    });
+
     return message;
   }
 
@@ -845,6 +857,7 @@ export class MessageService {
     for (const m of message.conversation.members) {
       realtimeService.publishToUser(m.userId, 'MESSAGE_EDITED', updated);
     }
+    realtimeService.publish(`conversation:${message.conversationId}`, 'MESSAGE_EDITED', updated);
 
     return updated;
   }
@@ -880,6 +893,10 @@ export class MessageService {
         conversationId: message.conversationId,
       });
     }
+    realtimeService.publish(`conversation:${message.conversationId}`, 'MESSAGE_DELETED', {
+      messageId: message.id,
+      conversationId: message.conversationId,
+    });
 
     return updated;
   }
@@ -931,6 +948,11 @@ export class MessageService {
         reactions: allReactions,
       });
     }
+    realtimeService.publish(`conversation:${message.conversationId}`, 'MESSAGE_REACTION', {
+      messageId,
+      conversationId: message.conversationId,
+      reactions: allReactions,
+    });
 
     return allReactions;
   }

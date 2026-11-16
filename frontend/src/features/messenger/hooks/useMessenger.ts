@@ -57,8 +57,10 @@ export function useMessengerMessages(
       return messengerService.getConversationMessages(conversationId, undefined, search);
     },
     enabled: Boolean(conversationId),
-    staleTime: 10 * 1000,
+    staleTime: 3 * 1000,
     gcTime: 5 * 60 * 1000,
+    refetchInterval: 4000, // Background polling fallback (4s) so messages update even if websocket drops
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -184,6 +186,16 @@ export function useMessengerRealtime(activeConvId: string | null) {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
+
+  // Auto-subscribe to active conversation room for instant push delivery
+  React.useEffect(() => {
+    if (!activeConvId) return;
+    const channel = `conversation:${activeConvId}`;
+    realtimeClient.subscribe(channel);
+    return () => {
+      realtimeClient.unsubscribe(channel);
+    };
+  }, [activeConvId]);
 
   React.useEffect(() => {
     // 1. New Message Received

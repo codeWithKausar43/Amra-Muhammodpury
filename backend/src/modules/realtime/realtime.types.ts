@@ -81,6 +81,7 @@ export type ClientInboundMessage =
   | { type: 'PING' }
   | { type: 'SUBSCRIBE'; channel: RealtimeChannel }
   | { type: 'UNSUBSCRIBE'; channel: RealtimeChannel }
+  | { type: 'AUTH'; userId: string; token?: string }
   | { type: 'TYPING'; conversationId: string; isTyping: boolean };
 
 export interface ConnectedClient {

@@ -94,6 +94,38 @@ export class RealtimeService {
   }
 
   /**
+   * Bind or re-bind an authenticated userId to an active client connection
+   */
+  public bindUser(
+    client: ConnectedClient,
+    userId: string,
+    role?: string | null,
+    isAdminOrOfficer?: boolean,
+  ) {
+    if (client.userId && client.userId !== userId && this.userMap.has(client.userId)) {
+      const set = this.userMap.get(client.userId);
+      if (set) {
+        set.delete(client);
+        if (set.size === 0) this.userMap.delete(client.userId);
+      }
+      this.unsubscribe(client, `user:${client.userId}`);
+    }
+
+    client.userId = userId;
+    if (role !== undefined) client.role = role;
+    if (isAdminOrOfficer !== undefined) client.isAdminOrOfficer = isAdminOrOfficer;
+
+    // Auto-subscribe to personal user channel
+    this.subscribe(client, `user:${userId}`);
+
+    // Register in userMap
+    if (!this.userMap.has(userId)) {
+      this.userMap.set(userId, new Set());
+    }
+    this.userMap.get(userId)!.add(client);
+  }
+
+  /**
    * Remove client and clean up channel mappings
    */
   public removeClient(client: ConnectedClient) {

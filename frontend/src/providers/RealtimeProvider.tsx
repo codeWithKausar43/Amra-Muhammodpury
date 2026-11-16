@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { realtimeClient, RealtimeClient } from '@/lib/realtime/websocket-client';
 import { notificationAudio } from '@/lib/audio/notificationSound';
+import { useSession } from '@/lib/auth/auth-client';
 
 interface RealtimeContextType {
   client: RealtimeClient;
@@ -15,7 +16,14 @@ const RealtimeContext = React.createContext<RealtimeContextType | null>(null);
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
   const [status, setStatus] = React.useState<'CONNECTED' | 'CONNECTING' | 'DISCONNECTED'>(realtimeClient.status);
+
+  // Sync auth state with WebSocket client
+  const userId = session?.user?.id || null;
+  React.useEffect(() => {
+    realtimeClient.setAuth(userId);
+  }, [userId]);
 
   React.useEffect(() => {
     // 1. Listen to status

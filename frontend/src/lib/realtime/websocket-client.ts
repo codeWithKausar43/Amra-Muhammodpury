@@ -21,6 +21,7 @@ export class RealtimeClient {
   private seenEventIds = new Set<string>();
 
   public status: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED' = 'DISCONNECTED';
+  public currentUserId: string | null = null;
   private statusListeners = new Set<(status: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED') => void>();
 
   private constructor() {
@@ -43,16 +44,45 @@ export class RealtimeClient {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const envApi = process.env.NEXT_PUBLIC_API_URL;
+    let base = '';
 
     if (envApi) {
       // Replace http/https with ws/wss and append /api/v1/realtime/ws
       const cleanApi = envApi.replace(/\/api\/v1\/?$/, '').replace(/^http/, 'ws');
-      return `${cleanApi}/api/v1/realtime/ws`;
+      base = `${cleanApi}/api/v1/realtime/ws`;
+    } else {
+      // Default development fallback: port 5000
+      const host = window.location.hostname || 'localhost';
+      base = `${protocol}//${host}:5000/api/v1/realtime/ws`;
     }
 
-    // Default development fallback: port 5000
-    const host = window.location.hostname || 'localhost';
-    return `${protocol}//${host}:5000/api/v1/realtime/ws`;
+    if (this.currentUserId) {
+      const sep = base.includes('?') ? '&' : '?';
+      return `${base}${sep}userId=${encodeURIComponent(this.currentUserId)}`;
+    }
+    return base;
+  }
+
+  /**
+   * Set or update current authenticated user ID and sync WebSocket subscriptions
+   */
+  public setAuth(userId: string | null) {
+    const previousId = this.currentUserId;
+    this.currentUserId = userId;
+
+    if (previousId && previousId !== userId) {
+      this.unsubscribe(`user:${previousId}`);
+    }
+
+    if (userId) {
+      this.subscribedChannels.add(`user:${userId}`);
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.send({ type: 'AUTH', userId });
+        this.send({ type: 'SUBSCRIBE', channel: `user:${userId}` });
+      } else if (this.status === 'DISCONNECTED') {
+        this.connect();
+      }
+    }
   }
 
   /**
@@ -76,6 +106,12 @@ export class RealtimeClient {
         this.setStatus('CONNECTED');
         this.reconnectAttempts = 0;
         this.startPing();
+
+        // If authenticated, send AUTH and ensure personal channel is subscribed
+        if (this.currentUserId) {
+          this.send({ type: 'AUTH', userId: this.currentUserId });
+          this.subscribedChannels.add(`user:${this.currentUserId}`);
+        }
 
         // Resubscribe to all tracked channels
         for (const channel of this.subscribedChannels) {
