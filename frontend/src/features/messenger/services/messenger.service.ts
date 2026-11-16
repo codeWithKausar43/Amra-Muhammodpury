@@ -49,7 +49,7 @@ export const messengerService = {
    * Start or fetch direct conversation
    */
   async getOrCreateDirect(recipientId: string): Promise<ConversationItem> {
-    const res = await apiClient<ApiResponse<ConversationItem>>('/messages/direct', {
+    const res = await apiClient<ApiResponse<ConversationItem>>('/messages/conversations/direct', {
       method: 'POST',
       body: JSON.stringify({ recipientId }),
     });
@@ -246,9 +246,18 @@ export const messengerService = {
     if (!userIds || userIds.length === 0) return {};
     try {
       const res = await apiClient<
-        ApiResponse<Record<string, { isOnline: boolean; lastActive?: string }>>
+        ApiResponse<Record<string, boolean | { isOnline: boolean; lastActive?: string }>>
       >(`/messages/presence?userIds=${userIds.join(',')}`);
-      return res.data || {};
+      const raw = res.data || {};
+      const result: Record<string, { isOnline: boolean; lastActive?: string }> = {};
+      for (const [k, v] of Object.entries(raw)) {
+        if (typeof v === 'boolean') {
+          result[k] = { isOnline: v };
+        } else if (v && typeof v === 'object') {
+          result[k] = { isOnline: Boolean(v.isOnline), lastActive: v.lastActive };
+        }
+      }
+      return result;
     } catch {
       return {};
     }

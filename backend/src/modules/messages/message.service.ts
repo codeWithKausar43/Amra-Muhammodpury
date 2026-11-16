@@ -164,8 +164,8 @@ export class MessageService {
 
       // Filter by tab
       if (tab === 'primary') {
-        // Direct conversation must be ACCEPTED (or groups are always primary)
-        if (!conv.isGroup && conv.status !== 'ACCEPTED') {
+        // Direct conversation must be ACCEPTED, or PENDING if current user is the creator (sender sent the request)
+        if (!conv.isGroup && conv.status !== 'ACCEPTED' && conv.creatorId !== userId) {
           continue;
         }
       } else if (tab === 'requests') {
@@ -643,6 +643,8 @@ export class MessageService {
         image: conv.image,
         status: conv.status,
         creatorId: conv.creatorId,
+        otherUser,
+        isMyRequest: conv.status === 'PENDING' && conv.creatorId === userId,
         members: conv.members.map((m) => ({
           id: m.user.id,
           name: m.user.name,

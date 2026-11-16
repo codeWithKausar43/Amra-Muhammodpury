@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useSession } from '@/lib/auth/auth-client';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import {
   useMessengerConversations,
@@ -26,9 +27,11 @@ import { CreateGroupModal } from '@/features/messenger/components/CreateGroupMod
 import { GroupMembersModal } from '@/features/messenger/components/GroupMembersModal';
 import { ImageLightbox } from '@/features/messenger/components/ImageLightbox';
 
-export default function MessagesPage() {
+function MessagesContent() {
   const { data: session, isPending: isSessionLoading } = useSession();
   const currentUserId = session?.user?.id;
+  const searchParams = useSearchParams();
+  const targetUserId = searchParams.get('user');
 
   // Active navigation states
   const [activeTab, setActiveTab] = React.useState<'primary' | 'requests' | 'archived'>('primary');
@@ -62,6 +65,30 @@ export default function MessagesPage() {
     (c) => c.status === 'PENDING' && !c.isMyRequest,
   ).length;
 
+  // Auto-open chat if ?user=<userId> is passed in URL
+  React.useEffect(() => {
+    if (!targetUserId || !session?.user || isConvLoading) return;
+
+    const existing = conversations.find((c) => c.otherUser?.id === targetUserId);
+    if (existing) {
+      setActiveConvId(existing.id);
+      return;
+    }
+
+    messengerService
+      .getOrCreateDirect(targetUserId)
+      .then((conv) => {
+        if (conv?.id) {
+          setActiveConvId(conv.id);
+          setActiveTab('primary');
+          refetchConversations();
+        }
+      })
+      .catch((err) => {
+        console.error('Error starting direct chat:', err);
+      });
+  }, [targetUserId, session?.user, isConvLoading, conversations, refetchConversations]);
+
   // 2. Fetch Active Thread Messages
   const {
     data: threadData,
@@ -70,10 +97,19 @@ export default function MessagesPage() {
   } = useMessengerMessages(activeConvId, messageSearchQuery);
 
   const activeMessages = threadData?.messages || [];
-  const activeConversation =
-    threadData?.conversation?.id === activeConvId
-      ? threadData.conversation
-      : conversations.find((c) => c.id === activeConvId) || null;
+
+  const activeConversation = React.useMemo(() => {
+    if (threadData?.conversation?.id === activeConvId) {
+      return {
+        ...threadData.conversation,
+        otherUser:
+          threadData.conversation.otherUser ||
+          conversations.find((c) => c.id === activeConvId)?.otherUser ||
+          null,
+      };
+    }
+    return conversations.find((c) => c.id === activeConvId) || null;
+  }, [threadData, activeConvId, conversations]);
 
   // 3. User Presence Tracking
   const otherUserIds = React.useMemo(() => {
@@ -127,9 +163,17 @@ export default function MessagesPage() {
 
   // Handlers
   const handleSelectUserFromNewChat = async (userId: string) => {
-    const conv = await messengerService.getOrCreateDirect(userId);
-    setActiveConvId(conv.id);
-    refetchConversations();
+    try {
+      const conv = await messengerService.getOrCreateDirect(userId);
+      if (conv && conv.id) {
+        setActiveConvId(conv.id);
+        setActiveTab('primary');
+        refetchConversations();
+      }
+    } catch (err: any) {
+      console.error('Failed to start chat:', err);
+      alert(err.message || 'চ্যাট শুরু করতে সমস্যা হয়েছে');
+    }
   };
 
   const handleCreateGroup = async (data: { title: string; memberIds: string[] }) => {
@@ -146,10 +190,15 @@ export default function MessagesPage() {
     replyToId?: string;
   }) => {
     if (!activeConvId) return;
-    await mutations.sendMessage.mutateAsync({
-      conversationId: activeConvId,
-      ...payload,
-    });
+    try {
+      await mutations.sendMessage.mutateAsync({
+        conversationId: activeConvId,
+        ...payload,
+      });
+    } catch (err: any) {
+      console.error('Failed to send message:', err);
+      alert(err.message || 'বার্তা পাঠাতে ত্রুটি হয়েছে');
+    }
   };
 
   const handleEditMessage = async (messageId: string, content: string) => {
@@ -176,7 +225,10 @@ export default function MessagesPage() {
   };
 
   const isPendingRequest = activeConversation?.status === 'PENDING';
-  const isMyRequest = Boolean(activeConversation?.isMyRequest);
+  const isMyRequest = Boolean(
+    activeConversation?.isMyRequest ||
+      (activeConversation?.status === 'PENDING' && activeConversation?.creatorId === currentUserId),
+  );
 
   if (isSessionLoading) {
     return (
@@ -259,7 +311,6 @@ export default function MessagesPage() {
               {/* Thread Header */}
               <ChatHeader
                 conversation={activeConversation}
-                currentUserId={currentUserId}
                 isOnline={
                   activeConversation.otherUser?.id
                     ? onlineUserIds.has(activeConversation.otherUser.id)
@@ -293,10 +344,10 @@ export default function MessagesPage() {
                   <div className="py-16 text-center text-xs text-slate-400 space-y-2">
                     <MessageSquare className="w-8 h-8 mx-auto text-slate-300" />
                     <p className="font-semibold text-slate-600 dark:text-slate-300">
-                      এখনই কথোপকথন শুরু করুন!
+                      কথোপকথন শুরু করুন!
                     </p>
                     <p className="text-[11px] text-slate-400">
-                      নিচে বার্তা লিখে পাঠান বাটনে চাপুন।
+                      নিচের বক্সে বার্তা লিখে পাঠান বাটনে চাপুন।
                     </p>
                   </div>
                 ) : (
@@ -323,8 +374,8 @@ export default function MessagesPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Request Banner if status is PENDING */}
-              {isPendingRequest && (
+              {/* Message Request Banner if status is PENDING and already has at least 1 message, or if recipient */}
+              {isPendingRequest && (!isMyRequest || activeMessages.length >= 1) && (
                 <MessageRequestBanner
                   isMyRequest={isMyRequest}
                   senderName={activeConversation.otherUser?.name}
@@ -351,7 +402,7 @@ export default function MessagesPage() {
                 editingMessage={editingMessage}
                 onCancelEdit={() => setEditingMessage(null)}
                 onTyping={notifyTyping}
-                disabled={isPendingRequest && isMyRequest}
+                disabled={isPendingRequest && isMyRequest && activeMessages.length >= 1}
               />
             </>
           ) : (
@@ -402,5 +453,20 @@ export default function MessagesPage() {
         onClose={() => setLightboxSrc(null)}
       />
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="max-w-5xl mx-auto px-4 py-16 flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-emerald" />
+          <p className="text-xs text-slate-400">মেসেঞ্জার লোড হচ্ছে...</p>
+        </div>
+      }
+    >
+      <MessagesContent />
+    </React.Suspense>
   );
 }

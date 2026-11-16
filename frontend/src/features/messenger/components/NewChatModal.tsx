@@ -33,6 +33,9 @@ export function NewChatModal({ isOpen, onClose, onSelectUser }: NewChatModalProp
     try {
       await onSelectUser(userId);
       onClose();
+    } catch (err: any) {
+      console.error('Failed to start chat:', err);
+      alert(err.message || 'চ্যাট শুরু করতে সমস্যা হয়েছে');
     } finally {
       setIsStarting(null);
     }

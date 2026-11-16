@@ -9,9 +9,9 @@ import {
   Plus,
   Bell,
   User,
-  MessageSquare,
+  MessageCircleMore,
   PenSquare,
-  Sparkles,
+  Users,
 } from 'lucide-react';
 import { useSession } from '@/lib/auth/auth-client';
 import { useFeedModal } from '../context/FeedModalContext';
@@ -32,6 +32,11 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
   const isOrganization = pathname.startsWith('/organization');
   const isNotifications = pathname === '/notifications';
   const isProfile = pathname.startsWith('/profile') || pathname.startsWith('/dashboard');
+
+  // Close menu on route change
+  React.useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
 
   const handleCenterPlusClick = () => {
     setIsMenuOpen((prev) => !prev);
@@ -57,7 +62,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
 
   const handleActionComingSoon = () => {
     setIsMenuOpen(false);
-    alert('এই চমৎকার ফিচারটি খুব শীঘ্রই আসছে!');
+    router.push('/friends');
   };
 
   return (
@@ -75,53 +80,41 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-2 pt-1 pointer-events-none"
       >
         <div className="max-w-md mx-auto pointer-events-auto relative">
-          {/* Animated Speed Dial / Fan-out Popup Menu */}
+          {/* Animated Speed Dial Menu with Exact Triangle/Arc Alignment */}
           {isMenuOpen && (
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 flex items-center justify-around z-50 pointer-events-auto animate-in fade-in slide-in-from-bottom-5 duration-200">
-              {/* Option 1: Messenger (Left) */}
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleActionMessage}
-                  className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-emerald to-emerald-600 text-white flex items-center justify-center shadow-lg shadow-brand-emerald/30 active:scale-90 transition-transform cursor-pointer ring-2 ring-white dark:ring-brand-charcoal"
-                  title="ইনবক্স ও বার্তা"
-                >
-                  <MessageSquare className="w-5 h-5" />
-                </button>
-                <span className="text-[10px] font-bold text-white bg-slate-900/80 px-2 py-0.5 rounded-full backdrop-blur-xs shadow-sm">
-                  বার্তা
-                </span>
-              </div>
+            <div className="absolute bottom-16 left-0 right-0 h-28 pointer-events-auto z-50">
+              {/* Option 1: Messenger / Chat Speech Bubble (Left - directly above সংগঠন) */}
+              <button
+                type="button"
+                onClick={handleActionMessage}
+                aria-label="বার্তা ও চ্যাট"
+                title="বার্তা ও চ্যাট"
+                className="absolute left-[24%] -translate-x-1/2 bottom-2 w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center shadow-xl shadow-blue-500/40 ring-4 ring-white dark:ring-brand-charcoal-dark hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer animate-in zoom-in-75 fade-in slide-in-from-bottom-5 duration-200"
+              >
+                <MessageCircleMore className="w-6 h-6 stroke-[2.2]" />
+              </button>
 
-              {/* Option 2: Create Post (Center / Top) */}
-              <div className="flex flex-col items-center gap-1 -translate-y-3">
-                <button
-                  type="button"
-                  onClick={handleActionPost}
-                  className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-xl shadow-teal-600/30 active:scale-90 transition-transform cursor-pointer ring-2 ring-white dark:ring-brand-charcoal"
-                  title="নতুন পোস্ট করুন"
-                >
-                  <PenSquare className="w-6 h-6 stroke-[2.2]" />
-                </button>
-                <span className="text-[10px] font-bold text-white bg-slate-900/80 px-2 py-0.5 rounded-full backdrop-blur-xs shadow-sm">
-                  পোস্ট
-                </span>
-              </div>
+              {/* Option 2: Create Post / Book with Pen (Center / Top - directly above + button) */}
+              <button
+                type="button"
+                onClick={handleActionPost}
+                aria-label="নতুন পোস্ট করুন"
+                title="নতুন পোস্ট করুন"
+                className="absolute left-1/2 -translate-x-1/2 bottom-11 w-13 h-13 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-2xl shadow-emerald-600/45 ring-4 ring-white dark:ring-brand-charcoal-dark hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer animate-in zoom-in-75 fade-in slide-in-from-bottom-7 duration-250"
+              >
+                <PenSquare className="w-6 h-6 stroke-[2.2]" />
+              </button>
 
-              {/* Option 3: 3rd Feature Placeholder (Right) */}
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleActionComingSoon}
-                  className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/30 active:scale-90 transition-transform cursor-pointer ring-2 ring-white dark:ring-brand-charcoal"
-                  title="আসছে..."
-                >
-                  <Sparkles className="w-5 h-5" />
-                </button>
-                <span className="text-[10px] font-bold text-white bg-slate-900/80 px-2 py-0.5 rounded-full backdrop-blur-xs shadow-sm">
-                  আসছে...
-                </span>
-              </div>
+              {/* Option 3: Community Persona / Members (Right - directly above বিজ্ঞপ্তি) */}
+              <button
+                type="button"
+                onClick={handleActionComingSoon}
+                aria-label="কমিউনিটি ও সদস্য"
+                title="কমিউনিটি ও সদস্য"
+                className="absolute left-[76%] -translate-x-1/2 bottom-2 w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-500 text-white flex items-center justify-center shadow-xl shadow-purple-500/40 ring-4 ring-white dark:ring-brand-charcoal-dark hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer animate-in zoom-in-75 fade-in slide-in-from-bottom-5 duration-200"
+              >
+                <Users className="w-6 h-6 stroke-[2.2]" />
+              </button>
             </div>
           )}
 
@@ -130,6 +123,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             {/* Home */}
             <Link
               href="/"
+              onClick={() => setIsMenuOpen(false)}
               className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
                 isHome
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
@@ -143,6 +137,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             {/* Organization */}
             <Link
               href="/organization"
+              onClick={() => setIsMenuOpen(false)}
               className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
                 isOrganization
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
@@ -161,8 +156,10 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
                 onClick={handleCenterPlusClick}
                 aria-label={isMenuOpen ? 'মেনু বন্ধ করুন' : 'মেনু খুলুন'}
                 title={isMenuOpen ? 'মেনু বন্ধ করুন' : 'অপশন খুলুন'}
-                className={`w-12 h-12 rounded-full bg-gradient-to-tr from-brand-emerald to-emerald-600 text-white flex items-center justify-center shadow-lg shadow-brand-emerald/40 ring-4 ring-white dark:ring-brand-charcoal-dark active:scale-90 transition-all duration-200 cursor-pointer ${
-                  isMenuOpen ? 'rotate-45 bg-rose-600 from-rose-500 to-rose-600 shadow-rose-500/40' : ''
+                className={`w-12 h-12 rounded-full bg-gradient-to-tr from-brand-emerald to-emerald-600 text-white flex items-center justify-center shadow-lg shadow-brand-emerald/40 ring-4 ring-white dark:ring-brand-charcoal-dark active:scale-90 transition-all duration-300 cursor-pointer ${
+                  isMenuOpen
+                    ? 'rotate-45 from-rose-500 to-rose-600 shadow-rose-500/40 ring-rose-100 dark:ring-rose-950/30'
+                    : ''
                 }`}
               >
                 <Plus className="w-6 h-6 stroke-[2.5]" />
@@ -172,6 +169,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             {/* Notifications */}
             <Link
               href="/notifications"
+              onClick={() => setIsMenuOpen(false)}
               className={`relative flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
                 isNotifications
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
@@ -188,6 +186,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             {/* Profile or Login */}
             <Link
               href={session?.user ? `/profile/${session.user.id}` : '/login'}
+              onClick={() => setIsMenuOpen(false)}
               className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
                 isProfile
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
