@@ -80,51 +80,57 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-2 pt-1 pointer-events-none"
       >
         <div className="max-w-md mx-auto pointer-events-auto relative">
-          {/* Animated Speed Dial Menu with Consistent Circular Icons & Smooth Spring Pop */}
+          {/* Animated Speed Dial Menu with Consistent Circular Icons & Symmetrical Positioning */}
           {isMenuOpen && (
             <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-44 h-24 pointer-events-auto z-50">
               {/* Option 1: Messenger / Chat (Left) */}
-              <button
-                type="button"
-                onClick={handleActionMessage}
-                aria-label="বার্তা ও চ্যাট"
-                title="বার্তা ও চ্যাট"
-                className="speed-dial-item-1 absolute left-0 bottom-2 w-12 h-12 rounded-full bg-[#0084FF] hover:bg-[#0073e6] text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
-              >
-                <MessageCircleMore className="w-5 h-5 stroke-[2.2]" />
-              </button>
+              <div className="absolute left-0 bottom-2">
+                <button
+                  type="button"
+                  onClick={handleActionMessage}
+                  aria-label="বার্তা ও চ্যাট"
+                  title="বার্তা ও চ্যাট"
+                  className="speed-dial-item-1 w-12 h-12 rounded-full bg-[#0084FF] hover:bg-[#0073e6] text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
+                >
+                  <MessageCircleMore className="w-5 h-5 stroke-[2.2]" />
+                </button>
+              </div>
 
-              {/* Option 2: Create Post (Center / Top) */}
-              <button
-                type="button"
-                onClick={handleActionPost}
-                aria-label="নতুন পোস্ট করুন"
-                title="নতুন পোস্ট করুন"
-                className="speed-dial-item-2 absolute left-1/2 -translate-x-1/2 bottom-11 w-12 h-12 rounded-full bg-brand-emerald hover:bg-emerald-800 text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
-              >
-                <PenSquare className="w-5 h-5 stroke-[2.2]" />
-              </button>
+              {/* Option 2: Create Post (Center / Top - exactly centered) */}
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-11">
+                <button
+                  type="button"
+                  onClick={handleActionPost}
+                  aria-label="নতুন পোস্ট করুন"
+                  title="নতুন পোস্ট করুন"
+                  className="speed-dial-item-2 w-12 h-12 rounded-full bg-brand-emerald hover:bg-emerald-800 text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
+                >
+                  <PenSquare className="w-5 h-5 stroke-[2.2]" />
+                </button>
+              </div>
 
               {/* Option 3: Community / Members (Right) */}
-              <button
-                type="button"
-                onClick={handleActionComingSoon}
-                aria-label="কমিউনিটি ও সদস্য"
-                title="কমিউনিটি ও সদস্য"
-                className="speed-dial-item-3 absolute right-0 bottom-2 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
-              >
-                <Users className="w-5 h-5 stroke-[2.2]" />
-              </button>
+              <div className="absolute right-0 bottom-2">
+                <button
+                  type="button"
+                  onClick={handleActionComingSoon}
+                  aria-label="কমিউনিটি ও সদস্য"
+                  title="কমিউনিটি ও সদস্য"
+                  className="speed-dial-item-3 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center border-2 border-white dark:border-brand-charcoal-dark shadow-md shadow-slate-900/20 hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
+                >
+                  <Users className="w-5 h-5 stroke-[2.2]" />
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Navigation Bar Shell */}
-          <div className="relative bg-white/95 dark:bg-brand-charcoal-dark/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-xl px-4 py-2 flex items-center justify-between transition-colors">
+          {/* Navigation Bar Shell - 5 equal grid columns for 100% center alignment on all screen sizes */}
+          <div className="relative bg-white/95 dark:bg-brand-charcoal-dark/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-xl px-1 py-2 grid grid-cols-5 items-center transition-colors">
             {/* Home */}
             <Link
               href="/"
               onClick={() => setIsMenuOpen(false)}
-              className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
                 isHome
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
@@ -138,7 +144,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             <Link
               href="/organization"
               onClick={() => setIsMenuOpen(false)}
-              className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
                 isOrganization
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
@@ -150,7 +156,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             </Link>
 
             {/* Elevated Center Floating Action Button (+) with rotation toggle */}
-            <div className="relative -top-5 flex flex-col items-center">
+            <div className="relative -top-5 flex flex-col items-center justify-center">
               <button
                 type="button"
                 onClick={handleCenterPlusClick}
@@ -170,7 +176,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             <Link
               href="/notifications"
               onClick={() => setIsMenuOpen(false)}
-              className={`relative flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
+              className={`relative flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
                 isNotifications
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
@@ -187,7 +193,7 @@ export function BottomNav({ onCreatePostClick }: BottomNavProps) {
             <Link
               href={session?.user ? `/profile/${session.user.id}` : '/login'}
               onClick={() => setIsMenuOpen(false)}
-              className={`flex flex-col items-center gap-1 py-1 px-2.5 transition-colors ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
                 isProfile
                   ? 'text-brand-emerald dark:text-brand-mint font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
